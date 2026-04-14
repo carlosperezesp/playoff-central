@@ -507,9 +507,11 @@
     font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
     letter-spacing: .3px; white-space: nowrap; vertical-align: middle;
   }
-  .trend-up   { background: rgba(22,163,74,.12); color: var(--win); }
-  .trend-flat { background: rgba(107,114,128,.1); color: var(--muted); }
-  .trend-down { background: rgba(220,38,38,.10); color: var(--loss); }
+  .trend-up-strong { background: rgba(22,163,74,.15);  color: var(--win); }
+  .trend-up        { background: rgba(26,86,219,.12);  color: var(--accent); }
+  .trend-flat      { background: rgba(107,114,128,.1); color: var(--muted); }
+  .trend-down      { background: rgba(220,38,38,.10);  color: var(--loss); }
+  .trend-down-strong { background: rgba(220,38,38,.18); color: var(--loss); }
   .trend-badge svg { flex-shrink: 0; }
 
   /* IL section */
@@ -2562,19 +2564,28 @@ async function fetchCareerStats(pids) {
 }
 
 function trendBadgeHTML(current, career, metric) {
-  if (!career || !current) return '';
+  if (!career || !current || career === 0) return '';
   // For ERA/WHIP: lower is better; for OPS/AVG: higher is better
   const lowerBetter = metric === 'era' || metric === 'whip';
+  // delta > 0 means "performing better than career"
   const delta = lowerBetter ? career - current : current - career;
-  const threshold = metric === 'ops' ? 0.030 : metric === 'avg' ? 0.010 : metric === 'era' ? 0.30 : 0.05;
-  if (career === 0) return ''; // no career data
-  const pct = Math.abs(delta) / (career || 1);
-  if (delta > threshold || pct > 0.08) {
-    return `<span class="trend-badge trend-up" title="Above career avg">▲ ${Math.abs(delta).toFixed(metric==='ops'||metric==='avg'?3:2)} vs career</span>`;
-  } else if (delta < -threshold || pct < -0.08) {
-    return `<span class="trend-badge trend-down" title="Below career avg">▼ ${Math.abs(delta).toFixed(metric==='ops'||metric==='avg'?3:2)} vs career</span>`;
+  const absDelta = Math.abs(delta);
+  const pct = absDelta / career;
+  const threshold = metric === 'ops' ? 0.025 : metric === 'avg' ? 0.010 : metric === 'era' ? 0.25 : 0.04;
+  const decimals = (metric === 'ops' || metric === 'avg') ? 3 : 2;
+
+  const isUp   = delta >  threshold || pct > 0.07;
+  const isDown = delta < -threshold || pct > 0.07 && delta < 0;
+
+  if (isUp) {
+    // Good: rank 1-6 style — green if significantly above, blue if modestly above
+    const cls = pct > 0.15 ? 'trend-up-strong' : 'trend-up';
+    return `<span class="trend-badge ${cls}">▲ ${absDelta.toFixed(decimals)} vs career</span>`;
+  } else if (isDown) {
+    const cls = pct > 0.15 ? 'trend-down-strong' : 'trend-down';
+    return `<span class="trend-badge ${cls}">▼ ${absDelta.toFixed(decimals)} vs career</span>`;
   } else {
-    return `<span class="trend-badge trend-flat" title="Near career avg">≈ avg</span>`;
+    return `<span class="trend-badge trend-flat">≈ career</span>`;
   }
 }
 
