@@ -106,7 +106,9 @@
   .legend-dot.wc { background: var(--accent); }
   .legend-dot.out { background: var(--loss); opacity: .6; }
 
-  .divisions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+  .divisions-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 32px; }
+  .divisions-grid .division-card { flex: 1 1 calc(50% - 10px); min-width: 280px; }
+  @media (max-width: 768px) { .divisions-grid .division-card { flex: 1 1 100%; min-width: 0; } }
   .division-card { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.05); overflow: hidden; }
   .division-header { background: var(--surface2); padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
   .division-name { font-family: 'Bebas Neue'; font-size: 18px; letter-spacing: 2px; color: var(--text); }
@@ -188,7 +190,6 @@
     .section-title { font-size: 18px; }
 
     /* Standings / division tables */
-    .divisions-grid { grid-template-columns: 1fr; }
     .div-table { font-size: 13px; }
     .div-table th, .div-table td { padding: 7px 8px; }
     .standings-table { font-size: 13px; }
@@ -233,7 +234,9 @@
     .dfield-pill { font-size: 11px; max-width: 88px; }
     .impact-row { grid-template-columns: 1fr 70px 48px; gap: 7px; }
     .il-row { grid-template-columns: 1fr 70px 48px; gap: 7px; }
-    .impact-stats-line { font-size: 11px; }
+    .impact-stats-line { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .impact-name { font-size: 13px; }
+    .impact-name > * { flex-shrink: 0; }
     .impact-bar-val { font-size: 14px; }
     .dp-team-name { font-size: 22px; }
 
@@ -540,7 +543,6 @@
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('standings')">PLAYOFF RACE</button>
   <button class="tab-btn" onclick="switchTab('bracket')">BRACKET</button>
-  <button class="tab-btn" onclick="switchTab('schedule')">SCHEDULE</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
 </div>
 
@@ -737,19 +739,19 @@ async function renderStandings() {
       <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
       <div class="legend-item" style="margin-left:auto; color:var(--muted); font-size:11px">GR = Partidos restantes</div>
     </div>
-    <div id="trackerWidget"></div>
-    <div class="divisions-grid">`;
+    <div id="trackerWidget"></div>`;
 
   const alDivs = allData.standings.filter(r => r.league?.id === 103);
   const nlDivs = allData.standings.filter(r => r.league?.id === 104);
-  const orderedDivs = [];
-  const maxLen = Math.max(alDivs.length, nlDivs.length);
-  for (let i = 0; i < maxLen; i++) {
-    if (alDivs[i]) orderedDivs.push(alDivs[i]);
-    if (nlDivs[i]) orderedDivs.push(nlDivs[i]);
-  }
+  // Desktop: interleaved AL/NL. Mobile: AL then NL (via CSS order).
+  // We render AL first, then NL, and use CSS grid-column to interleave on desktop.
+  const orderedDivs = [...alDivs, ...nlDivs];
 
-  orderedDivs.forEach(divRecord => {
+  html += `
+    <div class="divisions-grid" id="divisionsGrid">`;
+
+  let alIdx = 0, nlIdx = 0;
+  orderedDivs.forEach((divRecord, di) => {
     const divId = divRecord.division?.id;
     const dm = divMeta[divId];
     if (!dm) return;
@@ -763,6 +765,8 @@ async function renderStandings() {
     teams.forEach((tr, i) => {
       const tid = tr.team.id;
       const meta = TEAM_META[tid] || { name: tr.team.name, abbr: tr.team.abbreviation || '???', logo: `https://www.mlbstatic.com/team-logos/${tid}.svg` };
+      // Shorten long names for table compactness
+      const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;
       const isDivLeader = tid === divLeaderId;
       const isWC = wcIds.has(tid) && !isDivLeader;
       const isElim = tr.eliminationNumber === 'E' || tr.wildCardEliminationNumber === 'E';
@@ -774,7 +778,7 @@ async function renderStandings() {
       const l10 = tr.records?.splitRecords?.find(s => s.type === 'lastTen');
       const l10str = l10 ? `${l10.wins}-${l10.losses}` : '—';
       const l10color = l10 ? (l10.wins > l10.losses ? 'var(--win)' : l10.wins < l10.losses ? 'var(--loss)' : 'var(--text)') : 'var(--muted)';
-      const l10html = `<span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10str}</span>`;
+      const l10html = `<span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color};white-space:nowrap">${l10str}</span>`;
 
       const streakCode = tr.streak?.streakCode || '—';
       const streakWin = streakCode.startsWith('W');
@@ -800,7 +804,7 @@ async function renderStandings() {
         <td>
           <div class="team-cell" style="gap:7px">
             <img class="team-logo-sm" style="width:22px;height:22px" src="https://www.mlbstatic.com/team-logos/${tid}.svg" onerror="this.style.display='none'" alt="">
-            <span style="font-weight:500;font-size:14px">${meta.name}</span>
+            <span style="font-weight:500;font-size:14px">${displayName}</span>
             ${gr}
           </div>
         </td>
@@ -815,16 +819,19 @@ async function renderStandings() {
       </tr>`;
     });
 
-    html += `<div class="division-card">
+    // On desktop: AL (league 103) goes in left column, NL in right. On mobile: AL first (natural order).
+    const isAL = leagueId === 103;
+    const cardOrder = isAL ? (alIdx++) : (3 + nlIdx++); // AL: order 0,1,2 → left col; NL: order 3,4,5 → right col
+    html += `<div class="division-card" style="order:${cardOrder}">
       <div class="division-header">
         <span class="division-name">${dm.name}</span>
-        <span class="division-league">${leagueId === 103 ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
+        <span class="division-league">${isAL ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
       </div>
       <table class="div-table">
         <thead><tr>
           <th>TEAM</th><th class="r">W</th><th class="r">L</th>
           <th class="r">PCT</th><th class="r">GB</th>
-          <th class="r">L10</th><th class="r">STRK</th><th class="r">MN</th><th></th>
+          <th class="r" style="white-space:nowrap">L10</th><th class="r">STRK</th><th class="r">MN</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -1283,68 +1290,61 @@ function renderProjectedBracket() {
   const nl = allData.standings.filter(r => r.league?.id === 104);
 
   const renderBracket = (seeds, leagueLabel) => {
-    const seedCard = (t, seed, extraCls='') => {
-      if (!t) return `<div class="bp-team bp-tbd ${extraCls}"><span class="bp-seed">?</span><span class="bp-name">TBD</span></div>`;
-      const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr:'???' };
-      const pct = parseFloat(t.winningPercentage).toFixed(3).replace(/^0/,'');
-      const isDivW = seed <= 3;
-      return `<div class="bp-team ${extraCls}">
-        <span class="bp-seed">${seed}</span>
-        <img class="bp-logo" src="https://www.mlbstatic.com/team-logos/${t.team.id}.svg" onerror="this.style.display='none'" alt="">
-        <span class="bp-name">${meta.name}</span>
-        <span class="bp-rec">${t.wins}-${t.losses} <span class="bp-pct">${pct}</span></span>
-        ${isDivW ? '<span class="bp-div-badge">DIV</span>' : '<span class="bp-wc-badge">WC</span>'}
+    const seedCard = (t, seed) => {
+      if (!t) return `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:var(--surface2);border-radius:4px;opacity:.55"><span style="font-family:'Barlow Condensed';font-weight:800;font-size:11px;color:var(--muted);width:14px">${seed}</span><span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">TBD</span></div>`;
+      const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr: t.team.abbreviation||'???' };
+      const abbr = meta.abbr || meta.name.slice(0,3).toUpperCase();
+      const isDivW = typeof seed === 'number' && seed <= 3;
+      const badge = isDivW
+        ? `<span style="font-size:8px;font-weight:700;padding:1px 3px;background:rgba(22,163,74,.12);color:var(--win);border-radius:2px">D</span>`
+        : `<span style="font-size:8px;font-weight:700;padding:1px 3px;background:rgba(26,86,219,.1);color:var(--accent);border-radius:2px">WC</span>`;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:var(--bg);border-radius:4px;">
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:11px;color:var(--muted);width:14px">${seed}</span>
+        <img src="https://www.mlbstatic.com/team-logos/${t.team.id}.svg" style="width:18px;height:18px;object-fit:contain" onerror="this.style.display='none'" alt="">
+        <span style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;flex:1">${abbr}</span>
+        <span style="font-size:10px;color:var(--muted)">${t.wins}-${t.losses}</span>
+        ${badge}
       </div>`;
     };
+    const vs = `<div style="font-family:'Barlow Condensed';font-size:9px;color:var(--muted);text-align:center;padding:1px 0">VS</div>`;
+    const box = (a, sa, b, sb) => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;overflow:hidden;margin-bottom:6px">${seedCard(a,sa)}${vs}${seedCard(b,sb)}</div>`;
+    const tbdBox = (label) => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:10px;text-align:center;color:var(--muted);font-family:'Barlow Condensed';font-size:11px;letter-spacing:1px">${label}</div>`;
+    const colHdr = (t) => `<div style="font-family:'Barlow Condensed';font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:8px;text-align:center">${t}</div>`;
 
     const [s1,s2,s3,s4,s5,s6] = seeds;
-
     return `
-      <div class="bracket-wrap">
-        <div class="bracket-league-title">${leagueLabel}</div>
-        <div class="bracket-layout" style="display:grid;grid-template-columns:1fr 220px 1fr;gap:0;align-items:center;background:var(--surface);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.05);">
-          <div class="bracket-col" style="padding:20px 16px;">
-            <div style="font-family:'Barlow Condensed';font-size:12px;letter-spacing:2px;color:var(--muted);font-weight:600;margin-bottom:14px;text-align:center;">DIVISION SERIES</div>
-            <div style="background:var(--bg);border:1px solid var(--border);padding:10px 14px;">
-              ${seedCard(s1, 1)}
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;padding:3px 0;">vs</div>
-              ${seedCard(null, '?', 'bp-wc-winner')}
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:7px;">WC Winner (3 vs 6)</div>
-            </div>
-            <div style="height:16px;"></div>
-            <div style="background:var(--bg);border:1px solid var(--border);padding:10px 14px;">
-              ${seedCard(s2, 2)}
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;padding:3px 0;">vs</div>
-              ${seedCard(null, '?', 'bp-wc-winner')}
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:7px;">WC Winner (4 vs 5)</div>
-            </div>
+      <div style="margin-bottom:16px">
+        <div style="font-family:'Bebas Neue';font-size:15px;letter-spacing:3px;color:var(--accent);margin-bottom:8px">${leagueLabel}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:var(--surface2);border:1px solid var(--border);padding:10px;border-radius:7px">
+          <div>
+            ${colHdr('WILD CARD')}
+            ${box(s3,3,s6,6)}
+            ${box(s4,4,s5,5)}
           </div>
-
-          <div class="bracket-col-cs" style="padding:20px 16px;border-left:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;">
-            <div style="font-family:'Barlow Condensed';font-size:12px;letter-spacing:2px;color:var(--muted);font-weight:600;margin-bottom:14px;text-align:center;">CHAMP. SERIES</div>
-            <div style="width:100%;background:var(--bg);border:1px solid var(--border);padding:10px 14px;">
-              <div class="bp-team bp-tbd"><span class="bp-seed">?</span><span class="bp-name">DS Winner</span></div>
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;padding:3px 0;">vs</div>
-              <div class="bp-team bp-tbd"><span class="bp-seed">?</span><span class="bp-name">DS Winner</span></div>
-            </div>
+          <div>
+            ${colHdr('DIV SERIES')}
+            ${box(s1,1,null,'WC')}
+            ${box(s2,2,null,'WC')}
           </div>
-
-          <div class="bracket-col" style="padding:20px 16px;">
-            <div style="font-family:'Barlow Condensed';font-size:12px;letter-spacing:2px;color:var(--muted);font-weight:600;margin-bottom:14px;text-align:center;">WILD CARD</div>
-            <div style="background:var(--bg);border:1px solid var(--border);padding:10px 14px;">
-              ${seedCard(s3, 3)}
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;padding:3px 0;">vs</div>
-              ${seedCard(s6, 6)}
-            </div>
-            <div style="height:16px;"></div>
-            <div style="background:var(--bg);border:1px solid var(--border);padding:10px 14px;">
-              ${seedCard(s4, 4)}
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;padding:3px 0;">vs</div>
-              ${seedCard(s5, 5)}
-            </div>
+          <div>
+            ${colHdr('CHAMP. SERIES')}
+            ${tbdBox('DS Winner vs DS Winner')}
           </div>
         </div>
       </div>`;
+  };
+
+  const alSeeds = getSeeds(al);
+  const nlSeeds = getSeeds(nl);
+
+  const wsLogoCard = (seeds, label) => {
+    if (!seeds || !seeds[0]) return `<div style="text-align:center;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;padding:12px">TBD</div>`;
+    const meta = TEAM_META[seeds[0].team.id] || { abbr:'?' };
+    return `<div style="text-align:center;padding:10px">
+      <img src="https://www.mlbstatic.com/team-logos/${seeds[0].team.id}.svg" style="width:40px;height:40px;object-fit:contain;opacity:.4" onerror="this.style.display='none'">
+      <div style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;color:var(--muted);margin-top:4px">${meta.abbr}?</div>
+      <div style="font-size:9px;letter-spacing:1px;color:var(--muted);font-family:'Barlow Condensed'">${label}</div>
+    </div>`;
   };
 
   const wcTable = (records, label) => {
@@ -1358,32 +1358,34 @@ function renderProjectedBracket() {
     const rest = all.filter(t => !divLeaderIds.has(t.team.id)).sort((a,b) => parseFloat(b.winningPercentage)-parseFloat(a.winningPercentage));
     const ordered = [...divLeaders, ...rest];
     const wcIds = new Set(ordered.slice(3,6).map(t => t.team.id));
-
     let rows = '';
     ordered.forEach((t, i) => {
       const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr:'???' };
+      const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;
       const isDivW = divLeaderIds.has(t.team.id);
       const isWC = wcIds.has(t.team.id);
       const isElim = t.eliminationNumber === 'E' || t.wildCardEliminationNumber === 'E';
       const rc = isElim ? 'xr' : isDivW ? 'dr' : isWC ? 'wr' : '';
       const pct = parseFloat(t.winningPercentage||0).toFixed(3).replace(/^0/,'');
       const wcgb = parseFloat(t.wildCardGamesBack);
-      const wcgbStr = isNaN(wcgb) || wcgb <= 0 ? '—' : `+${wcgb}`;
+      let wcgbStr;
+      if (isNaN(wcgb) || wcgb < 0) { wcgbStr = (isDivW || isWC) ? '—' : '—'; }
+      else if (wcgb === 0) { wcgbStr = '—'; }
+      else { wcgbStr = `${wcgb}`; }
       const l10 = t.records?.splitRecords?.find(s=>s.type==='lastTen');
       const l10w = l10?.wins ?? 0, l10l = l10?.losses ?? 0;
       const l10color = l10w > l10l ? 'var(--win)' : l10w < l10l ? 'var(--loss)' : 'var(--text)';
       const badge = isDivW ? '<span class="badge-div">DIV</span>' : isWC ? '<span class="badge-wc">WC</span>' : '';
-      const seedNum = i + 1;
       rows += `<tr class="${rc}">
-        <td style="width:28px;font-family:'Barlow Condensed';font-weight:700;color:var(--muted);font-size:13px">${seedNum}</td>
+        <td style="width:28px;font-family:'Barlow Condensed';font-weight:700;color:var(--muted);font-size:13px">${i+1}</td>
         <td><div class="team-cell" style="gap:7px">
           <img style="width:22px;height:22px;object-fit:contain" src="https://www.mlbstatic.com/team-logos/${t.team.id}.svg" onerror="this.style.display='none'" alt="">
-          <span style="font-weight:500;font-size:14px">${meta.name}</span>
+          <span style="font-weight:500;font-size:14px">${displayName}</span>
         </div></td>
         <td class="num">${t.wins}</td><td class="num">${t.losses}</td>
         <td class="num pct">${pct}</td>
         <td class="num" style="color:${isWC||isDivW?'var(--win)':'var(--muted)'}">${wcgbStr}</td>
-        <td class="num"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10w}-${l10l}</span></td>
+        <td class="num"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color};white-space:nowrap">${l10w}-${l10l}</span></td>
         <td>${badge}</td>
       </tr>`;
     });
@@ -1393,7 +1395,7 @@ function renderProjectedBracket() {
         <thead><tr>
           <th style="width:28px">#</th><th>TEAM</th>
           <th class="num">W</th><th class="num">L</th><th class="num">PCT</th>
-          <th class="num">WC GB</th><th class="num">L10</th><th>STATUS</th>
+          <th class="num" style="white-space:nowrap">WC GB</th><th class="num" style="white-space:nowrap">L10</th><th>STATUS</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
@@ -1401,8 +1403,16 @@ function renderProjectedBracket() {
 
   return `
     <div class="section-title">PROJECTED PLAYOFF BRACKET</div>
-    ${renderBracket(getSeeds(al), 'AMERICAN LEAGUE')}
-    ${renderBracket(getSeeds(nl), 'NATIONAL LEAGUE')}
+    <div style="margin-bottom:20px">
+      <div class="section-title" style="font-size:16px;margin-bottom:8px">🏆 WORLD SERIES</div>
+      <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:0;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+        ${wsLogoCard(alSeeds,'AL CAMPEÓN')}
+        <div style="text-align:center;font-family:'Bebas Neue';font-size:20px;color:var(--accent)">VS</div>
+        ${wsLogoCard(nlSeeds,'NL CAMPEÓN')}
+      </div>
+    </div>
+    ${renderBracket(alSeeds, 'AMERICAN LEAGUE')}
+    ${renderBracket(nlSeeds, 'NATIONAL LEAGUE')}
     ${wcTable(al, 'AMERICAN LEAGUE')}
     ${wcTable(nl, 'NATIONAL LEAGUE')}`;
 }
@@ -1899,27 +1909,41 @@ async function fetchTeamImpact(teamId) {
     }
   });
 
-  // DEDUP: each player should appear in only ONE position on the diamond.
-  // After sorting, assign every player to the position where they rank highest.
-  const assignedPid2Pos = {}; // pid → assigned position
+  // DEDUP: assign each player to their PRIMARY position (most appearances).
+  // They can still appear as ALTERNATES at other positions they've played.
+  const primaryPos = {}; // pid → their primary assigned position
   const POS_PRIORITY = ['C','SS','2B','3B','1B','CF','LF','RF','DH'];
+
+  // First pass: assign primary positions in priority order (prevents two players competing for SS etc.)
   POS_PRIORITY.forEach(pos => {
     if (!hittersByPos[pos]) return;
-    // Remove players already assigned to a different position
-    hittersByPos[pos] = hittersByPos[pos].filter(p => !(p.id in assignedPid2Pos));
-    // Assign the new #1 player to this position
-    if (hittersByPos[pos][0]) assignedPid2Pos[hittersByPos[pos][0].id] = pos;
+    // Find first unassigned player (they become starter here)
+    const starterIdx = hittersByPos[pos].findIndex(p => !(p.id in primaryPos));
+    if (starterIdx >= 0) {
+      primaryPos[hittersByPos[pos][starterIdx].id] = pos;
+      // Move this player to front
+      if (starterIdx > 0) {
+        const [starter] = hittersByPos[pos].splice(starterIdx, 1);
+        hittersByPos[pos].unshift(starter);
+      }
+    }
   });
-  // Second pass: remove assigned players from alternate slots too
-  // A player can only appear as alternate at other positions if they haven't been assigned yet
-  // Since we assigned in priority order, anyone in assignedPid2Pos should only appear as starter at their assigned pos
+
+  // Second pass: for each position, keep:
+  // - index 0: the assigned primary starter (already set)
+  // - alternates: players whose primary position is different (they can cover here)
+  // Sort alternates: primary-pos players who play here occasionally come first
   POS_PRIORITY.forEach(pos => {
     if (!hittersByPos[pos]) return;
-    hittersByPos[pos] = hittersByPos[pos].filter((p, i) => {
-      if (i === 0) return true; // starter at this pos — already confirmed no conflict above
-      // alternates: only if not assigned to any position
-      return !(p.id in assignedPid2Pos);
+    // Separate starter from rest
+    const [starter, ...rest] = hittersByPos[pos];
+    // Filter alternates: only keep players whose primary is different from this pos
+    // (avoids showing a player as their own backup)
+    const alts = rest.filter(p => {
+      const prim = primaryPos[p.id];
+      return !prim || prim !== pos; // show if their primary is a different position
     });
+    hittersByPos[pos] = starter ? [starter, ...alts] : alts;
   });
 
   // ── PITCHERS ─────────────────────────────────────────────────────────────
@@ -2065,16 +2089,23 @@ function playerDetailHTML(p, type, roleOrPos) {
     ? (p.bats && p.bats !== '?' ? `<span class="hand-badge${p.bats==='L'?' lhb':p.bats==='S'?' swi':''}">${p.bats==='L'?'LHB':p.bats==='S'?'SWI':'RHB'}</span>` : '')
     : (throwsCode !== '?' ? `<span class="hand-badge ${throwsCode==='L'?'lhp':''}">${throwsCode==='L'?'LHP':'RHP'}</span>` : '');
 
-  // Secondary positions: all positions the player has played this season except current pos
+  // Secondary positions: all positions the player has played (≥2 times), sorted by appearances desc
+  // Shows complete versatility picture — current position is highlighted differently if included
   let secPosBadges = '';
   if (isHitter && p.posCount) {
     const VALID_POS = new Set(['C','1B','2B','SS','3B','LF','CF','RF','DH']);
-    const otherPos = Object.entries(p.posCount)
-      .filter(([pos, count]) => pos !== roleOrPos && VALID_POS.has(pos) && count >= 2)
+    const allPos = Object.entries(p.posCount)
+      .filter(([pos, count]) => VALID_POS.has(pos) && count >= 2)
       .sort((a,b) => b[1]-a[1])
-      .slice(0, 2)
+      .slice(0, 3)
       .map(([pos]) => pos);
-    secPosBadges = otherPos.map(pos => `<span class="sec-pos-badge">${pos}</span>`).join('');
+    secPosBadges = allPos.map(pos => {
+      const isCurrent = pos === roleOrPos;
+      const style = isCurrent
+        ? 'background:rgba(22,163,74,.12);color:var(--win);border-color:rgba(22,163,74,.3);'
+        : '';
+      return `<span class="sec-pos-badge" style="${style}">${pos}</span>`;
+    }).join('');
   }
   const rookieBadge = p.isRookie ? `<span class="rookie-badge">R</span>` : '';
   const restBadge = (!isHitter && p.restDays !== null && p.restDays !== undefined)
@@ -2141,15 +2172,16 @@ function renderTeamStatsPanel(teamId, impact) {
     return `<span class="team-stat-rank ${cls}">${label}</span>`;
   }
 
-  function leagueBar(key, lowerBetter = false, color) {
+  function leagueBar(key, lowerBetter = false, color, rankObj) {
     const vals = allTeams.map(([,v]) => v[key]).filter(x => x && x > 0);
     if (!vals.length) return '';
     const myVal = mine[key] || 0;
     const minVal = Math.min(...vals), maxVal = Math.max(...vals);
     const range = maxVal - minVal || 1;
-    // pct = how good (0=worst, 1=best)
-    const pct = lowerBetter ? ((maxVal - myVal) / range) : ((myVal - minVal) / range);
-    const fillPct = Math.max(3, Math.min(97, Math.round(pct * 100)));
+    // Fill based on rank: rank 1 = 100%, rank last = ~5%
+    const total = rankObj?.total || vals.length;
+    const rk = (rankObj?.rank === '—' ? total : rankObj?.rank) || total;
+    const fillPct = Math.max(5, Math.round(((total - rk + 1) / total) * 100));
     const decimals = key === 'era' || key === 'whip' ? 2 : 3;
     // worst label on left, best label on right
     const leftLabel = lowerBetter ? maxVal.toFixed(decimals) : minVal.toFixed(decimals).replace(/^0/,'');
@@ -2163,15 +2195,24 @@ function renderTeamStatsPanel(teamId, impact) {
     </div>`;
   }
 
+
+  // New color scheme: rank 1-6 green, 7-12 blue, 13-22 grey, 23-30 red
+  function rankColor(r, total) {
+    if (r.rank === '—') return '#94a3b8';
+    const rk = r.rank;
+    if (rk <= 6) return 'var(--win)';         // green
+    if (rk <= 12) return 'var(--accent)';      // blue
+    if (rk <= 22) return '#94a3b8';            // grey
+    return 'var(--loss)';                      // red
+  }
+
   const avgR  = rank('avg');  const opsR  = rank('ops');
   const eraR  = rank('era', true); const whipR = rank('whip', true);
 
-  // For batting: higher = better → green when pct >= .67
-  // For pitching: lower = better → green when pct >= .67 (pct already normalized as "how good")
-  const avgColor  = avgR.pct  >= .67 ? 'var(--win)' : avgR.pct  <= .33 ? 'var(--loss)' : '#b45309';
-  const opsColor  = opsR.pct  >= .67 ? 'var(--win)' : opsR.pct  <= .33 ? 'var(--loss)' : '#b45309';
-  const eraColor  = eraR.pct  >= .67 ? 'var(--win)' : eraR.pct  <= .33 ? 'var(--loss)' : '#b45309';
-  const whipColor = whipR.pct >= .67 ? 'var(--win)' : whipR.pct <= .33 ? 'var(--loss)' : '#b45309';
+  const avgColor  = rankColor(avgR);
+  const opsColor  = rankColor(opsR);
+  const eraColor  = rankColor(eraR);
+  const whipColor = rankColor(whipR);
 
   // Innings split — use SP/RP breakdown calculated from classified pitchers' season stats
   const spSeasonIp    = impact?.spSeasonIp    || 0;
@@ -2184,49 +2225,55 @@ function renderTeamStatsPanel(teamId, impact) {
 
   return `<div class="team-stats-panel">
     <div class="team-stats-title">Team Stats vs League</div>
-    <div class="team-stats-grid">
-      <div class="team-stat-row">
-        <div class="team-stat-header">
-          <span class="team-stat-label">AVG</span>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span class="team-stat-val" style="color:${avgColor}">${mine.avg ? mine.avg.toFixed(3).replace(/^0/,'') : '—'}</span>
-            ${rankBadge(avgR)}
+    <div class="team-stats-grid" style="grid-template-columns:1fr 1fr">
+      <div style="grid-column:1;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding-bottom:4px;border-bottom:1px solid var(--border)">BATEO</div>
+        <div class="team-stat-row">
+          <div class="team-stat-header">
+            <span class="team-stat-label">AVG</span>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span class="team-stat-val" style="color:${avgColor}">${mine.avg ? mine.avg.toFixed(3).replace(/^0/,'') : '—'}</span>
+              ${rankBadge(avgR)}
+            </div>
           </div>
+          ${leagueBar('avg', false, avgColor, avgR)}
         </div>
-        ${leagueBar('avg', false, avgColor)}
+        <div class="team-stat-row">
+          <div class="team-stat-header">
+            <span class="team-stat-label">OPS</span>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span class="team-stat-val" style="color:${opsColor}">${mine.ops ? mine.ops.toFixed(3).replace(/^0/,'') : '—'}</span>
+              ${rankBadge(opsR)}
+            </div>
+          </div>
+          ${leagueBar('ops', false, opsColor, opsR)}
+        </div>
       </div>
-      <div class="team-stat-row">
-        <div class="team-stat-header">
-          <span class="team-stat-label">OPS</span>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span class="team-stat-val" style="color:${opsColor}">${mine.ops ? mine.ops.toFixed(3).replace(/^0/,'') : '—'}</span>
-            ${rankBadge(opsR)}
+      <div style="grid-column:2;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding-bottom:4px;border-bottom:1px solid var(--border)">PITCHEO</div>
+        <div class="team-stat-row">
+          <div class="team-stat-header">
+            <span class="team-stat-label">ERA</span>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span class="team-stat-val" style="color:${eraColor}">${mine.era ? mine.era.toFixed(2) : '—'}</span>
+              ${rankBadge(eraR)}
+            </div>
           </div>
+          ${leagueBar('era', true, eraColor, eraR)}
         </div>
-        ${leagueBar('ops', false, opsColor)}
-      </div>
-      <div class="team-stat-row">
-        <div class="team-stat-header">
-          <span class="team-stat-label">ERA</span>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span class="team-stat-val" style="color:${eraColor}">${mine.era ? mine.era.toFixed(2) : '—'}</span>
-            ${rankBadge(eraR, true)}
+        <div class="team-stat-row">
+          <div class="team-stat-header">
+            <span class="team-stat-label">WHIP</span>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span class="team-stat-val" style="color:${whipColor}">${mine.whip ? mine.whip.toFixed(2) : '—'}</span>
+              ${rankBadge(whipR)}
+            </div>
           </div>
+          ${leagueBar('whip', true, whipColor, whipR)}
         </div>
-        ${leagueBar('era', true, eraColor)}
-      </div>
-      <div class="team-stat-row">
-        <div class="team-stat-header">
-          <span class="team-stat-label">WHIP</span>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span class="team-stat-val" style="color:${whipColor}">${mine.whip ? mine.whip.toFixed(2) : '—'}</span>
-            ${rankBadge(whipR, true)}
-          </div>
-        </div>
-        ${leagueBar('whip', true, whipColor)}
       </div>
       ${totalSeasonIp > 0 ? `
-      <div class="team-stat-row innings-split-row">
+      <div class="team-stat-row innings-split-row" style="grid-column:1/-1">
         <div class="innings-split-title">Innings trabajados por abridores vs bullpen (de 9)</div>
         <div class="innings-bar-wrap">
           <div class="innings-bar-sp" style="width:${spPct}%">${spPct >= 18 ? `SP ${spInnings}` : ''}</div>
