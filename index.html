@@ -174,11 +174,71 @@
   .series-wins.w { color: var(--win); }
 
   @media (max-width: 768px) {
-    .game-row { grid-template-columns: 70px 1fr 50px 1fr 90px; font-size: 12px; }
-    header { padding: 0 16px; }
-    main { padding: 20px 16px; }
-    .tabs { padding: 0 16px; }
+    /* Header */
+    header { padding: 0 12px; height: 52px; }
+    .logo { font-size: 22px; letter-spacing: 2px; }
+    .season-badge { font-size: 11px; padding: 3px 8px; letter-spacing: 1px; }
+
+    /* Tabs */
+    .tabs { padding: 0 8px; }
+    .tab-btn { padding: 12px 12px; font-size: 12px; }
+
+    /* Main */
+    main { padding: 16px 12px; }
+    .section-title { font-size: 18px; }
+
+    /* Standings / division tables */
     .divisions-grid { grid-template-columns: 1fr; }
+    .div-table { font-size: 13px; }
+    .div-table th, .div-table td { padding: 7px 8px; }
+    .standings-table { font-size: 13px; }
+    .standings-table th, .standings-table td { padding: 7px 8px; }
+    .team-cell { gap: 6px; }
+    .team-logo-sm { width: 22px; height: 22px; }
+
+    /* Schedule rows — stack into 2-line layout */
+    .game-row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 6px 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .game-date   { grid-column: 1 / 2; grid-row: 1; align-self: center; }
+    .game-info   { grid-column: 2 / 3; grid-row: 1; text-align: right; align-self: center; }
+    .game-team:first-of-type { grid-column: 1 / 2; grid-row: 2; }
+    .game-score  { grid-column: 2 / 3; grid-row: 2; font-size: 18px; text-align: right; }
+    .game-team:last-of-type  { grid-column: 1 / 2; grid-row: 3; }
+    .game-status { grid-column: 2 / 3; grid-row: 3; text-align: right; align-self: center; }
+    .game-team-name { font-size: 14px; }
+
+    /* Bracket cards */
+    .bracket-grid { grid-template-columns: 1fr; }
+    .series-name { font-size: 14px; }
+    .series-wins { font-size: 22px; }
+
+    /* Tracker */
+    .tracker-section { padding: 14px 12px; }
+    .tracker-header { gap: 8px; }
+    .tracker-controls { gap: 8px; }
+    .tracker-date-label { font-size: 17px; min-width: 80px; }
+
+    /* Teams / roster panel */
+    .team-selector-list { max-height: 220px; }
+    .diamond-panel { padding: 14px 12px; }
+    .dfield-container { height: 360px; }
+    .dfield-circle { width: 36px; height: 36px; font-size: 10px; }
+    .dfield-btn.active .dfield-circle,
+    .dfield-btn-inline.active .dfield-circle { width: 42px; height: 42px; }
+    .dfield-pill { font-size: 11px; max-width: 88px; }
+    .impact-row { grid-template-columns: 1fr 70px 48px; gap: 7px; }
+    .il-row { grid-template-columns: 1fr 70px 48px; gap: 7px; }
+    .impact-stats-line { font-size: 11px; }
+    .impact-bar-val { font-size: 14px; }
+    .dp-team-name { font-size: 22px; }
+
+    /* Legend */
+    .legend { gap: 12px; }
   }
 
   .teams-layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
@@ -203,6 +263,31 @@
   .team-selector-item img { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; }
   .team-selector-name { font-weight: 600; font-size: 14px; color: var(--text); }
   .team-selector-abbr { font-size: 11px; color: var(--muted); margin-left: auto; letter-spacing: .5px; }
+  .team-selector-wl { font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700; color: var(--muted); margin-left: auto; letter-spacing: .5px; }
+  .team-div-group {}
+  .team-div-label {
+    font-family: 'Barlow Condensed'; font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--accent); padding: 7px 14px 4px;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 1;
+  }
+  .team-div-pos {
+    font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700; color: var(--muted);
+    width: 14px; text-align: center; flex-shrink: 0;
+  }
+
+  /* Badges — LHB gets blue like LHP */
+  .hand-badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+    background: rgba(184,15,33,.1); color: #b80f21; letter-spacing: .3px; }
+  .hand-badge.lhp, .hand-badge.lhb { background: rgba(0,90,156,.1); color: #005A9C; }
+  .hand-badge.swi { background: rgba(107,114,128,.12); color: var(--muted); }
+
+  /* Secondary positions pill */
+  .sec-pos-badge {
+    font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;
+    background: rgba(26,86,219,.07); color: var(--accent); border: 1px solid rgba(26,86,219,.2);
+    letter-spacing: .3px; white-space: nowrap;
+  }
 
   .diamond-panel {
     background: var(--surface); border: 1px solid var(--border);
@@ -305,11 +390,6 @@
   .impact-bar-val { font-family: 'Barlow Condensed'; font-weight: 800; font-size: 16px; line-height: 1; }
 
   /* Badges */
-  .hand-badge {
-    font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
-    background: rgba(184,15,33,.1); color: #b80f21; letter-spacing: .3px;
-  }
-  .hand-badge.lhp { background: rgba(0,90,156,.1); color: #005A9C; }
   .rookie-badge {
     font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
     background: rgba(234,179,8,.15); color: #b45309; letter-spacing: .5px;
@@ -354,6 +434,80 @@
     margin-top: 10px; background: #f8f9fd;
     border: 1px solid #e4eaf5; border-radius: 10px; padding: 10px 12px;
   }
+
+  /* ── Team Stats vs League ── */
+  .team-stats-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .team-stats-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .team-stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;
+  }
+  .team-stat-row { display: flex; flex-direction: column; gap: 4px; }
+  .team-stat-header {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+  }
+  .team-stat-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+  }
+  .team-stat-val {
+    font-family: 'Barlow Condensed'; font-weight: 800; font-size: 17px; line-height: 1;
+  }
+  .team-stat-rank {
+    font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+    padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+  }
+  .team-stat-rank.top { background: rgba(22,163,74,.12); color: var(--win); }
+  .team-stat-rank.mid { background: rgba(234,179,8,.12); color: #b45309; }
+  .team-stat-rank.bot { background: rgba(220,38,38,.10); color: var(--loss); }
+  .team-stat-bar-wrap { position: relative; height: 5px; background: var(--border); border-radius: 999px; overflow: visible; }
+  .team-stat-bar-fill { height: 100%; border-radius: 999px; transition: width .4s ease; }
+  .team-stat-bar-dots {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    display: flex; justify-content: space-between; width: 100%; pointer-events: none;
+  }
+  .innings-split-row { grid-column: 1 / -1; }
+  .innings-split-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .innings-bar-wrap {
+    height: 20px; border-radius: 4px; overflow: hidden; display: flex;
+    border: 1px solid var(--border);
+  }
+  .innings-bar-sp {
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; color: #fff;
+    letter-spacing: .5px; transition: width .4s ease; white-space: nowrap; overflow: hidden;
+    min-width: 0;
+  }
+  .innings-bar-rp {
+    background: #94a3b8; flex: 1; display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 6px; font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; color: #fff;
+    letter-spacing: .5px; white-space: nowrap; overflow: hidden; min-width: 0;
+  }
+  .innings-legend { display: flex; gap: 14px; margin-top: 5px; }
+  .innings-legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted); font-weight: 600;
+  }
+  .innings-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── Player trend indicator ── */
+  .trend-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
+    letter-spacing: .3px; white-space: nowrap; vertical-align: middle;
+  }
+  .trend-up   { background: rgba(22,163,74,.12); color: var(--win); }
+  .trend-flat { background: rgba(107,114,128,.1); color: var(--muted); }
+  .trend-down { background: rgba(220,38,38,.10); color: var(--loss); }
+  .trend-badge svg { flex-shrink: 0; }
 
   /* IL section */
   .il-section { margin-top: 20px; border-top: 2px solid rgba(220,38,38,.15); padding-top: 16px; }
@@ -462,20 +616,32 @@ let allData = { standings: null, playoffs: null, schedule: null };
 let playoffTeamIds = new Set();
 let isPlayoffSeason = false;
 
+function fetchWithTimeout(url, ms = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 async function init() {
+  const el = document.getElementById('standingsContent');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING STANDINGS...</div></div>`;
   try {
     await Promise.all([loadStandings(), detectPlayoffs()]);
-    await renderStandings();
+    renderStandings(); // not awaited — tabs usable immediately
   } catch(e) {
     console.error(e);
-    document.getElementById('standingsContent').innerHTML =
-      `<div class="error-box">Failed to load data. ${e.message}</div>`;
+    el.innerHTML = `<div class="error-box" style="padding:24px">
+      <strong>Error connecting to MLB API</strong><br><br>
+      ${e.name === 'AbortError' ? 'Request timed out.' : e.message}<br><br>
+      <button onclick="init()" style="margin-top:8px;padding:6px 16px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:'Barlow Condensed';font-size:14px;letter-spacing:1px">RETRY</button>
+    </div>`;
   }
 }
 
 async function detectPlayoffs() {
   try {
-    const res = await fetch(`${MLB_API}/schedule/postseason/series?season=${CURRENT_YEAR}&sportId=1`);
+    const res = await fetchWithTimeout(`${MLB_API}/schedule/postseason/series?season=${CURRENT_YEAR}&sportId=1`);
     const data = await res.json();
     if (data.series && data.series.length > 0) {
       isPlayoffSeason = true;
@@ -493,16 +659,17 @@ async function detectPlayoffs() {
 }
 
 async function loadStandings() {
-  const res = await fetch(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division`);
+  const res = await fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division`);
+  if (!res.ok) throw new Error(`MLB API returned ${res.status}`);
   const data = await res.json();
-  allData.standings = data.records;
+  allData.standings = data.records || [];
 }
 
 async function loadGamesRemaining(teamIds) {
   const today = new Date().toISOString().split('T')[0];
   const seasonEnd = `${CURRENT_YEAR}-10-01`;
   try {
-    const res = await fetch(`${MLB_API}/schedule?sportId=1&startDate=${today}&endDate=${seasonEnd}&gameType=R`);
+    const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&startDate=${today}&endDate=${seasonEnd}&gameType=R`);
     const data = await res.json();
     const counts = {};
     teamIds.forEach(id => counts[id] = 0);
@@ -519,13 +686,25 @@ async function loadGamesRemaining(teamIds) {
 
 async function renderStandings() {
   const el = document.getElementById('standingsContent');
-  if (!allData.standings) { el.innerHTML = '<div class="error-box">No standings available.</div>'; return; }
+  if (!allData.standings?.length) {
+    el.innerHTML = `<div class="error-box" style="padding:24px">
+      <strong>No standings data yet for ${CURRENT_YEAR}</strong><br><br>
+      The MLB API hasn't published standings for this season yet, or there are no games played.
+      <br><br><button onclick="init()" style="margin-top:8px;padding:6px 16px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:'Barlow Condensed';font-size:14px;letter-spacing:1px">RETRY</button>
+    </div>`;
+    return;
+  }
 
-  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING STANDINGS…</div></div>`;
-
+  // Render immediately with empty gamesRem, then load in background
   const allTeamIds = [];
   allData.standings.forEach(div => div.teamRecords.forEach(tr => allTeamIds.push(tr.team.id)));
-  const gamesRem = await loadGamesRemaining(allTeamIds);
+  const gamesRem = {}; // render first with empty, then refresh
+  loadGamesRemaining(allTeamIds).then(rem => {
+    // update GR badges once loaded without full re-render
+    Object.entries(rem).forEach(([tid, gr]) => {
+      document.querySelectorAll(`.gr-badge-${tid}`).forEach(el => { el.textContent = `${gr} GR`; el.style.display=''; });
+    });
+  }).catch(()=>{});
 
   const leagueWCIds = {};
   [103, 104].forEach(leagueId => {
@@ -591,7 +770,7 @@ async function renderStandings() {
 
       const pct = parseFloat(tr.winningPercentage || 0).toFixed(3).replace(/^0/, '');
       const gb = i === 0 ? `<span class="gb-leader">—</span>` : `<span class="gb-val">${tr.divisionGamesBack}</span>`;
-      const gr = gamesRem[tid] !== undefined ? `<span class="games-rem">${gamesRem[tid]} GR</span>` : '';
+      const gr = gamesRem[tid] !== undefined ? `<span class="games-rem gr-badge-${tid}">${gamesRem[tid]} GR</span>` : `<span class="games-rem gr-badge-${tid}" style="display:none"></span>`;
       const l10 = tr.records?.splitRecords?.find(s => s.type === 'lastTen');
       const l10str = l10 ? `${l10.wins}-${l10.losses}` : '—';
       const l10color = l10 ? (l10.wins > l10.losses ? 'var(--win)' : l10.wins < l10.losses ? 'var(--loss)' : 'var(--text)') : 'var(--muted)';
@@ -654,7 +833,8 @@ async function renderStandings() {
 
   html += `</div>`;
   el.innerHTML = html;
-  initTracker();
+  // Load tracker in background — don't block standings render
+  setTimeout(() => initTracker(), 0);
 }
 
 const TRACKER_DIVISIONS = {
@@ -732,12 +912,12 @@ async function loadTrackerData() {
   trackerDates = dates;
 
   const standingsFetches = dates.map(date =>
-    fetch(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division&date=${date}`)
+    fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division&date=${date}`)
       .then(r => r.json()).then(data => ({ date, records: data.records || [] })).catch(() => ({ date, records: [] }))
   );
 
   const scheduleFetches = dates.map(date =>
-    fetch(`${MLB_API}/schedule?sportId=1&date=${date}&gameType=R&hydrate=team,linescore`)
+    fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}&gameType=R&hydrate=team,linescore`)
       .then(r => r.json()).then(data => ({ date, dates: data.dates || [] })).catch(() => ({ date, dates: [] }))
   );
 
@@ -1399,29 +1579,48 @@ async function loadRosters() {
     return;
   }
 
-  const teamSet = new Map();
+  // Division order: AL East, AL Central, AL West, NL East, NL Central, NL West
+  const DIV_ORDER = [201, 202, 200, 204, 205, 203];
+  const DIV_LABELS = {
+    200: 'AL West', 201: 'AL East', 202: 'AL Central',
+    203: 'NL West', 204: 'NL East', 205: 'NL Central',
+  };
+
+  // Build a map: divId → sorted teamRecords
+  const divMap = {};
   allData.standings.forEach(div => {
-    div.teamRecords.forEach(tr => {
-      const id = tr.team.id;
-      const meta = TEAM_META[id] || {
-        name: tr.team.name,
-        abbr: tr.team.abbreviation || tr.team.fileCode?.toUpperCase() || String(id),
-        logo: `https://www.mlbstatic.com/team-logos/${id}.svg`,
-        color: '#1a56db'
-      };
-      teamSet.set(id, meta);
+    const divId = div.division?.id;
+    if (!divId) return;
+    const sorted = [...div.teamRecords].sort((a,b) => {
+      const pa = parseFloat(a.winningPercentage)||0, pb = parseFloat(b.winningPercentage)||0;
+      return pb - pa || b.wins - a.wins;
     });
+    divMap[divId] = sorted;
   });
 
-  const sorted = [...teamSet.entries()].sort((a,b) => a[1].name.localeCompare(b[1].name));
-
   let html = '';
-  sorted.forEach(([id, meta]) => {
-    html += `<div class="team-selector-item" id="ts-${id}" onclick="selectTeam(${id})">
-      <img src="${meta.logo}" alt="${meta.abbr}" onerror="this.style.display='none'" width="26" height="26">
-      <span class="team-selector-name">${meta.name}</span>
-      <span class="team-selector-abbr">${meta.abbr}</span>
-    </div>`;
+  DIV_ORDER.forEach(divId => {
+    const teams = divMap[divId];
+    if (!teams?.length) return;
+    html += `<div class="team-div-group">
+      <div class="team-div-label">${DIV_LABELS[divId] || ''}</div>`;
+    teams.forEach((tr, i) => {
+      const tid = tr.team.id;
+      const meta = TEAM_META[tid] || {
+        name: tr.team.name,
+        abbr: tr.team.abbreviation || String(tid),
+        logo: `https://www.mlbstatic.com/team-logos/${tid}.svg`,
+      };
+      const pos = i + 1;
+      const wl = `${tr.wins}-${tr.losses}`;
+      html += `<div class="team-selector-item" id="ts-${tid}" onclick="selectTeam(${tid})">
+        <span class="team-div-pos">${pos}</span>
+        <img src="${meta.logo}" alt="${meta.abbr}" onerror="this.style.display='none'" width="24" height="24">
+        <span class="team-selector-name">${meta.name}</span>
+        <span class="team-selector-wl">${wl}</span>
+      </div>`;
+    });
+    html += `</div>`;
   });
   listEl.innerHTML = html;
 }
@@ -1453,6 +1652,16 @@ async function selectTeam(teamId) {
       impact = await fetchTeamImpact(teamId);
       teamsImpactCache[teamId] = impact;
     }
+    // Fetch league team stats + career stats for all players in parallel
+    const allPids = [
+      ...Object.values(impact.hittersByPos).flat().map(p=>p.id),
+      ...impact.spList.map(p=>p.id),
+      ...impact.clList.map(p=>p.id),
+      ...impact.rpList.map(p=>p.id),
+      ...impact.ilPlayers.map(p=>p.id),
+    ].filter(Boolean);
+    const uniquePids = [...new Set(allPids)];
+    await Promise.all([fetchLeagueTeamStats(), fetchCareerStats(uniquePids)]);
     renderDiamondPanel(teamId, impact);
   } catch(e) {
     panel.innerHTML += `<div class="error-box">Error loading impact: ${e.message}</div>`;
@@ -1472,12 +1681,12 @@ async function fetchTeamImpact(teamId) {
 
   // Fetch roster (hydrated), schedule (for boxscores + yesterday's games), and IL list in parallel
   const [rosterData, schedData, ilData] = await Promise.all([
-    fetch(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${season}&hydrate=person(stats(group=[hitting,pitching],type=season,season=${season}))`)
+    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${season}&hydrate=person(stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
-    fetch(`${MLB_API}/schedule?sportId=1&teamId=${teamId}&season=${season}&gameType=R&startDate=${getDateOffset(-25)}&endDate=${today}`)
+    fetchWithTimeout(`${MLB_API}/schedule?sportId=1&teamId=${teamId}&season=${season}&gameType=R&startDate=${getDateOffset(-25)}&endDate=${today}`)
       .then(r => r.json()).catch(() => ({ dates: [] })),
     // 40-man roster includes IL players with their status
-    fetch(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(stats(group=[hitting,pitching],type=season,season=${season}))`)
+    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
   ]);
 
@@ -1521,10 +1730,10 @@ async function fetchTeamImpact(teamId) {
     for (let i = 0; i < missingPids.length; i += 20) {
       const chunk = missingPids.slice(i, i + 20).join(',');
       await Promise.all([
-        fetch(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=hitting,season=${season})`).then(r=>r.json()).then(d=>{
+        fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=hitting,season=${season})`).then(r=>r.json()).then(d=>{
           (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat; if(s) hitStatMap[p.id]=s; });
         }).catch(()=>{}),
-        fetch(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=pitching,season=${season})`).then(r=>r.json()).then(d=>{
+        fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=pitching,season=${season})`).then(r=>r.json()).then(d=>{
           (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat; if(s) pitchStatMap[p.id]=s; });
         }).catch(()=>{})
       ]);
@@ -1557,7 +1766,7 @@ async function fetchTeamImpact(teamId) {
 
   await Promise.all(last15.map(async (gamePk) => {
     try {
-      const bData = await fetch(`${MLB_API}/game/${gamePk}/boxscore`).then(r => r.json());
+      const bData = await fetchWithTimeout(`${MLB_API}/game/${gamePk}/boxscore`).then(r => r.json());
       const teamKey = Object.keys(bData.teams||{}).find(k => bData.teams[k].team?.id === teamId);
       if (!teamKey) return;
       const gameDate = gamePkToDate[gamePk] || null;
@@ -1690,6 +1899,29 @@ async function fetchTeamImpact(teamId) {
     }
   });
 
+  // DEDUP: each player should appear in only ONE position on the diamond.
+  // After sorting, assign every player to the position where they rank highest.
+  const assignedPid2Pos = {}; // pid → assigned position
+  const POS_PRIORITY = ['C','SS','2B','3B','1B','CF','LF','RF','DH'];
+  POS_PRIORITY.forEach(pos => {
+    if (!hittersByPos[pos]) return;
+    // Remove players already assigned to a different position
+    hittersByPos[pos] = hittersByPos[pos].filter(p => !(p.id in assignedPid2Pos));
+    // Assign the new #1 player to this position
+    if (hittersByPos[pos][0]) assignedPid2Pos[hittersByPos[pos][0].id] = pos;
+  });
+  // Second pass: remove assigned players from alternate slots too
+  // A player can only appear as alternate at other positions if they haven't been assigned yet
+  // Since we assigned in priority order, anyone in assignedPid2Pos should only appear as starter at their assigned pos
+  POS_PRIORITY.forEach(pos => {
+    if (!hittersByPos[pos]) return;
+    hittersByPos[pos] = hittersByPos[pos].filter((p, i) => {
+      if (i === 0) return true; // starter at this pos — already confirmed no conflict above
+      // alternates: only if not assigned to any position
+      return !(p.id in assignedPid2Pos);
+    });
+  });
+
   // ── PITCHERS ─────────────────────────────────────────────────────────────
   const todayDate = new Date(today + 'T12:00:00');
   const pitcherEntries = roster
@@ -1789,7 +2021,15 @@ async function fetchTeamImpact(teamId) {
     return a.ilDays - b.ilDays;
   });
 
-  return { hittersByPos, spList, clList, rpList, ilPlayers };
+  // ── SP vs RP innings split (from season stats of classified pitchers) ──
+  let spSeasonIp = 0, totalSeasonIp = 0;
+  [...spList, ...clList, ...rpList].forEach(p => {
+    const ip = parseFloat(p.stats?.inningsPitched) || 0;
+    totalSeasonIp += ip;
+    if (spList.includes(p)) spSeasonIp += ip;
+  });
+
+  return { hittersByPos, spList, clList, rpList, ilPlayers, spSeasonIp, totalSeasonIp };
 }
 
 function restDotHTML(days) {
@@ -1822,18 +2062,42 @@ function playerDetailHTML(p, type, roleOrPos) {
 
   const throwsCode = p.throws || '?';
   const handBadge = isHitter
-    ? (p.bats && p.bats !== '?' ? `<span class="hand-badge">${p.bats==='L'?'LHB':p.bats==='S'?'SWI':'RHB'}</span>` : '')
+    ? (p.bats && p.bats !== '?' ? `<span class="hand-badge${p.bats==='L'?' lhb':p.bats==='S'?' swi':''}">${p.bats==='L'?'LHB':p.bats==='S'?'SWI':'RHB'}</span>` : '')
     : (throwsCode !== '?' ? `<span class="hand-badge ${throwsCode==='L'?'lhp':''}">${throwsCode==='L'?'LHP':'RHP'}</span>` : '');
+
+  // Secondary positions: all positions the player has played this season except current pos
+  let secPosBadges = '';
+  if (isHitter && p.posCount) {
+    const VALID_POS = new Set(['C','1B','2B','SS','3B','LF','CF','RF','DH']);
+    const otherPos = Object.entries(p.posCount)
+      .filter(([pos, count]) => pos !== roleOrPos && VALID_POS.has(pos) && count >= 2)
+      .sort((a,b) => b[1]-a[1])
+      .slice(0, 2)
+      .map(([pos]) => pos);
+    secPosBadges = otherPos.map(pos => `<span class="sec-pos-badge">${pos}</span>`).join('');
+  }
   const rookieBadge = p.isRookie ? `<span class="rookie-badge">R</span>` : '';
   const restBadge = (!isHitter && p.restDays !== null && p.restDays !== undefined)
     ? restDotHTML(p.restDays) : '';
+
+  // Trend vs career
+  let trendBadge = '';
+  if (isHitter) {
+    const career = careerStatsCache[p.id];
+    if (career?.ops && p.ops) trendBadge = trendBadgeHTML(p.ops, career.ops, 'ops');
+  } else {
+    const career = careerStatsCache[p.id];
+    const s = p.stats || {};
+    const currentEra = parseFloat(s.era);
+    if (career?.era && !isNaN(currentEra) && currentEra > 0) trendBadge = trendBadgeHTML(currentEra, career.era, 'era');
+  }
 
   return `<div class="impact-row">
     <div class="impact-row-left">
       <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
       <div class="impact-name-block">
-        <div class="impact-name">${p.name} ${handBadge}${rookieBadge}${restBadge}</div>
+        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${restBadge}${trendBadge}</div>
         <div class="impact-stats-line">${statsLine}</div>
       </div>
     </div>
@@ -1847,7 +2111,138 @@ function playerDetailHTML(p, type, roleOrPos) {
   </div>`;
 }
 
+function renderTeamStatsPanel(teamId, impact) {
+  const map = leagueTeamStatsCache || {};
+  const mine = map[teamId];
+  if (!mine) return '';
+
+  // Build arrays for ranking
+  const allTeams = Object.entries(map);
+  function rank(key, lowerBetter = false) {
+    // Sort best→worst: for lowerBetter asc (lowest ERA = rank 1), for higherBetter desc (highest AVG = rank 1)
+    const vals = allTeams.map(([,v]) => v[key]).filter(x => x && x > 0).sort((a,b) => lowerBetter ? a-b : b-a);
+    const myVal = mine[key];
+    if (!myVal) return { rank: '—', total: vals.length, pct: 0.5 };
+    // findIndex of first element that is at least as good as myVal
+    const pos = vals.findIndex(v => lowerBetter ? v >= myVal : v <= myVal);
+    const r = pos === -1 ? vals.length : pos + 1;
+    const total = vals.length;
+    // pct: 1 = best (rank 1), 0 = worst (rank total)
+    const pct = total > 1 ? (total - r) / (total - 1) : 1;
+    return { rank: r, total, pct };
+  }
+
+  function rankBadge(r, lowerBetter = false) {
+    if (r.rank === '—') return '<span class="team-stat-rank mid">—</span>';
+    const label = `#${r.rank} / ${r.total}`;
+    // top third = good, bottom third = bad (accounting for direction)
+    const pct = r.pct; // 0=worst, 1=best
+    const cls = pct >= 0.67 ? 'top' : pct <= 0.33 ? 'bot' : 'mid';
+    return `<span class="team-stat-rank ${cls}">${label}</span>`;
+  }
+
+  function leagueBar(key, lowerBetter = false, color) {
+    const vals = allTeams.map(([,v]) => v[key]).filter(x => x && x > 0);
+    if (!vals.length) return '';
+    const myVal = mine[key] || 0;
+    const minVal = Math.min(...vals), maxVal = Math.max(...vals);
+    const range = maxVal - minVal || 1;
+    // pct = how good (0=worst, 1=best)
+    const pct = lowerBetter ? ((maxVal - myVal) / range) : ((myVal - minVal) / range);
+    const fillPct = Math.max(3, Math.min(97, Math.round(pct * 100)));
+    const decimals = key === 'era' || key === 'whip' ? 2 : 3;
+    // worst label on left, best label on right
+    const leftLabel = lowerBetter ? maxVal.toFixed(decimals) : minVal.toFixed(decimals).replace(/^0/,'');
+    const rightLabel = lowerBetter ? minVal.toFixed(decimals) : maxVal.toFixed(decimals).replace(/^0/,'');
+    return `<div class="team-stat-bar-wrap" style="margin-top:2px">
+      <div class="team-stat-bar-fill" style="width:${fillPct}%;background:${color}"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:2px">
+        <span style="font-size:9px;color:var(--muted);font-family:'Barlow Condensed'">${leftLabel}</span>
+        <span style="font-size:9px;color:var(--muted);font-family:'Barlow Condensed'">${rightLabel}</span>
+      </div>
+    </div>`;
+  }
+
+  const avgR  = rank('avg');  const opsR  = rank('ops');
+  const eraR  = rank('era', true); const whipR = rank('whip', true);
+
+  // For batting: higher = better → green when pct >= .67
+  // For pitching: lower = better → green when pct >= .67 (pct already normalized as "how good")
+  const avgColor  = avgR.pct  >= .67 ? 'var(--win)' : avgR.pct  <= .33 ? 'var(--loss)' : '#b45309';
+  const opsColor  = opsR.pct  >= .67 ? 'var(--win)' : opsR.pct  <= .33 ? 'var(--loss)' : '#b45309';
+  const eraColor  = eraR.pct  >= .67 ? 'var(--win)' : eraR.pct  <= .33 ? 'var(--loss)' : '#b45309';
+  const whipColor = whipR.pct >= .67 ? 'var(--win)' : whipR.pct <= .33 ? 'var(--loss)' : '#b45309';
+
+  // Innings split — use SP/RP breakdown calculated from classified pitchers' season stats
+  const spSeasonIp    = impact?.spSeasonIp    || 0;
+  const totalSeasonIp = impact?.totalSeasonIp || 0;
+  const spPct = totalSeasonIp > 0 ? Math.round((spSeasonIp / totalSeasonIp) * 100) : 0;
+  const rpPct = 100 - spPct;
+  // Translate to "of 9 innings"
+  const spInnings = (spPct / 100 * 9).toFixed(1);
+  const rpInnings = (rpPct / 100 * 9).toFixed(1);
+
+  return `<div class="team-stats-panel">
+    <div class="team-stats-title">Team Stats vs League</div>
+    <div class="team-stats-grid">
+      <div class="team-stat-row">
+        <div class="team-stat-header">
+          <span class="team-stat-label">AVG</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span class="team-stat-val" style="color:${avgColor}">${mine.avg ? mine.avg.toFixed(3).replace(/^0/,'') : '—'}</span>
+            ${rankBadge(avgR)}
+          </div>
+        </div>
+        ${leagueBar('avg', false, avgColor)}
+      </div>
+      <div class="team-stat-row">
+        <div class="team-stat-header">
+          <span class="team-stat-label">OPS</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span class="team-stat-val" style="color:${opsColor}">${mine.ops ? mine.ops.toFixed(3).replace(/^0/,'') : '—'}</span>
+            ${rankBadge(opsR)}
+          </div>
+        </div>
+        ${leagueBar('ops', false, opsColor)}
+      </div>
+      <div class="team-stat-row">
+        <div class="team-stat-header">
+          <span class="team-stat-label">ERA</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span class="team-stat-val" style="color:${eraColor}">${mine.era ? mine.era.toFixed(2) : '—'}</span>
+            ${rankBadge(eraR, true)}
+          </div>
+        </div>
+        ${leagueBar('era', true, eraColor)}
+      </div>
+      <div class="team-stat-row">
+        <div class="team-stat-header">
+          <span class="team-stat-label">WHIP</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span class="team-stat-val" style="color:${whipColor}">${mine.whip ? mine.whip.toFixed(2) : '—'}</span>
+            ${rankBadge(whipR, true)}
+          </div>
+        </div>
+        ${leagueBar('whip', true, whipColor)}
+      </div>
+      ${totalSeasonIp > 0 ? `
+      <div class="team-stat-row innings-split-row">
+        <div class="innings-split-title">Innings trabajados por abridores vs bullpen (de 9)</div>
+        <div class="innings-bar-wrap">
+          <div class="innings-bar-sp" style="width:${spPct}%">${spPct >= 18 ? `SP ${spInnings}` : ''}</div>
+          <div class="innings-bar-rp">${rpPct >= 18 ? `RP ${rpInnings}` : ''}</div>
+        </div>
+        <div class="innings-legend">
+          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:var(--accent)"></div>Abridores ${spInnings} inn (${spPct}%)</div>
+          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:#94a3b8"></div>Bullpen ${rpInnings} inn (${rpPct}%)</div>
+        </div>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderDiamondPanel(teamId, impact) {
+
   const panel = document.getElementById('diamondPanel');
   const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1a56db' };
   const { hittersByPos, spList, clList, rpList, ilPlayers = [] } = impact;
@@ -1933,6 +2328,10 @@ function renderDiamondPanel(teamId, impact) {
         .replace(/(\d+)[\s-]*day[\s-]*injured[\s-]*list/i,'$1d IL')
         .replace(/injured list/i,'IL');
       const posLabel = p.isPitcher ? (p.pos||'P') : (p.pos||'?');
+      const ilCareer = careerStatsCache[p.id];
+      let ilTrend = '';
+      if (p.isPitcher && ilCareer?.era && p.stats?.era) ilTrend = trendBadgeHTML(parseFloat(p.stats.era), ilCareer.era, 'era');
+      else if (!p.isPitcher && ilCareer?.ops && p.ops) ilTrend = trendBadgeHTML(p.ops, ilCareer.ops, 'ops');
       return `<div class="il-row">
         <div class="impact-row-left">
           <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
@@ -1940,7 +2339,7 @@ function renderDiamondPanel(teamId, impact) {
           <div class="impact-name-block">
             <div class="impact-name" style="opacity:.8">${p.name}
               <span style="font-size:10px;font-weight:600;color:var(--muted)">${posLabel}</span>
-              <span class="il-badge">${ilLabel}</span>
+              <span class="il-badge">${ilLabel}</span>${ilTrend}
             </div>
             <div class="impact-stats-line">${statsLine}</div>
           </div>
@@ -1986,6 +2385,7 @@ function renderDiamondPanel(teamId, impact) {
         <div class="dp-subtitle">SEASON IMPACT — ${CURRENT_YEAR}</div>
       </div>
     </div>
+    ${renderTeamStatsPanel(teamId, impact)}
 
     <div class="diamond-box">
       <div class="diamond-section-label">Defensive Shift</div>
@@ -2054,20 +2454,100 @@ function selectDiamondKey(key, teamId) {
   }
 }
 
+// ── League-wide team stats cache ──────────────────────────────────────────
+let leagueTeamStatsCache = null; // { teamId: { avg, ops, era, whip, spIp, totalIp } }
+
+async function fetchLeagueTeamStats() {
+  if (leagueTeamStatsCache) return leagueTeamStatsCache;
+  try {
+    const [hitRes, pitchRes] = await Promise.all([
+      fetchWithTimeout(`${MLB_API}/teams/stats?season=${CURRENT_YEAR}&sportId=1&group=hitting&stats=season&gameType=R`).then(r=>r.json()).catch(()=>({stats:[]})),
+      fetchWithTimeout(`${MLB_API}/teams/stats?season=${CURRENT_YEAR}&sportId=1&group=pitching&stats=season&gameType=R`).then(r=>r.json()).catch(()=>({stats:[]})),
+    ]);
+    const map = {};
+    (hitRes.stats?.[0]?.splits || []).forEach(s => {
+      const id = s.team?.id; if (!id) return;
+      map[id] = map[id] || {};
+      map[id].avg = parseFloat(s.stat?.avg) || 0;
+      map[id].ops = parseFloat(s.stat?.ops) || 0;
+    });
+    (pitchRes.stats?.[0]?.splits || []).forEach(s => {
+      const id = s.team?.id; if (!id) return;
+      map[id] = map[id] || {};
+      map[id].era  = parseFloat(s.stat?.era)  || 0;
+      map[id].whip = parseFloat(s.stat?.whip) || 0;
+      // gamesStarted innings vs total innings → SP usage %
+      map[id].spIp    = parseFloat(s.stat?.inningsPitchedStart) || 0;
+      map[id].totalIp = parseFloat(s.stat?.inningsPitched)      || 0;
+    });
+    leagueTeamStatsCache = map;
+    return map;
+  } catch(e) { return {}; }
+}
+
+// ── Career stats cache (for trend detection) ──────────────────────────────
+const careerStatsCache = {};
+
+async function fetchCareerStats(pids) {
+  const missing = pids.filter(id => !(id in careerStatsCache));
+  if (!missing.length) return;
+  // Exclude current season so the "vs career" comparison is meaningful
+  const prevYear = CURRENT_YEAR - 1;
+  for (let i = 0; i < missing.length; i += 20) {
+    const chunk = missing.slice(i, i+20).join(',');
+    await Promise.all([
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=hitting,startSeason=2000,endSeason=${prevYear})`).then(r=>r.json()).then(d=>{
+        (d.people||[]).forEach(p => {
+          const s = p.stats?.find(g => g.group?.displayName==='hitting')?.splits?.[0]?.stat;
+          careerStatsCache[p.id] = careerStatsCache[p.id] || {};
+          if (s) { careerStatsCache[p.id].ops = parseFloat(s.ops)||0; careerStatsCache[p.id].avg = parseFloat(s.avg)||0; }
+        });
+      }).catch(()=>{}),
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${prevYear})`).then(r=>r.json()).then(d=>{
+        (d.people||[]).forEach(p => {
+          const s = p.stats?.find(g => g.group?.displayName==='pitching')?.splits?.[0]?.stat;
+          careerStatsCache[p.id] = careerStatsCache[p.id] || {};
+          if (s) { careerStatsCache[p.id].era = parseFloat(s.era)||0; careerStatsCache[p.id].whip = parseFloat(s.whip)||0; }
+        });
+      }).catch(()=>{})
+    ]);
+  }
+}
+
+function trendBadgeHTML(current, career, metric) {
+  if (!career || !current) return '';
+  // For ERA/WHIP: lower is better; for OPS/AVG: higher is better
+  const lowerBetter = metric === 'era' || metric === 'whip';
+  const delta = lowerBetter ? career - current : current - career;
+  const threshold = metric === 'ops' ? 0.030 : metric === 'avg' ? 0.010 : metric === 'era' ? 0.30 : 0.05;
+  if (career === 0) return ''; // no career data
+  const pct = Math.abs(delta) / (career || 1);
+  if (delta > threshold || pct > 0.08) {
+    return `<span class="trend-badge trend-up" title="Above career avg">▲ ${Math.abs(delta).toFixed(metric==='ops'||metric==='avg'?3:2)} vs career</span>`;
+  } else if (delta < -threshold || pct < -0.08) {
+    return `<span class="trend-badge trend-down" title="Below career avg">▼ ${Math.abs(delta).toFixed(metric==='ops'||metric==='avg'?3:2)} vs career</span>`;
+  } else {
+    return `<span class="trend-badge trend-flat" title="Near career avg">≈ avg</span>`;
+  }
+}
+
 const loaded = { standings: true, bracket: false, schedule: false, rosters: false };
 
 function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-  document.getElementById(`tab-${tab}`).classList.add('active');
-
-  if (!loaded[tab]) {
-    loaded[tab] = true;
-    if (tab === 'bracket') loadBracket();
-    if (tab === 'schedule') loadSchedule();
-    if (tab === 'rosters') loadRosters();
-  }
+  try {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const btn = document.querySelector(`[onclick="switchTab('${tab}')"]`);
+    if (btn) btn.classList.add('active');
+    const panel = document.getElementById(`tab-${tab}`);
+    if (panel) panel.classList.add('active');
+    if (!loaded[tab]) {
+      loaded[tab] = true;
+      if (tab === 'bracket') loadBracket();
+      if (tab === 'schedule') loadSchedule();
+      if (tab === 'rosters') loadRosters();
+    }
+  } catch(e) { console.error('switchTab:', e); }
 }
 
 init();
