@@ -545,6 +545,7 @@
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('standings')">PLAYOFF RACE</button>
   <button class="tab-btn" onclick="switchTab('bracket')">BRACKET</button>
+  <button class="tab-btn" onclick="switchTab('topgames')">TOP GAMES</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
 </div>
 
@@ -561,8 +562,11 @@
     <div id="scheduleContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING SCHEDULE...</div></div></div>
   </div>
 
+  <div id="tab-topgames" class="tab-panel">
+    <div id="topGamesContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
+  </div>
+
   <div id="tab-rosters" class="tab-panel">
-    <div class="section-title">TEAM IMPACT — DIAMOND VIEW</div>
     <div class="teams-layout">
       <div class="team-selector-card">
         <div class="team-selector-header">SELECT TEAM</div>
@@ -1560,28 +1564,47 @@ function getDiamondPlayerColor(value, type) {
     if (value >= 0.650) return '#94a3b8';
     return '#dc2626';
   } else {
-    if (!value || value <= 0) return '#9ca3af';
-    if (value >= 80) return '#16a34a';
-    if (value >= 65) return '#1a56db';
-    if (value >= 50) return '#94a3b8';
+    // FORMA 0-100. Media MLB ≈ 51. ≥75 élite, ≥60 bueno, ≥40 medio, <40 malo
+    if (value == null || value < 0) return '#9ca3af';
+    if (value >= 75) return '#16a34a';
+    if (value >= 60) return '#1a56db';
+    if (value >= 40) return '#94a3b8';
     return '#dc2626';
   }
 }
 
+// ── FORMA score system (0–100, never exceeds 100) ─────────────────────────
+// Media MLB 2024: ERA 4.15, WHIP 1.27 → FORMA 51
+// Kershaw carrera: ERA 2.53, WHIP 1.018 → FORMA 76
+const ERA_BEST = 1.50,  ERA_WORST = 6.00;
+const WHIP_BEST = 0.80, WHIP_WORST = 2.00;
+const MIN_IP_RELIABLE = 3;
+
+function calcBaseScore(era, whip) {
+  const eraScore = !isNaN(era) && era >= 0
+    ? Math.max(0, Math.min(100, ((ERA_WORST - era) / (ERA_WORST - ERA_BEST)) * 100))
+    : null;
+  const whipScore = !isNaN(whip) && whip >= 0
+    ? Math.max(0, Math.min(100, ((WHIP_WORST - whip) / (WHIP_WORST - WHIP_BEST)) * 100))
+    : null;
+  const components = [eraScore, whipScore].filter(v => v !== null);
+  if (components.length === 0) return null;
+  return Math.round(components.reduce((a, b) => a + b, 0) / components.length);
+}
+
+function calcFormaScore(eraSeason, whipSeason, eraRecent, whipRecent, ipRecent) {
+  const base = calcBaseScore(eraSeason, whipSeason);
+  if (base === null) return null;
+  const hasRecent = !isNaN(eraRecent) && !isNaN(whipRecent) && (ipRecent || 0) >= MIN_IP_RELIABLE;
+  if (!hasRecent) return base;
+  const recent = calcBaseScore(eraRecent, whipRecent);
+  if (recent === null) return base;
+  return Math.round(base * 0.85 + recent * 0.15);
+}
+
 function calcPitcherScore(stat) {
-  if (!stat) return 0;
-  const era  = parseFloat(stat.era);
-  const whip = parseFloat(stat.whip);
-  const ip   = parseFloat(stat.inningsPitched) || 0;
-  const sv   = parseInt(stat.saves) || 0;
-
-  let score = 0;
-  if (!isNaN(era))  score += Math.max(0, 5 - era)  * 15;
-  if (!isNaN(whip)) score += Math.max(0, 2 - whip) * 20;
-  score += ip * 2;
-  score += sv * 5;
-
-  return Math.max(1, Math.round(score));
+  if (!stat) return null;
+  return calcBaseScore(parseFloat(stat.era), parseFloat(stat.whip));
 }
 
 async function loadRosters() {
@@ -1664,7 +1687,6 @@ async function selectTeam(teamId) {
       impact = await fetchTeamImpact(teamId);
       teamsImpactCache[teamId] = impact;
     }
-    // Fetch league team stats + career stats for all players in parallel
     const allPids = [
       ...Object.values(impact.hittersByPos).flat().map(p=>p.id),
       ...impact.spList.map(p=>p.id),
@@ -1673,7 +1695,26 @@ async function selectTeam(teamId) {
       ...impact.ilPlayers.map(p=>p.id),
     ].filter(Boolean);
     const uniquePids = [...new Set(allPids)];
-    await Promise.all([fetchLeagueTeamStats(), fetchCareerStats(uniquePids)]);
+    const pitcherPids = [...new Set([
+      ...impact.spList.map(p=>p.id),
+      ...impact.clList.map(p=>p.id),
+      ...impact.rpList.map(p=>p.id),
+      ...impact.ilPlayers.filter(p=>p.isPitcher).map(p=>p.id),
+    ])].filter(Boolean);
+    await Promise.all([
+      fetchLeagueTeamStats(),
+      fetchCareerStats(uniquePids),
+      fetchRecentPitching(pitcherPids),
+    ]);
+    // Recalculate FORMA with recent data now available
+    [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => {
+      const recent = recentPitchingCache[p.id];
+      const s = p.stats || {};
+      p.score = calcFormaScore(
+        parseFloat(s.era), parseFloat(s.whip),
+        recent?.era, recent?.whip, recent?.ip
+      ) ?? 0;
+    });
     renderDiamondPanel(teamId, impact);
   } catch(e) {
     panel.innerHTML += `<div class="error-box">Error loading impact: ${e.message}</div>`;
@@ -1841,6 +1882,9 @@ async function fetchTeamImpact(teamId) {
 
   // ── HITTERS ──────────────────────────────────────────────────────────────
   const VALID_POS = new Set(['C','1B','2B','SS','3B','LF','CF','RF','DH']);
+  // Generic positions that map to a specific pos — but these players' REAL pos
+  // must be inferred from boxscores since 'OF' doesn't tell us CF vs LF vs RF
+  const GENERIC_POS = new Set(['OF','IF','UT','PH','PR','DH']);
   const POS_MAP   = { OF:'LF', IF:'SS', UT:'DH', PH:'DH', PR:'DH' };
 
   const hittersByPos = {};
@@ -1848,104 +1892,110 @@ async function fetchTeamImpact(teamId) {
   roster.filter(p => p.position?.abbreviation !== 'P').forEach(p => {
     const pid      = p.person?.id;
     if (!pid) return;
-    const hs        = hitStatMap[pid] || null;
-    const ops       = parseFloat(hs?.ops) || 0;
-    const rosterPos = p.position?.abbreviation || '';
-    const isTWP     = rosterPos === 'TWP';
+    const hs           = hitStatMap[pid] || null;
+    const ops          = parseFloat(hs?.ops) || 0;
+    const gamesPlayed  = parseInt(hs?.gamesPlayed) || 0;
+    const rosterPos    = p.position?.abbreviation || '';
+    const isTWP        = rosterPos === 'TWP';
+
+    // Determine the player's TRUE primary position:
+    // - If roster gives a specific pos (C, 1B, SS, 3B, 2B, CF, LF, RF) → use it
+    // - If roster gives a generic (OF, IF, UT...) → find their most-played pos from boxscores
+    // - Fallback to POS_MAP or DH
+    let truePrimaryPos = null;
+    if (VALID_POS.has(rosterPos)) {
+      truePrimaryPos = rosterPos; // specific, trust it
+    } else if (GENERIC_POS.has(rosterPos)) {
+      // Find which valid position they've appeared at most in boxscores
+      const posEntries = Object.entries(hitterPosCount[pid] || {})
+        .filter(([pp]) => VALID_POS.has(pp))
+        .sort((a, b) => b[1] - a[1]);
+      truePrimaryPos = posEntries.length > 0 ? posEntries[0][0] : (POS_MAP[rosterPos] || 'DH');
+    }
 
     const playerData = {
       id: pid, name: p.person?.fullName||'?', lastName: p.person?.lastName||'?',
       number: p.jerseyNumber||'', bats: p.person?.batSide?.code||'?',
       dhApps: dhCount[pid] || 0,
       isRookie: rookiePids.has(pid),
+      gamesPlayed,
       ops, stats: hs,
-      posCount: hitterPosCount[pid] || {},   // count at each pos
-      posRecent: hitterPosRecent[pid] || {},  // last date at each pos
+      rosterPos,
+      truePrimaryPos, // the position we'll use for starter assignment
+      posCount: hitterPosCount[pid] || {},
+      posRecent: hitterPosRecent[pid] || {},
       photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
     };
 
     if (isTWP) {
-      // TWP always bats as DH
       if (!hittersByPos['DH']) hittersByPos['DH'] = [];
       hittersByPos['DH'].push({ ...playerData, pos: 'DH' });
       return;
     }
 
-    // Add player to every valid position they've appeared at in recent boxscores
-    const seenPositions = new Set();
-    Object.entries(hitterPosCount[pid] || {}).forEach(([pp]) => {
-      if (!VALID_POS.has(pp)) return;
-      seenPositions.add(pp);
-      if (!hittersByPos[pp]) hittersByPos[pp] = [];
-      hittersByPos[pp].push({ ...playerData, pos: pp });
-    });
-
-    // Fallback: if no boxscore data, use roster position
-    if (seenPositions.size === 0) {
-      const fallback = VALID_POS.has(rosterPos) ? rosterPos : (POS_MAP[rosterPos] || 'DH');
-      if (!hittersByPos[fallback]) hittersByPos[fallback] = [];
-      hittersByPos[fallback].push({ ...playerData, pos: fallback });
+    // Add player to their true primary position
+    const addedPositions = new Set();
+    if (truePrimaryPos) {
+      addedPositions.add(truePrimaryPos);
+      if (!hittersByPos[truePrimaryPos]) hittersByPos[truePrimaryPos] = [];
+      hittersByPos[truePrimaryPos].push({ ...playerData, pos: truePrimaryPos });
     }
-  });
 
-  // Sort each position: primary key = appearances AT THAT POSITION (desc),
-  // tiebreak = most recent appearance at that position (desc), then OPS
-  Object.keys(hittersByPos).forEach(pos => {
-    if (pos === 'DH') {
-      hittersByPos[pos].sort((a, b) =>
-        (b.dhApps - a.dhApps) ||
-        ((b.posRecent['DH']||'') > (a.posRecent['DH']||'') ? 1 : -1) ||
-        (b.ops - a.ops)
-      );
-    } else {
-      hittersByPos[pos].sort((a, b) => {
-        const countA = a.posCount[pos] || 0;
-        const countB = b.posCount[pos] || 0;
-        if (countB !== countA) return countB - countA;
-        // Tiebreak: more recent at this position
-        const recentA = a.posRecent[pos] || '';
-        const recentB = b.posRecent[pos] || '';
-        if (recentB !== recentA) return recentB > recentA ? 1 : -1;
-        return b.ops - a.ops;
+    // Also add to any OTHER positions seen in recent boxscores (for versatility / alternatives)
+    Object.entries(hitterPosCount[pid] || {})
+      .filter(([pp, cnt]) => VALID_POS.has(pp) && !addedPositions.has(pp) && cnt >= 2)
+      .forEach(([pp]) => {
+        addedPositions.add(pp);
+        if (!hittersByPos[pp]) hittersByPos[pp] = [];
+        hittersByPos[pp].push({ ...playerData, pos: pp });
       });
+
+    if (addedPositions.size === 0) {
+      if (!hittersByPos['DH']) hittersByPos['DH'] = [];
+      hittersByPos['DH'].push({ ...playerData, pos: 'DH' });
     }
   });
 
-  // DEDUP: assign each player to their PRIMARY position (most appearances).
-  // They can still appear as ALTERNATES at other positions they've played.
-  const primaryPos = {}; // pid → their primary assigned position
+  // Sort each position by: native (truePrimaryPos matches) first, then gamesPlayed, then posCount, then OPS
+  Object.keys(hittersByPos).forEach(pos => {
+    hittersByPos[pos].sort((a, b) => {
+      const aNative = a.truePrimaryPos === pos ? 1 : 0;
+      const bNative = b.truePrimaryPos === pos ? 1 : 0;
+      if (bNative !== aNative) return bNative - aNative;
+      if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
+      return (b.posCount[pos] || 0) - (a.posCount[pos] || 0) || b.ops - a.ops;
+    });
+  });
+
+  // DEDUP: assign each player to their truePrimaryPos as starter.
+  // They can still appear as alternates at other positions they've played.
+  const primaryPos = {};
   const POS_PRIORITY = ['C','SS','2B','3B','1B','CF','LF','RF','DH'];
 
-  // First pass: assign primary positions in priority order (prevents two players competing for SS etc.)
   POS_PRIORITY.forEach(pos => {
     if (!hittersByPos[pos]) return;
-    // Find first unassigned player (they become starter here)
-    const starterIdx = hittersByPos[pos].findIndex(p => !(p.id in primaryPos));
+    // Best unassigned player whose truePrimaryPos is this position
+    const starterIdx = hittersByPos[pos].findIndex(p =>
+      !(p.id in primaryPos) && p.truePrimaryPos === pos
+    );
     if (starterIdx >= 0) {
       primaryPos[hittersByPos[pos][starterIdx].id] = pos;
-      // Move this player to front
       if (starterIdx > 0) {
-        const [starter] = hittersByPos[pos].splice(starterIdx, 1);
-        hittersByPos[pos].unshift(starter);
+        const [s] = hittersByPos[pos].splice(starterIdx, 1);
+        hittersByPos[pos].unshift(s);
       }
     }
+    // If still no starter, leave position empty (don't invent)
   });
 
-  // Second pass: for each position, keep:
-  // - index 0: the assigned primary starter (already set)
-  // - alternates: players whose primary position is different (they can cover here)
-  // Sort alternates: primary-pos players who play here occasionally come first
+  // Second pass: keep only alts that aren't already starters elsewhere
   POS_PRIORITY.forEach(pos => {
     if (!hittersByPos[pos]) return;
-    // Separate starter from rest
     const [starter, ...rest] = hittersByPos[pos];
-    // Filter alternates: only keep players whose primary is different from this pos
-    // (avoids showing a player as their own backup)
-    const alts = rest.filter(p => {
-      const prim = primaryPos[p.id];
-      return !prim || prim !== pos; // show if their primary is a different position
-    });
-    hittersByPos[pos] = starter ? [starter, ...alts] : alts;
+    // starter must be the assigned one; others are alts only if their primaryPos differs
+    hittersByPos[pos] = starter
+      ? [starter, ...rest.filter(p => primaryPos[p.id] !== pos)]
+      : rest.filter(p => primaryPos[p.id] !== pos);
   });
 
   // ── PITCHERS ─────────────────────────────────────────────────────────────
@@ -2091,21 +2141,29 @@ function playerDetailHTML(p, type, roleOrPos) {
     ? (p.bats && p.bats !== '?' ? `<span class="hand-badge${p.bats==='L'?' lhb':p.bats==='S'?' swi':''}">${p.bats==='L'?'LHB':p.bats==='S'?'SWI':'RHB'}</span>` : '')
     : (throwsCode !== '?' ? `<span class="hand-badge ${throwsCode==='L'?'lhp':''}">${throwsCode==='L'?'LHP':'RHP'}</span>` : '');
 
-  // Secondary positions: all positions the player has played (≥2 times), sorted by appearances desc
-  // Shows complete versatility picture — current position is highlighted differently if included
+  // Secondary positions: native roster pos first (green), then by appearances desc
   let secPosBadges = '';
   if (isHitter && p.posCount) {
     const VALID_POS = new Set(['C','1B','2B','SS','3B','LF','CF','RF','DH']);
+    const nativePos = p.truePrimaryPos || null;
     const allPos = Object.entries(p.posCount)
       .filter(([pos, count]) => VALID_POS.has(pos) && count >= 2)
-      .sort((a,b) => b[1]-a[1])
+      .sort((a, b) => {
+        const aNative = a[0] === nativePos ? 1 : 0;
+        const bNative = b[0] === nativePos ? 1 : 0;
+        if (bNative !== aNative) return bNative - aNative;
+        return b[1] - a[1];
+      })
       .slice(0, 3)
       .map(([pos]) => pos);
     secPosBadges = allPos.map(pos => {
+      const isNative = pos === nativePos;
       const isCurrent = pos === roleOrPos;
-      const style = isCurrent
+      const style = isNative
         ? 'background:rgba(22,163,74,.12);color:var(--win);border-color:rgba(22,163,74,.3);'
-        : '';
+        : isCurrent
+          ? 'background:rgba(26,86,219,.1);color:var(--accent);border-color:rgba(26,86,219,.25);'
+          : '';
       return `<span class="sec-pos-badge" style="${style}">${pos}</span>`;
     }).join('');
   }
@@ -2113,16 +2171,18 @@ function playerDetailHTML(p, type, roleOrPos) {
   const restBadge = (!isHitter && p.restDays !== null && p.restDays !== undefined)
     ? restDotHTML(p.restDays) : '';
 
-  // Trend vs career
+  // Trend vs career — skip for rookies (no prior career data)
   let trendBadge = '';
-  if (isHitter) {
-    const career = careerStatsCache[p.id];
-    if (career?.ops && p.ops) trendBadge = trendBadgeHTML(p.ops, career.ops, 'ops');
-  } else {
-    const career = careerStatsCache[p.id];
-    const s = p.stats || {};
-    const currentEra = parseFloat(s.era);
-    if (career?.era && !isNaN(currentEra) && currentEra > 0) trendBadge = trendBadgeHTML(currentEra, career.era, 'era');
+  if (!p.isRookie) {
+    if (isHitter) {
+      const career = careerStatsCache[p.id];
+      if (career?.ops && p.ops) trendBadge = trendBadgeHTML(p.ops, career.ops, 'ops');
+    } else {
+      const career = careerStatsCache[p.id];
+      if (career?.formaScore != null && p.score != null) {
+        trendBadge = trendFormaHTML(p.score, career.formaScore);
+      }
+    }
   }
 
   return `<div class="impact-row">
@@ -2225,6 +2285,7 @@ function renderTeamStatsPanel(teamId, impact) {
   const spInnings = (spPct / 100 * 9).toFixed(1);
   const rpInnings = (rpPct / 100 * 9).toFixed(1);
 
+  // Narrative stats
   return `<div class="team-stats-panel">
     <div class="team-stats-title">Team Stats vs League</div>
     <div class="team-stats-grid" style="grid-template-columns:1fr 1fr">
@@ -2379,7 +2440,7 @@ function renderDiamondPanel(teamId, impact) {
       const posLabel = p.isPitcher ? (p.pos||'P') : (p.pos||'?');
       const ilCareer = careerStatsCache[p.id];
       let ilTrend = '';
-      if (p.isPitcher && ilCareer?.era && p.stats?.era) ilTrend = trendBadgeHTML(parseFloat(p.stats.era), ilCareer.era, 'era');
+      if (p.isPitcher && ilCareer?.formaScore != null && p.score != null) ilTrend = trendFormaHTML(p.score, ilCareer.formaScore);
       else if (!p.isPitcher && ilCareer?.ops && p.ops) ilTrend = trendBadgeHTML(p.ops, ilCareer.ops, 'ops');
       return `<div class="il-row">
         <div class="impact-row-left">
@@ -2536,11 +2597,28 @@ async function fetchLeagueTeamStats() {
 
 // ── Career stats cache (for trend detection) ──────────────────────────────
 const careerStatsCache = {};
+const recentPitchingCache = {};
+
+async function fetchRecentPitching(pids) {
+  const missing = pids.filter(id => !(id in recentPitchingCache));
+  if (!missing.length) return;
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0];
+  await Promise.all(missing.map(pid =>
+    fetchWithTimeout(`${MLB_API}/people/${pid}/stats?stats=byDateRange&group=pitching&startDate=${startDate}&endDate=${endDate}&season=${CURRENT_YEAR}`)
+      .then(r => r.json()).then(d => {
+        const s = d.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
+        recentPitchingCache[pid] = s ? {
+          era: parseFloat(s.era), whip: parseFloat(s.whip),
+          ip: parseFloat(s.inningsPitched) || 0,
+        } : null;
+      }).catch(() => { recentPitchingCache[pid] = null; })
+  ));
+}
 
 async function fetchCareerStats(pids) {
   const missing = pids.filter(id => !(id in careerStatsCache));
   if (!missing.length) return;
-  // Exclude current season so the "vs career" comparison is meaningful
   const prevYear = CURRENT_YEAR - 1;
   for (let i = 0; i < missing.length; i += 20) {
     const chunk = missing.slice(i, i+20).join(',');
@@ -2556,7 +2634,12 @@ async function fetchCareerStats(pids) {
         (d.people||[]).forEach(p => {
           const s = p.stats?.find(g => g.group?.displayName==='pitching')?.splits?.[0]?.stat;
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
-          if (s) { careerStatsCache[p.id].era = parseFloat(s.era)||0; careerStatsCache[p.id].whip = parseFloat(s.whip)||0; }
+          if (s) {
+            const era = parseFloat(s.era), whip = parseFloat(s.whip);
+            careerStatsCache[p.id].era  = era;
+            careerStatsCache[p.id].whip = whip;
+            careerStatsCache[p.id].formaScore = calcBaseScore(era, whip);
+          }
         });
       }).catch(()=>{})
     ]);
@@ -2565,20 +2648,15 @@ async function fetchCareerStats(pids) {
 
 function trendBadgeHTML(current, career, metric) {
   if (!career || !current || career === 0) return '';
-  // For ERA/WHIP: lower is better; for OPS/AVG: higher is better
   const lowerBetter = metric === 'era' || metric === 'whip';
-  // delta > 0 means "performing better than career"
   const delta = lowerBetter ? career - current : current - career;
   const absDelta = Math.abs(delta);
   const pct = absDelta / career;
   const threshold = metric === 'ops' ? 0.025 : metric === 'avg' ? 0.010 : metric === 'era' ? 0.25 : 0.04;
   const decimals = (metric === 'ops' || metric === 'avg') ? 3 : 2;
-
-  const isUp   = delta >  threshold || pct > 0.07;
-  const isDown = delta < -threshold || pct > 0.07 && delta < 0;
-
+  const isUp   = delta >  threshold || (pct > 0.07 && delta > 0);
+  const isDown = delta < -threshold || (pct > 0.07 && delta < 0);
   if (isUp) {
-    // Good: rank 1-6 style — green if significantly above, blue if modestly above
     const cls = pct > 0.15 ? 'trend-up-strong' : 'trend-up';
     return `<span class="trend-badge ${cls}">▲ ${absDelta.toFixed(decimals)} vs career</span>`;
   } else if (isDown) {
@@ -2589,7 +2667,22 @@ function trendBadgeHTML(current, career, metric) {
   }
 }
 
-const loaded = { standings: true, bracket: false, schedule: false, rosters: false };
+// FORMA trend: compares two 0-100 scores — higher always = better
+function trendFormaHTML(currentScore, careerScore) {
+  if (currentScore == null || careerScore == null) return '';
+  const delta = currentScore - careerScore;
+  const abs = Math.abs(delta);
+  if (abs < 3) return `<span class="trend-badge trend-flat">≈ career</span>`;
+  if (delta > 0) {
+    const cls = abs >= 10 ? 'trend-up-strong' : 'trend-up';
+    return `<span class="trend-badge ${cls}">▲ ${abs} vs career</span>`;
+  } else {
+    const cls = abs >= 10 ? 'trend-down-strong' : 'trend-down';
+    return `<span class="trend-badge ${cls}">▼ ${abs} vs career</span>`;
+  }
+}
+
+const loaded = { standings: true, bracket: false, schedule: false, rosters: false, topgames: false };
 
 function switchTab(tab) {
   try {
@@ -2604,8 +2697,252 @@ function switchTab(tab) {
       if (tab === 'bracket') loadBracket();
       if (tab === 'schedule') loadSchedule();
       if (tab === 'rosters') loadRosters();
+      if (tab === 'topgames') loadTopGames();
     }
   } catch(e) { console.error('switchTab:', e); }
+}
+
+// ── TOP GAMES ─────────────────────────────────────────────────────────────
+function topGameCardHTML(game, gameScore, rank) {
+  const awayTeam = game.teams.away.team;
+  const homeTeam = game.teams.home.team;
+  const awayMeta = TEAM_META[awayTeam.id] || { name: awayTeam.name, abbr: awayTeam.abbreviation||'?', logo: `https://www.mlbstatic.com/team-logos/${awayTeam.id}.svg` };
+  const homeMeta = TEAM_META[homeTeam.id] || { name: homeTeam.name, abbr: homeTeam.abbreviation||'?', logo: `https://www.mlbstatic.com/team-logos/${homeTeam.id}.svg` };
+
+  const awayRec = (() => { const r = game.teams.away.leagueRecord; return r ? `${r.wins}-${r.losses}` : ''; })();
+  const homeRec = (() => { const r = game.teams.home.leagueRecord; return r ? `${r.wins}-${r.losses}` : ''; })();
+
+  const gameTime = new Date(game.gameDate).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+
+  function spBlock(side) {
+    const pp = game.teams?.[side]?.probablePitcher;
+    if (!pp) return `<div style="font-size:11px;color:var(--muted);font-family:'Barlow Condensed'">SP por confirmar</div>`;
+    const s = pp.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
+    const forma = s ? (calcBaseScore(parseFloat(s.era), parseFloat(s.whip)) ?? '—') : '—';
+    const formaColor = typeof forma === 'number' ? getDiamondPlayerColor(forma, 'pitcher') : 'var(--muted)';
+    const era = s?.era || '—';
+    return `<div>
+      <div style="font-weight:700;font-size:13px;color:var(--text)">${pp.fullName}</div>
+      <div style="font-size:11px;color:var(--muted);font-family:'Barlow Condensed'">ERA ${era} · <span style="color:${formaColor};font-weight:700">FORMA ${forma}</span></div>
+    </div>`;
+  }
+
+  const rankLabel = ['🥇','🥈','🥉'][rank] || `#${rank+1}`;
+  const scoreRound = Math.round(gameScore);
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-family:'Bebas Neue';font-size:18px;letter-spacing:2px;color:var(--accent)">${rankLabel} Partido del día</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:1px">${gameTime}</span>
+          <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;background:rgba(26,86,219,.08);color:var(--accent);border:1px solid rgba(26,86,219,.2);padding:2px 8px;border-radius:4px">SCORE ${scoreRound}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px">
+        <!-- Away team -->
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="${awayMeta.logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
+          <div>
+            <div style="font-family:'Bebas Neue';font-size:20px;letter-spacing:1px">${awayMeta.name}</div>
+            <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted);font-weight:600">${awayRec}</div>
+          </div>
+        </div>
+        <!-- VS -->
+        <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted)">@</div>
+        <!-- Home team -->
+        <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse;text-align:right">
+          <img src="${homeMeta.logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
+          <div>
+            <div style="font-family:'Bebas Neue';font-size:20px;letter-spacing:1px">${homeMeta.name}</div>
+            <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted);font-weight:600">${homeRec}</div>
+          </div>
+        </div>
+      </div>
+      <!-- Probable pitchers -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div>${spBlock('away')}</div>
+        <div style="text-align:right">${spBlock('home')}</div>
+      </div>
+    </div>`;
+}
+
+// ── TOP GAMES ─────────────────────────────────────────────────────────────
+async function loadTopGames() {
+  const el = document.getElementById('topGamesContent');
+  try {
+    const today = new Date();
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const fmt = d => d.toISOString().split('T')[0];
+
+    // Fetch today + tomorrow schedules with probable pitchers and team records
+    const [todayData, tomorrowData] = await Promise.all([
+      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(today)}&gameType=R&hydrate=probablePitcher,team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
+      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(tomorrow)}&gameType=R&hydrate=probablePitcher,team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
+    ]);
+
+    const todayGames    = (todayData.dates?.[0]?.games    || []).filter(g => g.status.abstractGameState !== 'Final');
+    const tomorrowGames = (tomorrowData.dates?.[0]?.games || []);
+
+    // Fetch pitcher stats for all probable pitchers
+    const pitcherIds = new Set();
+    [...todayGames, ...tomorrowGames].forEach(g => {
+      const ap = g.teams.away.probablePitcher?.id;
+      const hp = g.teams.home.probablePitcher?.id;
+      if (ap) pitcherIds.add(ap);
+      if (hp) pitcherIds.add(hp);
+    });
+
+    const pitcherForma = {};
+    if (pitcherIds.size) {
+      const ids = [...pitcherIds];
+      for (let i = 0; i < ids.length; i += 20) {
+        const chunk = ids.slice(i, i+20).join(',');
+        await fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=pitching,season=${CURRENT_YEAR})`)
+          .then(r=>r.json()).then(d=>{
+            (d.people||[]).forEach(p => {
+              const s = p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat;
+              if (s) pitcherForma[p.id] = calcBaseScore(parseFloat(s.era), parseFloat(s.whip)) ?? 0;
+            });
+          }).catch(()=>{});
+      }
+    }
+
+    // Score each game
+    function scoreGame(g) {
+      const away = g.teams.away, home = g.teams.home;
+      const awayW = away.leagueRecord?.wins   || 0;
+      const awayL = away.leagueRecord?.losses || 0;
+      const homeW = home.leagueRecord?.wins   || 0;
+      const homeL = home.leagueRecord?.losses || 0;
+
+      const awayPct = awayW / Math.max(awayW + awayL, 1);
+      const homePct = homeW / Math.max(homeW + homeL, 1);
+
+      // Record quality (30%): average win% of both teams
+      const recordScore = ((awayPct + homePct) / 2) * 100;
+
+      // Matchup balance (20%): how evenly matched the teams are
+      const balance = 100 - Math.abs(awayPct - homePct) * 100;
+
+      // Pitcher FORMA (40%): reward seeing great pitchers, not just "balanced" ones
+      // Use the MINIMUM of the two — a 90 vs 10 matchup (min=10) scores worse than 70 vs 70 (min=70)
+      // because you want BOTH pitchers to be good, not just one star vs a punching bag.
+      // Formula: (min * 0.6 + avg * 0.4) rewards two good pitchers more than one star + one bad
+      const awayForma = pitcherForma[g.teams.away.probablePitcher?.id] ?? 50;
+      const homeForma = pitcherForma[g.teams.home.probablePitcher?.id] ?? 50;
+      const formaMin  = Math.min(awayForma, homeForma);
+      const formaAvg  = (awayForma + homeForma) / 2;
+      const pitcherScore = formaMin * 0.6 + formaAvg * 0.4;
+
+      // Division rivalry bonus (10%)
+      const sameDivision = away.team?.division?.id && away.team?.division?.id === home.team?.division?.id;
+      const divBonus = sameDivision ? 10 : 0;
+
+      // Weights: 40% pitchers · 30% record · 20% balance · 10% rivalry
+      return pitcherScore * 0.40 + recordScore * 0.30 + balance * 0.20 + divBonus;
+    }
+
+    const scoredToday    = todayGames.map(g    => ({ g, score: scoreGame(g), day: 'today' }))
+                                     .sort((a,b) => b.score - a.score);
+    const scoredTomorrow = tomorrowGames.map(g  => ({ g, score: scoreGame(g), day: 'tomorrow' }))
+                                        .sort((a,b) => b.score - a.score);
+
+    const topToday    = scoredToday.slice(0, 3);
+    const topTomorrow = scoredTomorrow.slice(0, 3);
+
+    function gameCardHTML(item) {
+      const g = item.g;
+      const away = g.teams.away, home = g.teams.home;
+      const awayMeta = TEAM_META[away.team.id] || { name: away.team.name, abbr: away.team.abbreviation, logo: `https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
+      const homeMeta = TEAM_META[home.team.id] || { name: home.team.name, abbr: home.team.abbreviation, logo: `https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
+
+      const awayRec   = `${away.leagueRecord?.wins||0}-${away.leagueRecord?.losses||0}`;
+      const homeRec   = `${home.leagueRecord?.wins||0}-${home.leagueRecord?.losses||0}`;
+      const awayPid   = away.probablePitcher?.id;
+      const homePid   = home.probablePitcher?.id;
+      const awayPName = away.probablePitcher?.fullName || 'Por confirmar';
+      const homePName = home.probablePitcher?.fullName || 'Por confirmar';
+      const awayF     = awayPid ? (pitcherForma[awayPid] ?? null) : null;
+      const homeF     = homePid ? (pitcherForma[homePid] ?? null) : null;
+
+      const formaTag = (score, name) => {
+        const nameHtml = `<span style="font-family:'Barlow Condensed';font-size:16px;font-weight:700;color:var(--text);display:block;line-height:1.2;margin-bottom:4px">${name}</span>`;
+        if (score === null) return nameHtml + `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:.5px">FORMA —</span>`;
+        const color = getDiamondPlayerColor(score, 'pitcher');
+        return nameHtml + `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:.5px">FORMA </span><span style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;color:${color};line-height:1">${score}</span>`;
+      };
+
+      const gdate = new Date(g.gameDate);
+      const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+
+      const sameDivision = away.team?.division?.id && away.team?.division?.id === home.team?.division?.id;
+      const divBadge = sameDivision
+        ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span>`
+        : '';
+
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <span style="font-family:'Barlow Condensed';font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--muted)">${timeStr}</span>
+          ${divBadge}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 44px 1fr;align-items:center;gap:10px">
+          <!-- Away -->
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <img src="${awayMeta.logo}" style="width:40px;height:40px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+              <div>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1">${awayMeta.abbr}</div>
+                <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">${awayRec}</div>
+              </div>
+            </div>
+            <div style="padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">
+              <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">PROBABLE</div>
+              ${formaTag(awayF, awayPName)}
+            </div>
+          </div>
+          <!-- VS -->
+          <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted)">VS</div>
+          <!-- Home -->
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;text-align:right">
+            <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
+              <img src="${homeMeta.logo}" style="width:40px;height:40px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+              <div>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1">${homeMeta.abbr}</div>
+                <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">${homeRec}</div>
+              </div>
+            </div>
+            <div style="padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border);text-align:right">
+              <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">PROBABLE</div>
+              ${formaTag(homeF, homePName)}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function daySection(label, items, emptyMsg) {
+      if (!items.length) return `
+        <div style="margin-bottom:32px">
+          <div class="section-title">${label}</div>
+          <div style="color:var(--muted);font-family:'Barlow Condensed';font-size:14px;letter-spacing:1px;padding:20px 0">${emptyMsg}</div>
+        </div>`;
+      return `
+        <div style="margin-bottom:32px">
+          <div class="section-title">${label}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px">
+            ${items.map(gameCardHTML).join('')}
+          </div>
+        </div>`;
+    }
+
+    el.innerHTML =
+      daySection('🔥 TOP GAMES — HOY', topToday, 'No hay partidos programados para hoy.') +
+      daySection('📅 TOP GAMES — MAÑANA', topTomorrow, 'No hay partidos programados para mañana.');
+
+  } catch(e) {
+    el.innerHTML = `<div class="error-box">Error loading top games: ${e.message}</div>`;
+  }
 }
 
 init();
