@@ -397,17 +397,13 @@
     font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
     background: rgba(234,179,8,.15); color: #b45309; letter-spacing: .5px;
   }
-  /* Award pip on circle — tiny emoji badge */
   .award-pip {
-    position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    position: absolute; width: 15px; height: 15px; border-radius: 50%;
     background: #fff; border: 1.5px solid #fff;
     display: flex; align-items: center; justify-content: center;
-    font-size: 8px; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+    box-shadow: 0 1px 3px rgba(0,0,0,.3); pointer-events: none;
   }
-  /* Award inline badge in player name row */
-  .award-inline-badge {
-    font-size: 11px; line-height: 1; cursor: default;
-  }
+  .award-inline-badge { display: inline-flex; align-items: center; vertical-align: middle; }
   .rest-dot {
     display: inline-flex; align-items: center; gap: 3px;
     font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px;
@@ -1890,6 +1886,12 @@ async function fetchTeamImpact(teamId) {
   roster.forEach(p => {
     const debut = p.person?.mlbDebutDate;
     if (debut && debut.startsWith(String(season))) rookiePids.add(p.person.id);
+    // Pre-populate All-Star from roster data if available
+    const pid = p.person?.id;
+    if (pid && p.person?.allStarStatus === 'Y') {
+      if (!awardsCache[pid]) awardsCache[pid] = { allStar:false, goldGlove:false, silverSlugger:false, mvp:false, cyYoung:false };
+      awardsCache[pid].allStar = true;
+    }
   });
 
   // ── HITTERS ──────────────────────────────────────────────────────────────
@@ -2120,31 +2122,73 @@ async function fetchTeamImpact(teamId) {
   return { hittersByPos, spList, clList, rpList, ilPlayers, spSeasonIp, totalSeasonIp };
 }
 
-// Award pips positioned around the circle
-// Positions: top-left, top-right, bottom-left, bottom-right, top-center
-const AWARD_PIPS = [
-  { key: 'allStar',       emoji: '⭐', title: 'All-Star',       top: '-4px',  left: '-4px',  right: 'auto'  },
-  { key: 'goldGlove',     emoji: '🧤', title: 'Gold Glove',     top: '-4px',  left: 'auto',  right: '-4px'  },
-  { key: 'silverSlugger', emoji: '🥈', title: 'Silver Slugger', top: 'auto',  left: '-4px',  right: 'auto',  bottom: '-4px' },
-  { key: 'mvp',           emoji: '👑', title: 'MVP',            top: 'auto',  left: 'auto',  right: '-4px',  bottom: '-4px' },
-  { key: 'cyYoung',       emoji: '🏆', title: 'Cy Young',       top: '50%',   left: '-8px',  right: 'auto',  transform: 'translateY(-50%)' },
+// ── Awards cache & fetch ──────────────────────────────────────────────────
+const awardsCache = {};
+
+async function fetchAwards(pids) {
+  const missing = pids.filter(id => !(id in awardsCache));
+  if (!missing.length) return;
+  missing.forEach(id => { awardsCache[id] = { allStar:false, goldGlove:false, silverSlugger:false, mvp:false, cyYoung:false }; });
+  await Promise.all(missing.map(pid =>
+    fetchWithTimeout(`${MLB_API}/people/${pid}/awards`)
+      .then(r => r.json()).then(d => {
+        (d.awards || []).forEach(a => {
+          const name = (a.award?.name || a.name || '').toLowerCase();
+          const id   = (a.awardId || '').toUpperCase();
+          const cache = awardsCache[pid];
+          // All-Star
+          if (name.includes('all-star') || name.includes('all star') ||
+              id === 'ASG' || id === 'ALASF' || id === 'NLASF') cache.allStar = true;
+          // Gold Glove — exact match, avoid false positives
+          if (name.includes('gold glove')) cache.goldGlove = true;
+          // Silver Slugger — exact match only
+          if (name.includes('silver slugger')) cache.silverSlugger = true;
+          // MVP — BBWAA seasonal award only, not All-Star/LCS/WS/Game MVPs
+          if ((name.includes('most valuable player') || name.includes(' mvp')) &&
+              !name.includes('all-star') && !name.includes('all star') &&
+              !name.includes('series') && !name.includes('game') &&
+              !name.includes('championship') && !name.includes('world')) cache.mvp = true;
+          // Cy Young
+          if (name.includes('cy young')) cache.cyYoung = true;
+        });
+      }).catch(() => {})
+  ));
+}
+
+// ── Award SVG icons (14×14 viewBox, minimalista/lineal) ───────────────────
+const AWARD_SVGS = {
+  allStar: (color='#f59e0b') => `<svg width="11" height="11" viewBox="-16 -16 32 32" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"><polygon points="0,-13 3.5,-5 12,-5 5.5,1.5 8,10 0,5 -8,10 -5.5,1.5 -12,-5 -3.5,-5"/></svg>`,
+  goldGlove: (color='#f59e0b') => `<svg width="11" height="11" viewBox="-24 -24 48 48" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="-14" y="-20" width="7" height="14" rx="3.5"/><rect x="-5" y="-22" width="7" height="16" rx="3.5"/><rect x="4" y="-21" width="7" height="15" rx="3.5"/><rect x="13" y="-18" width="7" height="13" rx="3.5"/><path d="M-14,-7 Q-16,2 -12,14 Q-6,18 4,18 Q14,16 16,8 Q18,-2 20,-6"/><path d="M-14,-4 Q-22,-4 -22,4 Q-22,10 -14,10"/></svg>`,
+  silverSlugger: (color='#94a3b8') => `<svg width="11" height="11" viewBox="-16 -20 32 40" fill="none" stroke="${color}" stroke-width="4.5" stroke-linecap="round"><line x1="-8" y1="17" x2="8" y2="-17"/></svg>`,
+  mvp: (color='#f59e0b') => `<svg width="11" height="11" viewBox="-16 -16 32 32" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="-12" y="3" width="24" height="5" rx="1.5"/><polyline points="-12,3 -12,-10 -5,0 0,-12 5,0 12,-10 12,3"/><circle cx="-6" cy="5.5" r="1.5" fill="${color}" stroke="none"/><circle cx="0" cy="5.5" r="1.5" fill="${color}" stroke="none"/><circle cx="6" cy="5.5" r="1.5" fill="${color}" stroke="none"/></svg>`,
+  cyYoung: (color='#1a56db') => `<svg width="11" height="11" viewBox="-16 -16 32 32" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round"><path d="M11,-10 Q4,-17 -3,-15 Q-15,-11 -15,0 Q-15,11 -3,15 Q4,17 11,10"/></svg>`,
+};
+
+// Positions around the circle for each award
+const AWARD_POSITIONS = [
+  { key:'allStar',       style:'top:-5px;left:-5px' },
+  { key:'goldGlove',     style:'top:-5px;right:-5px' },
+  { key:'silverSlugger', style:'bottom:-5px;left:-5px' },
+  { key:'mvp',           style:'bottom:-5px;right:-5px' },
+  { key:'cyYoung',       style:'top:50%;left:-8px;transform:translateY(-50%)' },
 ];
 
 function awardPipsHTML(pid) {
   const a = awardsCache[pid];
   if (!a) return '';
-  return AWARD_PIPS
-    .filter(pip => a[pip.key])
-    .map(pip => {
-      const style = [
-        `top:${pip.top || 'auto'}`,
-        `left:${pip.left || 'auto'}`,
-        `right:${pip.right || 'auto'}`,
-        pip.bottom ? `bottom:${pip.bottom}` : '',
-        pip.transform ? `transform:${pip.transform}` : '',
-      ].filter(Boolean).join(';');
-      return `<span class="award-pip" style="${style}" title="${pip.title}">${pip.emoji}</span>`;
-    }).join('');
+  return AWARD_POSITIONS
+    .filter(p => a[p.key])
+    .map(p => `<span class="award-pip" style="${p.style}">${AWARD_SVGS[p.key]()}</span>`)
+    .join('');
+}
+
+function awardInlineBadges(pid) {
+  const a = awardsCache[pid];
+  if (!a) return '';
+  return Object.entries(AWARD_SVGS)
+    .filter(([key]) => a[key])
+    .map(([key, fn]) => `<span class="award-inline-badge" title="${key}" style="margin-left:2px">${fn()}</span>`)
+    .join('');
 }
 
 function restDotHTML(days) {
@@ -2210,19 +2254,6 @@ function playerDetailHTML(p, type, roleOrPos) {
   const restBadge = (!isHitter && p.restDays !== null && p.restDays !== undefined)
     ? restDotHTML(p.restDays) : '';
 
-  // Award inline badges in the name row
-  const awardBadges = (() => {
-    const a = awardsCache[p.id];
-    if (!a) return '';
-    const badges = [];
-    if (a.allStar)       badges.push(`<span class="award-inline-badge" title="All-Star">⭐</span>`);
-    if (a.goldGlove)     badges.push(`<span class="award-inline-badge" title="Gold Glove">🧤</span>`);
-    if (a.silverSlugger) badges.push(`<span class="award-inline-badge" title="Silver Slugger">🥈</span>`);
-    if (a.mvp)           badges.push(`<span class="award-inline-badge" title="MVP">👑</span>`);
-    if (a.cyYoung)       badges.push(`<span class="award-inline-badge" title="Cy Young">🏆</span>`);
-    return badges.join('');
-  })();
-
   // Trend vs career — skip for rookies (no prior career data)
   let trendBadge = '';
   if (!p.isRookie) {
@@ -2242,7 +2273,7 @@ function playerDetailHTML(p, type, roleOrPos) {
       <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
       <div class="impact-name-block">
-        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${awardBadges}${restBadge}${trendBadge}</div>
+        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${awardInlineBadges(p.id)}${restBadge}${trendBadge}</div>
         <div class="impact-stats-line">${statsLine}</div>
       </div>
     </div>
@@ -2429,12 +2460,12 @@ function renderDiamondPanel(teamId, impact) {
     const color = p ? getDiamondPlayerColor(ops, 'hitter') : '#9ca3af';
     const nameLabel = p ? p.name : '—';
     const rookieStar = p?.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
-    const awardPips = p ? awardPipsHTML(p.id) : '';
+    const pips = p ? awardPipsHTML(p.id) : '';
     const xy = DPOS[pos];
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
       onclick="selectDiamondKey('${key}',${teamId})">
-      <div class="dfield-circle" style="background:${color};position:relative">${pos}${rookieStar}${awardPips}</div>
+      <div class="dfield-circle" style="background:${color};position:relative">${pos}${rookieStar}${pips}</div>
       <div class="dfield-pill">${nameLabel}</div>
     </button>`;
   }
@@ -2451,12 +2482,12 @@ function renderDiamondPanel(teamId, impact) {
       const color = getDiamondPlayerColor(p.score, 'pitcher');
       const label = p.throws !== '?' ? p.throws : role;
       const rookieStar = p.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
-      const awardPips  = awardPipsHTML(p.id);
+      const pips = awardPipsHTML(p.id);
       const restPart   = p.restDays !== null && p.restDays !== undefined ? restDotHTML(p.restDays) : '';
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
         onclick="selectDiamondKey('${key}',${teamId})">
-        <div class="dfield-circle" style="background:${color};position:relative">${label}${rookieStar}${awardPips}</div>
+        <div class="dfield-circle" style="background:${color};position:relative">${label}${rookieStar}${pips}</div>
         <div class="dfield-pill">${p.name}</div>
         ${extras}
       </button>`;
@@ -2652,53 +2683,6 @@ async function fetchLeagueTeamStats() {
 // ── Career stats cache (for trend detection) ──────────────────────────────
 const careerStatsCache = {};
 const recentPitchingCache = {};
-
-// ── Awards cache ──────────────────────────────────────────────────────────
-// Maps pid → { allStar, goldGlove, silverSlugger, mvp, cyYoung } (all boolean)
-const awardsCache = {};
-
-const AWARD_IDS = {
-  allStar:       ['ALMVP','NLMVP','ASG'],   // All-Star Game selection
-  goldGlove:     ['GG'],
-  silverSlugger: ['SS'],
-  mvp:           ['ALMVP','NLMVP'],
-  cyYoung:       ['ALCY','NLCY'],
-};
-
-// The awards endpoint uses different IDs — map known award names
-function classifyAward(awardId, awardName) {
-  const id = (awardId || '').toUpperCase();
-  const name = (awardName || '').toLowerCase();
-  return {
-    allStar:       name.includes('all-star') || name.includes('all star'),
-    goldGlove:     name.includes('gold glove') || id.includes('GG'),
-    silverSlugger: name.includes('silver slugger') || id.includes('SS'),
-    mvp:           (name.includes('most valuable') || name.includes('mvp')) && !name.includes('all-star'),
-    cyYoung:       name.includes('cy young'),
-  };
-}
-
-async function fetchAwards(pids) {
-  const missing = pids.filter(id => !(id in awardsCache));
-  if (!missing.length) return;
-  // Initialize all as false first
-  missing.forEach(id => { awardsCache[id] = { allStar:false, goldGlove:false, silverSlugger:false, mvp:false, cyYoung:false }; });
-  // Fetch individually (no bulk endpoint for awards)
-  await Promise.all(missing.map(pid =>
-    fetchWithTimeout(`${MLB_API}/people/${pid}/awards`)
-      .then(r => r.json()).then(d => {
-        (d.awards || []).forEach(a => {
-          const classified = classifyAward(a.awardId, a.award?.name);
-          const cache = awardsCache[pid];
-          if (classified.allStar)       cache.allStar = true;
-          if (classified.goldGlove)     cache.goldGlove = true;
-          if (classified.silverSlugger) cache.silverSlugger = true;
-          if (classified.mvp)           cache.mvp = true;
-          if (classified.cyYoung)       cache.cyYoung = true;
-        });
-      }).catch(() => {})
-  ));
-}
 
 async function fetchRecentPitching(pids) {
   const missing = pids.filter(id => !(id in recentPitchingCache));
@@ -2994,11 +2978,10 @@ async function loadTopGames() {
         if (stat && !isTBD) {
           const era  = stat.era  || '—';
           const whip = stat.whip || '—';
-          const ip   = stat.inningsPitched || '—';
-          const gs   = stat.gamesStarted ?? '—';
-          const sv   = stat.saves != null ? ` · SV ${stat.saves}` : '';
-          const hld  = stat.holds != null && stat.holds > 0 ? ` · HLD ${stat.holds}` : '';
-          statsLine = `ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${sv}${hld}`;
+          const w    = stat.wins   != null ? stat.wins   : '—';
+          const l    = stat.losses != null ? stat.losses : '—';
+          const qs   = stat.qualityStarts != null ? ` · QS ${stat.qualityStarts}` : '';
+          statsLine = `ERA ${era} · WHIP ${whip} · ${w}W-${l}L${qs}`;
         }
 
         return `<div style="padding:10px 12px;background:${bg};border-radius:7px;border:1px solid ${border};text-align:${align}">
