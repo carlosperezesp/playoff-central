@@ -2793,7 +2793,8 @@ async function loadTopGames() {
       if (hp) pitcherIds.add(hp);
     });
 
-    const pitcherForma = {};
+    const pitcherForma = {};  // id → FORMA score
+    const pitcherStats = {};  // id → full season stat object
     if (pitcherIds.size) {
       const ids = [...pitcherIds];
       for (let i = 0; i < ids.length; i += 20) {
@@ -2802,7 +2803,10 @@ async function loadTopGames() {
           .then(r=>r.json()).then(d=>{
             (d.people||[]).forEach(p => {
               const s = p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat;
-              if (s) pitcherForma[p.id] = calcBaseScore(parseFloat(s.era), parseFloat(s.whip)) ?? 0;
+              if (s) {
+                pitcherStats[p.id] = s;
+                pitcherForma[p.id] = calcBaseScore(parseFloat(s.era), parseFloat(s.whip)) ?? 0;
+              }
             });
           }).catch(()=>{});
       }
@@ -2848,8 +2852,8 @@ async function loadTopGames() {
     const scoredTomorrow = tomorrowGames.map(g  => ({ g, score: scoreGame(g), day: 'tomorrow' }))
                                         .sort((a,b) => b.score - a.score);
 
-    const topToday    = scoredToday.slice(0, 3);
-    const topTomorrow = scoredTomorrow.slice(0, 3);
+    const topToday    = scoredToday.slice(0, 5);
+    const topTomorrow = scoredTomorrow.slice(0, 5);
 
     function gameCardHTML(item) {
       const g = item.g;
@@ -2865,16 +2869,52 @@ async function loadTopGames() {
       const homePName = home.probablePitcher?.fullName || 'Por confirmar';
       const awayF     = awayPid ? (pitcherForma[awayPid] ?? null) : null;
       const homeF     = homePid ? (pitcherForma[homePid] ?? null) : null;
+      const awayS     = awayPid ? (pitcherStats[awayPid] || null) : null;
+      const homeS     = homePid ? (pitcherStats[homePid] || null) : null;
 
-      const formaTag = (score, name) => {
-        const nameHtml = `<span style="font-family:'Barlow Condensed';font-size:16px;font-weight:700;color:var(--text);display:block;line-height:1.2;margin-bottom:4px">${name}</span>`;
-        if (score === null) return nameHtml + `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:.5px">FORMA —</span>`;
-        const color = getDiamondPlayerColor(score, 'pitcher');
-        return nameHtml + `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:.5px">FORMA </span><span style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;color:${color};line-height:1">${score}</span>`;
+      // Pitcher block: name + FORMA + full stats line (same as TEAMS tab)
+      const pitcherBlock = (score, name, stat, align='left') => {
+        const isTBD = !name || name === 'Por confirmar';
+        const isRight = align === 'right';
+
+        let bg = 'var(--bg)', border = 'var(--border)';
+        if (score !== null && !isTBD) {
+          if      (score >= 75) { bg = 'rgba(22,163,74,.09)';   border = 'rgba(22,163,74,.28)'; }
+          else if (score >= 60) { bg = 'rgba(26,86,219,.08)';   border = 'rgba(26,86,219,.22)'; }
+          else if (score >= 40) { bg = 'rgba(148,163,184,.12)'; border = 'rgba(148,163,184,.35)'; }
+          else                  { bg = 'rgba(220,38,38,.07)';   border = 'rgba(220,38,38,.22)'; }
+        }
+
+        const color = score !== null ? getDiamondPlayerColor(score, 'pitcher') : 'var(--muted)';
+        const nameColor = isTBD ? 'var(--muted)' : 'var(--text)';
+
+        // Stats line matching TEAMS tab format
+        let statsLine = '';
+        if (stat && !isTBD) {
+          const era  = stat.era  || '—';
+          const whip = stat.whip || '—';
+          const ip   = stat.inningsPitched || '—';
+          const gs   = stat.gamesStarted ?? '—';
+          const sv   = stat.saves != null ? ` · SV ${stat.saves}` : '';
+          const hld  = stat.holds != null && stat.holds > 0 ? ` · HLD ${stat.holds}` : '';
+          statsLine = `ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${sv}${hld}`;
+        }
+
+        return `<div style="padding:10px 12px;background:${bg};border-radius:7px;border:1px solid ${border};text-align:${align}">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">PROBABLE</div>
+          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:15px;color:${nameColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">${isTBD ? 'Por confirmar' : name}</div>
+          ${isTBD ? `<div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">FORMA —</div>` : `
+          <div style="margin-bottom:${statsLine ? '4px' : '0'}">
+            <span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:.5px">FORMA </span>
+            <span style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;color:${color};line-height:1">${score ?? '—'}</span>
+          </div>
+          ${statsLine ? `<div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:.2px">${statsLine}</div>` : ''}`}
+        </div>`;
       };
 
       const gdate = new Date(g.gameDate);
       const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+      const venueName = g.venue?.name || '';
 
       const sameDivision = away.team?.division?.id && away.team?.division?.id === home.team?.division?.id;
       const divBadge = sameDivision
@@ -2882,11 +2922,12 @@ async function loadTopGames() {
         : '';
 
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <span style="font-family:'Barlow Condensed';font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--muted)">${timeStr}</span>
           ${divBadge}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 44px 1fr;align-items:center;gap:10px">
+        ${venueName ? `<div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:.5px;margin-bottom:12px">📍 ${venueName}</div>` : '<div style="margin-bottom:12px"></div>'}
+        <div style="display:grid;grid-template-columns:1fr 44px 1fr;align-items:start;gap:10px">
           <!-- Away -->
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;gap:10px">
@@ -2896,26 +2937,20 @@ async function loadTopGames() {
                 <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">${awayRec}</div>
               </div>
             </div>
-            <div style="padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">
-              <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">PROBABLE</div>
-              ${formaTag(awayF, awayPName)}
-            </div>
+            ${pitcherBlock(awayF, awayPName, awayS, 'left')}
           </div>
           <!-- VS -->
-          <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted)">VS</div>
+          <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted);padding-top:10px">VS</div>
           <!-- Home -->
-          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;text-align:right">
+          <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
               <img src="${homeMeta.logo}" style="width:40px;height:40px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-              <div>
+              <div style="text-align:right">
                 <div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1">${homeMeta.abbr}</div>
                 <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">${homeRec}</div>
               </div>
             </div>
-            <div style="padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border);text-align:right">
-              <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">PROBABLE</div>
-              ${formaTag(homeF, homePName)}
-            </div>
+            ${pitcherBlock(homeF, homePName, homeS, 'right')}
           </div>
         </div>
       </div>`;
