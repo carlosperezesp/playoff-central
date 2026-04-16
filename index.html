@@ -453,25 +453,25 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.05);
   }
   .team-stats-title {
-    font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
   }
   .team-stats-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px;
   }
-  .team-stat-row { display: flex; flex-direction: column; gap: 4px; }
+  .team-stat-row { display: flex; flex-direction: column; gap: 5px; }
   .team-stat-header {
     display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
   }
   .team-stat-label {
-    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
   }
   .team-stat-val {
-    font-family: 'Barlow Condensed'; font-weight: 800; font-size: 17px; line-height: 1;
+    font-family: 'Barlow Condensed'; font-weight: 800; font-size: 22px; line-height: 1;
   }
   .team-stat-rank {
-    font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; letter-spacing: .5px;
-    padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+    font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700; letter-spacing: .5px;
+    padding: 2px 6px; border-radius: 3px; white-space: nowrap;
   }
   .team-stat-rank.top      { background: rgba(22,163,74,.12);  color: var(--win); }
   .team-stat-rank.mid-blue { background: rgba(26,86,219,.10);  color: var(--accent); }
@@ -509,6 +509,19 @@
     font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted); font-weight: 600;
   }
   .innings-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── Narrative player badges (purple) ── */
+  .narrative-badge {
+    display: inline-flex; align-items: center;
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    letter-spacing: .4px; white-space: nowrap; vertical-align: middle;
+    background: rgba(124,58,237,.1); color: #7c3aed;
+    border: 1px solid rgba(124,58,237,.22);
+    margin-right: 2px;
+  }
+  .narrative-badges-row {
+    display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;
+  }
 
   /* ── Player trend indicator ── */
   .trend-badge {
@@ -870,11 +883,11 @@ const TRACKER_DIVISIONS = {
 
 const TEAM_COLORS_TRACKER = {
   108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0E3386',
-  113:'#C6011F',114:'#003366',115:'#33006F',116:'#0C2340',117:'#EB6E1F',
+  113:'#C6011F',114:'#CC0000',115:'#33006F',116:'#E87722',117:'#EB6E1F',
   118:'#004687',119:'#005A9C',120:'#AB0003',121:'#002D72',133:'#003831',
   134:'#C8A800',135:'#7B5B3A',136:'#0C2C56',137:'#FD5A1E',138:'#C41E3A',
   139:'#092C5C',140:'#003278',141:'#134A8E',142:'#002B5C',143:'#E81828',
-  144:'#CE1141',145:'#555555',146:'#00A3E0',147:'#003087',158:'#12284B',
+  144:'#CE1141',145:'#8A8A8A',146:'#00A3E0',147:'#003087',158:'#12284B',
 };
 
 let trackerData = {};
@@ -1764,6 +1777,30 @@ async function fetchTeamImpact(teamId) {
     return IL_STATUSES.has(statusDesc) || statusDesc.toLowerCase().includes('injured') || statusDesc.toLowerCase().includes('list');
   });
 
+  // Fetch recent transactions to get the actual IL placement date for each player
+  const ilPlacementDates = {}; // pid → date string 'YYYY-MM-DD'
+  try {
+    const seasonStart = `${season}-01-01`;
+    const txRes = await fetchWithTimeout(
+      `${MLB_API}/transactions?teamId=${teamId}&startDate=${seasonStart}&endDate=${today}&sportId=1`
+    ).then(r => r.json()).catch(() => ({ transactions: [] }));
+    // Sort newest-first so we capture the most recent IL placement per player
+    const txList = (txRes.transactions || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    txList.forEach(tx => {
+      const pid = tx.person?.id;
+      if (!pid) return;
+      const desc = (tx.description || '').toLowerCase();
+      const typeCode = (tx.typeCode || tx.type?.code || '').toUpperCase();
+      const isILPlacement =
+        typeCode === 'IL' || typeCode === 'ILD' ||
+        (desc.includes('placed') && desc.includes('injured list')) ||
+        (desc.includes('transferred') && desc.includes('injured list'));
+      if (isILPlacement && !ilPlacementDates[pid]) {
+        ilPlacementDates[pid] = (tx.date || tx.effectiveDate || '').slice(0, 10);
+      }
+    });
+  } catch(e) { /* silently ignore */ }
+
   // Parse hydrated stats for active roster
   const hitStatMap   = {};
   const pitchStatMap = {};
@@ -2045,6 +2082,32 @@ async function fetchTeamImpact(teamId) {
       };
     });
 
+  // QS fix: re-fetch full pitching stats for starters to guarantee qualityStarts is present
+  const spCandidates = pitcherEntries.filter(p => p.gs >= 1).map(p => p.id).filter(Boolean);
+  if (spCandidates.length) {
+    for (let i = 0; i < spCandidates.length; i += 20) {
+      const chunk = spCandidates.slice(i, i + 20).join(',');
+      try {
+        const qsData = await fetchWithTimeout(
+          `${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=pitching,season=${season})`
+        ).then(r => r.json());
+        (qsData.people || []).forEach(person => {
+          const st = person.stats?.find(g =>
+            (g.group?.displayName || '').toLowerCase() === 'pitching'
+          )?.splits?.[0]?.stat;
+          if (!st) return;
+          if (pitchStatMap[person.id]) {
+            if (st.qualityStarts != null) pitchStatMap[person.id].qualityStarts = st.qualityStarts;
+          } else {
+            pitchStatMap[person.id] = st;
+          }
+        });
+      } catch(e) { /* silent */ }
+    }
+    // Re-sync stats on pitcherEntries
+    pitcherEntries.forEach(p => { if (pitchStatMap[p.id]) p.stats = pitchStatMap[p.id]; });
+  }
+
   const spList = [], clList = [], rpList = [];
 
   pitcherEntries.forEach(p => {
@@ -2094,9 +2157,21 @@ async function fetchTeamImpact(teamId) {
     const ops  = parseFloat(hs?.ops) || 0;
     const score = calcPitcherScore(ps);
     const ilType = p.status?.description || 'IL';
+    const duration = ilDays(ilType);
+    // Use placement date from transactions API (most reliable source)
+    const placedDate = ilPlacementDates[pid] || null;
+    let daysRemaining = null;
+    if (placedDate) {
+      const placed = new Date(placedDate + 'T12:00:00');
+      const nowDay = new Date();
+      nowDay.setHours(12, 0, 0, 0);
+      const elapsed = Math.floor((nowDay - placed) / 86400000);
+      daysRemaining = Math.max(0, duration - elapsed);
+    }
     return {
       id: pid, name: p.person?.fullName||'?', pos,
-      ilType, ilDays: ilDays(ilType),
+      ilType, ilDays: duration,
+      daysRemaining, placedDate,
       isPitcher: pos === 'P' || pos === 'TWP',
       ops, score,
       stats: (pos === 'P' || pos === 'TWP') ? ps : hs,
@@ -2197,6 +2272,96 @@ function restDotHTML(days) {
   return `<span class="rest-dot ${cls}">${label}</span>`;
 }
 
+// ── Narrative badges ────────────────────────────────────────────────────────
+function getNarrativeBadges(stats, lgAvg, pa) {
+  if (!stats || !lgAvg || pa < 40) return [];
+  const avg  = parseFloat(stats.avg)  || 0;
+  const obp  = parseFloat(stats.obp)  || 0;
+  const slg  = parseFloat(stats.slg)  || 0;
+  const hr   = parseInt(stats.homeRuns)    || 0;
+  const sb   = parseInt(stats.stolenBases) || 0;
+  const cs   = parseInt(stats.caughtStealing) || 0;
+  const so   = parseInt(stats.strikeOuts) || 0;
+  const bb   = parseInt(stats.baseOnBalls) || 0;
+  const rbi  = parseInt(stats.rbi)    || 0;
+  const risp = parseFloat(stats.avgWithRISP || stats.rISP || 0) || 0;
+  const hrPA = pa > 0 ? hr / pa : 0;
+  const sbPA = pa > 0 ? sb / pa : 0;
+  const soPA = pa > 0 ? so / pa : 0;
+  const lgHRPA = 0.034; const lgSBPA = 0.018; const lgSOPA = 0.225;
+  const badges = [];
+  const has = k => badges.includes(k);
+
+  if (pa >= 60 && hrPA >= lgHRPA * 1.15 && avg <= lgAvg.avg && !has('Contact Hitter'))
+    badges.push('Power Hitter');
+  if (pa >= 75 && avg >= lgAvg.avg + 0.025 && hrPA <= lgHRPA * 0.75 && !has('Power Hitter'))
+    badges.push('Contact Hitter');
+  if (pa >= 40 && sbPA >= lgSBPA * 2.5 && (sb === 0 || cs/sb <= 0.25) && !has('Groundball Machine'))
+    badges.push('Speed Threat');
+  if (pa >= 60 && obp >= lgAvg.obp + 0.030 && hrPA <= lgHRPA * 0.65 && !has('Run Producer'))
+    badges.push('Table Setter');
+  if (pa >= 75 && soPA >= lgSOPA * 1.15 && hrPA >= lgHRPA * 1.05)
+    badges.push('High-Variance');
+  if (pa >= 80 && avg >= lgAvg.avg + 0.020 && slg <= lgAvg.slg && !has('Power Hitter') && !has('Contact Hitter'))
+    badges.push('Empty Average');
+  if (pa >= 70 && hrPA <= lgHRPA * 0.60 && avg >= lgAvg.avg + 0.015 && !has('Speed Threat') && !has('Power Hitter'))
+    badges.push('Groundball Machine');
+  if (pa >= 100 && risp > 0 && risp >= avg + 0.035)
+    badges.push('Clutch Hitter');
+  if (pa >= 60 && (obp < avg + 0.025 || (bb > 0 && so/bb >= 2.8)))
+    badges.push('Poco Disciplinado');
+  if (pa >= 80 && (rbi/pa) >= 0.10 * 1.20 && !has('Table Setter'))
+    badges.push('Run Producer');
+
+  return badges.slice(0, 3);
+}
+
+function getPitcherNarrativeBadges(p, role) {
+  const s = p.stats || {};
+  const era  = parseFloat(s.era)  || 0;
+  const whip = parseFloat(s.whip) || 0;
+  const ip   = parseFloat(s.inningsPitched) || 0;
+  const gs   = parseInt(s.gamesStarted) || 0;
+  const qs   = parseInt(s.qualityStarts) || 0;
+  const so   = parseInt(s.strikeOuts) || 0;
+  const bb   = parseInt(s.baseOnBalls) || 0;
+  const sv   = parseInt(s.saves) || 0;
+  const hld  = parseInt(s.holds) || 0;
+  const gp   = parseInt(s.gamesPitched) || 0;
+  const badges = [];
+
+  if (role === 'SP' && gs >= 2) {
+    const ipPS   = gs > 0 ? ip / gs : 0;
+    const qsPct  = gs > 0 ? qs / gs : 0;
+    const k9     = ip > 0 ? (so / ip) * 9 : 0;
+    const bb9    = ip > 0 ? (bb / ip) * 9 : 0;
+    if      (era <= 2.80 && whip <= 1.10 && qsPct >= 0.65) badges.push('Ace');
+    else if (era <= 3.50 && whip <= 1.20 && qsPct >= 0.50) badges.push('Top Starter');
+    if (k9 >= 10.0 && gs >= 3) badges.push('Power Arm');
+    else if (k9 >= 8.5 && gs >= 3) badges.push('Strikeout Artist');
+    if (ipPS >= 6.5 && gs >= 3 && !badges.includes('Ace')) badges.push('Workhorse');
+    if (bb9 <= 2.0 && gs >= 3 && !badges.includes('Ace') && !badges.includes('Top Starter')) badges.push('Control Specialist');
+    if (era >= 5.50 && gs >= 4) badges.push('Vulnerable');
+  } else if (role === 'CL' && gp >= 3) {
+    if (sv >= 2 && era <= 2.50) badges.push('Elite Closer');
+    else if (sv >= 1 && era <= 3.50) badges.push('Reliable');
+    const bs = parseInt(s.blownSaves) || 0;
+    if ((sv + bs) > 0 && sv/(sv+bs) >= 0.85) badges.push('Lockdown');
+  } else if (role === 'RP' && gp >= 5) {
+    if (hld >= 3 && era <= 3.00) badges.push('Setup Man');
+    if (ip > 0 && (so/ip)*9 >= 10.5) badges.push('Swing Man');
+    if (era >= 5.50) badges.push('Shaky');
+  }
+  return badges.slice(0, 2);
+}
+
+function narrativeBadgesHTML(badges) {
+  if (!badges || !badges.length) return '';
+  return `<div class="narrative-badges-row">${
+    badges.map(b => `<span class="narrative-badge">${b}</span>`).join('')
+  }</div>`;
+}
+
 function playerDetailHTML(p, type, roleOrPos) {
   const isHitter = type === 'hitter';
   const barVal   = isHitter ? p.ops : p.score;
@@ -2268,17 +2433,34 @@ function playerDetailHTML(p, type, roleOrPos) {
     }
   }
 
+  // Narrative badges (purple)
+  let narrativeHTML = '';
+  if (isHitter) {
+    const lgAvg = (leagueTeamStatsCache || {})._leagueAvg || { avg:0.248, obp:0.317, slg:0.408 };
+    const pa = parseInt(p.stats?.plateAppearances || p.stats?.atBats || 0);
+    const nbadges = getNarrativeBadges(p.stats, lgAvg, pa);
+    if (nbadges.length < 3 && !p.isRookie) {
+      const career = careerStatsCache[p.id];
+      if (career?.ops && p.ops && Math.abs(p.ops - career.ops) >= 0.095) nbadges.push('Streaky Hitter');
+    }
+    narrativeHTML = narrativeBadgesHTML(nbadges.slice(0, 3));
+  } else {
+    narrativeHTML = narrativeBadgesHTML(getPitcherNarrativeBadges(p, roleOrPos));
+  }
+
   return `<div class="impact-row">
     <div class="impact-row-left">
       <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
       <div class="impact-name-block">
-        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}${trendBadge}</div>
+        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}</div>
         <div class="impact-stats-line">${statsLine}</div>
+        ${narrativeHTML}
       </div>
     </div>
     <div class="impact-bar-block">
       <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
+      ${trendBadge ? `<div style="margin-top:3px">${trendBadge}</div>` : ''}
     </div>
     <div class="impact-bar-val-wrap">
       <span class="impact-bar-label">${barLabel}</span>
@@ -2522,6 +2704,14 @@ function renderDiamondPanel(teamId, impact) {
       const ilLabel = p.ilType
         .replace(/(\d+)[\s-]*day[\s-]*injured[\s-]*list/i,'$1d IL')
         .replace(/injured list/i,'IL');
+      const daysRemainingBadge = (() => {
+        if (p.daysRemaining === null || p.daysRemaining === undefined) return '';
+        if (p.daysRemaining === 0) return `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px;margin-left:3px">✓ ELEGIBLE</span>`;
+        const urgency = p.daysRemaining <= 7
+          ? 'background:rgba(234,179,8,.15);color:#b45309'
+          : 'background:rgba(220,38,38,.08);color:var(--loss)';
+        return `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;${urgency};letter-spacing:.5px;margin-left:3px">${p.daysRemaining}d restantes</span>`;
+      })();
       const posLabel = p.isPitcher ? (p.pos||'P') : (p.pos||'?');
       const ilCareer = careerStatsCache[p.id];
       let ilTrend = '';
@@ -2534,7 +2724,7 @@ function renderDiamondPanel(teamId, impact) {
           <div class="impact-name-block">
             <div class="impact-name" style="opacity:.8">${p.name}
               <span style="font-size:10px;font-weight:600;color:var(--muted)">${posLabel}</span>
-              <span class="il-badge">${ilLabel}</span>${ilTrend}
+              <span class="il-badge">${ilLabel}</span>${daysRemainingBadge}${ilTrend}
             </div>
             <div class="impact-stats-line">${statsLine}</div>
           </div>
@@ -2660,12 +2850,32 @@ async function fetchLeagueTeamStats() {
       fetchWithTimeout(`${MLB_API}/teams/stats?season=${CURRENT_YEAR}&sportId=1&group=pitching&stats=season&gameType=R`).then(r=>r.json()).catch(()=>({stats:[]})),
     ]);
     const map = {};
-    (hitRes.stats?.[0]?.splits || []).forEach(s => {
+    const hitSplits = hitRes.stats?.[0]?.splits || [];
+    hitSplits.forEach(s => {
       const id = s.team?.id; if (!id) return;
       map[id] = map[id] || {};
       map[id].avg = parseFloat(s.stat?.avg) || 0;
       map[id].ops = parseFloat(s.stat?.ops) || 0;
+      map[id].obp = parseFloat(s.stat?.obp) || 0;
+      map[id].slg = parseFloat(s.stat?.slg) || 0;
     });
+    // Compute league-wide averages for narrative badge thresholds
+    const lgAvgAccum = { avg:0, obp:0, slg:0, ops:0, n:0 };
+    hitSplits.forEach(s => {
+      if (!s.stat?.avg) return;
+      lgAvgAccum.avg += parseFloat(s.stat.avg)||0;
+      lgAvgAccum.obp += parseFloat(s.stat.obp)||0;
+      lgAvgAccum.slg += parseFloat(s.stat.slg)||0;
+      lgAvgAccum.ops += parseFloat(s.stat.ops)||0;
+      lgAvgAccum.n++;
+    });
+    if (lgAvgAccum.n) {
+      const n = lgAvgAccum.n;
+      map._leagueAvg = { avg: lgAvgAccum.avg/n, obp: lgAvgAccum.obp/n, slg: lgAvgAccum.slg/n, ops: lgAvgAccum.ops/n };
+    } else {
+      // MLB historical constants as fallback
+      map._leagueAvg = { avg: 0.248, obp: 0.317, slg: 0.408, ops: 0.724 };
+    }
     (pitchRes.stats?.[0]?.splits || []).forEach(s => {
       const id = s.team?.id; if (!id) return;
       map[id] = map[id] || {};
@@ -3008,9 +3218,12 @@ async function loadTopGames() {
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <span style="font-family:'Barlow Condensed';font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--muted)">${timeStr}</span>
-          ${divBadge}
+          <div style="display:flex;align-items:center;gap:8px">
+            ${venueName ? `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:.3px">📍 ${venueName}</span>` : ''}
+            ${divBadge}
+          </div>
         </div>
-        ${venueName ? `<div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:.5px;margin-bottom:12px">📍 ${venueName}</div>` : '<div style="margin-bottom:12px"></div>'}
+        <div style="margin-bottom:12px"></div>
         <div style="display:grid;grid-template-columns:1fr 44px 1fr;align-items:start;gap:10px">
           <!-- Away -->
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -3023,8 +3236,8 @@ async function loadTopGames() {
             </div>
             ${pitcherBlock(awayF, awayPName, awayS, 'left')}
           </div>
-          <!-- VS -->
-          <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted);padding-top:10px">VS</div>
+          <!-- @ -->
+          <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted);padding-top:10px">@</div>
           <!-- Home -->
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
