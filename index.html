@@ -555,6 +555,67 @@
     border-bottom: 1px solid rgba(0,0,0,.04);
   }
   .il-row:last-child { border-bottom: none; }
+
+  /* ── PLAYERS tab ── */
+  .players-layout {
+    display: flex; flex-direction: column; gap: 32px;
+  }
+  .players-section-header {
+    display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px;
+  }
+  .players-section-title {
+    font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--text);
+  }
+  .players-section-desc {
+    font-size: 12px; color: var(--muted); font-style: italic;
+  }
+  .players-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;
+  }
+  .player-rank-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    transition: box-shadow .15s;
+  }
+  .player-rank-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.09); }
+  .player-rank-num {
+    font-family: 'Bebas Neue'; font-size: 26px; color: var(--border);
+    width: 28px; text-align: center; flex-shrink: 0; line-height: 1;
+  }
+  .player-rank-num.top3 { color: var(--accent); }
+  .player-rank-photo {
+    width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--border); flex-shrink: 0; background: var(--surface2);
+  }
+  .player-rank-info { flex: 1; min-width: 0; }
+  .player-rank-name {
+    font-weight: 700; font-size: 14px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .player-rank-team {
+    font-family: 'Barlow Condensed'; font-size: 12px; color: var(--muted);
+    font-weight: 600; letter-spacing: .5px; margin-top: 1px;
+  }
+  .player-rank-stat {
+    text-align: right; flex-shrink: 0;
+  }
+  .player-rank-stat-val {
+    font-family: 'Barlow Condensed'; font-weight: 800; font-size: 20px; line-height: 1;
+    display: block;
+  }
+  .player-rank-stat-lbl {
+    font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: .5px;
+    text-transform: uppercase; display: block; margin-top: 2px;
+  }
+  .players-divider {
+    height: 1px; background: var(--border); margin: 4px 0 20px;
+  }
+  @media (max-width: 768px) {
+    .players-grid { grid-template-columns: 1fr; }
+    .player-rank-card { padding: 10px 12px; }
+  }
 </style>
 </head>
 <body>
@@ -569,6 +630,7 @@
   <button class="tab-btn" onclick="switchTab('bracket')">BRACKET</button>
   <button class="tab-btn" onclick="switchTab('topgames')">TOP GAMES</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
+  <button class="tab-btn" onclick="switchTab('players')">PLAYERS</button>
 </div>
 
 <main>
@@ -586,6 +648,10 @@
 
   <div id="tab-topgames" class="tab-panel">
     <div id="topGamesContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
+  </div>
+
+  <div id="tab-players" class="tab-panel">
+    <div id="playersContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING PLAYERS...</div></div></div>
   </div>
 
   <div id="tab-rosters" class="tab-panel">
@@ -1723,10 +1789,14 @@ async function selectTeam(teamId) {
       ...impact.rpList.map(p=>p.id),
       ...impact.ilPlayers.filter(p=>p.isPitcher).map(p=>p.id),
     ])].filter(Boolean);
+    const hitterPids = [...new Set(
+      Object.values(impact.hittersByPos).flat().map(p=>p.id).filter(Boolean)
+    )];
     await Promise.all([
       fetchLeagueTeamStats(),
       fetchCareerStats(uniquePids),
       fetchRecentPitching(pitcherPids),
+      fetchRecentHitting(hitterPids),
       fetchAwards(uniquePids),
     ]);
     // Recalculate FORMA with recent data now available
@@ -2275,45 +2345,77 @@ function restDotHTML(days) {
 }
 
 // ── Narrative badges ────────────────────────────────────────────────────────
-function getNarrativeBadges(stats, lgAvg, pa) {
+function getNarrativeBadges(stats, lgAvg, pa, opsLast30) {
   if (!stats || !lgAvg || pa < 40) return [];
+
+  // Fallback constants if dynamic rates not yet available (early season)
+  const lgHRPA = lgAvg.hrPA || 0.032;
+  const lgSBPA = lgAvg.sbPA || 0.008;
+  const lgSOPA = lgAvg.soPA || 0.225;
+
   const avg  = parseFloat(stats.avg)  || 0;
   const obp  = parseFloat(stats.obp)  || 0;
   const slg  = parseFloat(stats.slg)  || 0;
-  const hr   = parseInt(stats.homeRuns)    || 0;
-  const sb   = parseInt(stats.stolenBases) || 0;
-  const cs   = parseInt(stats.caughtStealing) || 0;
-  const so   = parseInt(stats.strikeOuts) || 0;
-  const bb   = parseInt(stats.baseOnBalls) || 0;
-  const rbi  = parseInt(stats.rbi)    || 0;
+  const ops  = parseFloat(stats.ops)  || 0;
+  const hr   = parseInt(stats.homeRuns)      || 0;
+  const sb   = parseInt(stats.stolenBases)   || 0;
+  const cs   = parseInt(stats.caughtStealing)|| 0;
+  const so   = parseInt(stats.strikeOuts)    || 0;
+  const bb   = parseInt(stats.baseOnBalls)   || 0;
+  const rbi  = parseInt(stats.rbi)           || 0;
   const risp = parseFloat(stats.avgWithRISP || stats.rISP || 0) || 0;
-  const hrPA = pa > 0 ? hr / pa : 0;
-  const sbPA = pa > 0 ? sb / pa : 0;
-  const soPA = pa > 0 ? so / pa : 0;
-  const lgHRPA = 0.034; const lgSBPA = 0.018; const lgSOPA = 0.225;
+
+  const hrPA  = pa > 0 ? hr / pa : 0;
+  const sbPA  = pa > 0 ? sb / pa : 0;
+  const soPA  = pa > 0 ? so / pa : 0;
+  const sbAtt = sb + cs;
+
   const badges = [];
   const has = k => badges.includes(k);
 
+  // 1. Power Hitter: HR rate ≥115% liga + AVG ≤ liga
   if (pa >= 60 && hrPA >= lgHRPA * 1.15 && avg <= lgAvg.avg && !has('Contact Hitter'))
     badges.push('Power Hitter');
+
+  // 2. Contact Hitter: AVG ≥ liga+.025 + HR rate ≤75% liga
   if (pa >= 75 && avg >= lgAvg.avg + 0.025 && hrPA <= lgHRPA * 0.75 && !has('Power Hitter'))
     badges.push('Contact Hitter');
-  if (pa >= 40 && sbPA >= lgSBPA * 2.5 && (sb === 0 || cs/sb <= 0.25) && !has('Groundball Machine'))
+
+  // 3. Speed Threat: SB rate ≥250% liga + sbAtt ≥4 + CS% ≤25%
+  if (pa >= 40 && sbAtt >= 4 && sbPA >= lgSBPA * 2.5 && cs / Math.max(sbAtt,1) <= 0.25 && !has('Groundball Machine'))
     badges.push('Speed Threat');
+
+  // 4. Table Setter: OBP ≥ liga+.030 + HR rate ≤65% liga
   if (pa >= 60 && obp >= lgAvg.obp + 0.030 && hrPA <= lgHRPA * 0.65 && !has('Run Producer'))
     badges.push('Table Setter');
+
+  // 5. High-Variance: K rate ≥115% liga + HR rate ≥105% liga
   if (pa >= 75 && soPA >= lgSOPA * 1.15 && hrPA >= lgHRPA * 1.05)
     badges.push('High-Variance');
+
+  // 6. Empty Average: AVG ≥ liga+.020 pero SLG ≤ liga
   if (pa >= 80 && avg >= lgAvg.avg + 0.020 && slg <= lgAvg.slg && !has('Power Hitter') && !has('Contact Hitter'))
     badges.push('Empty Average');
+
+  // 7. Groundball Machine: HR rate ≤60% liga + AVG ≥ liga+.015
   if (pa >= 70 && hrPA <= lgHRPA * 0.60 && avg >= lgAvg.avg + 0.015 && !has('Speed Threat') && !has('Power Hitter'))
     badges.push('Groundball Machine');
+
+  // 8. Clutch Hitter: AVG RISP ≥ AVG+.035
   if (pa >= 100 && risp > 0 && risp >= avg + 0.035)
     badges.push('Clutch Hitter');
+
+  // 9. Poco Disciplinado: OBP < AVG+.025 o SO/BB ≥ 2.8
   if (pa >= 60 && (obp < avg + 0.025 || (bb > 0 && so/bb >= 2.8)))
     badges.push('Poco Disciplinado');
-  if (pa >= 80 && (rbi/pa) >= 0.10 * 1.20 && !has('Table Setter'))
+
+  // 10. Run Producer: RBI/PA ≥ 120% esperado (~0.10/PA)
+  if (pa >= 80 && (rbi/pa) >= 0.12 && !has('Table Setter'))
     badges.push('Run Producer');
+
+  // 11. En racha: OPS últimos 30d vs temporada ≥ .095 diferencia
+  if (opsLast30 != null && ops > 0 && Math.abs(opsLast30 - ops) >= 0.095)
+    badges.push('En racha');
 
   return badges.slice(0, 3);
 }
@@ -2323,37 +2425,61 @@ function getPitcherNarrativeBadges(p, role) {
   const era  = parseFloat(s.era)  || 0;
   const whip = parseFloat(s.whip) || 0;
   const ip   = parseFloat(s.inningsPitched) || 0;
-  const gs   = parseInt(s.gamesStarted) || 0;
-  const qs   = parseInt(s.qualityStarts) || 0;
-  const so   = parseInt(s.strikeOuts) || 0;
-  const bb   = parseInt(s.baseOnBalls) || 0;
-  const sv   = parseInt(s.saves) || 0;
-  const hld  = parseInt(s.holds) || 0;
-  const gp   = parseInt(s.gamesPitched) || 0;
+  const gs   = parseInt(s.gamesStarted)     || 0;
+  const so   = parseInt(s.strikeOuts)       || 0;
+  const bb   = parseInt(s.baseOnBalls)      || 0;
+  const sv   = parseInt(s.saves)            || 0;
+  const hld  = parseInt(s.holds)            || 0;
+  const gp   = parseInt(s.gamesPitched)     || 0;
+  const bs   = parseInt(s.blownSaves)       || 0;
+
+  // Dynamic league pitching rates (fallback to 2026 constants)
+  const lg = (leagueTeamStatsCache || {})._leaguePitch || { era:4.10, whip:1.28, k9:8.5, bb9:3.2 };
+
+  const k9  = ip > 0 ? (so/ip)*9 : 0;
+  const bb9 = ip > 0 ? (bb/ip)*9 : 0;
+  const ipPS = gs > 0 ? ip/gs : 0;
+
   const badges = [];
 
   if (role === 'SP' && gs >= 2) {
-    const ipPS   = gs > 0 ? ip / gs : 0;
-    const qsPct  = gs > 0 ? qs / gs : 0;
-    const k9     = ip > 0 ? (so / ip) * 9 : 0;
-    const bb9    = ip > 0 ? (bb / ip) * 9 : 0;
-    if      (era <= 2.80 && whip <= 1.10 && qsPct >= 0.65) badges.push('Ace');
-    else if (era <= 3.50 && whip <= 1.20 && qsPct >= 0.50) badges.push('Top Starter');
-    if (k9 >= 10.0 && gs >= 3) badges.push('Power Arm');
-    else if (k9 >= 8.5 && gs >= 3) badges.push('Strikeout Artist');
-    if (ipPS >= 6.5 && gs >= 3 && !badges.includes('Ace')) badges.push('Workhorse');
-    if (bb9 <= 2.0 && gs >= 3 && !badges.includes('Ace') && !badges.includes('Top Starter')) badges.push('Control Specialist');
-    if (era >= 5.50 && gs >= 4) badges.push('Vulnerable');
+    // Ace: ERA ≤85% liga + WHIP ≤90% liga + IP/GS ≥5.8
+    if (era > 0 && era <= lg.era * 0.85 && whip <= lg.whip * 0.90 && ipPS >= 5.8)
+      badges.push('Ace');
+    // Top Starter: ERA ≤95% liga + IP/GS ≥5.2
+    else if (era > 0 && era <= lg.era * 0.95 && ipPS >= 5.2)
+      badges.push('Top Starter');
+
+    // Power Arm: K/9 ≥115% liga
+    if (k9 >= lg.k9 * 1.15 && gs >= 2)
+      badges.push('Power Arm');
+    // Strikeout Artist: K/9 ≥105% liga (solo si no Power Arm)
+    else if (k9 >= lg.k9 * 1.05 && gs >= 2 && !badges.includes('Power Arm'))
+      badges.push('Strikeout Artist');
+
+    // Workhorse: IP/GS ≥6.2
+    if (ipPS >= 6.2 && gs >= 2 && !badges.includes('Ace'))
+      badges.push('Workhorse');
+    // Control Specialist: BB/9 ≤80% liga
+    if (bb9 <= lg.bb9 * 0.80 && gs >= 2 && !badges.includes('Ace') && !badges.includes('Top Starter'))
+      badges.push('Control Specialist');
+    // Vulnerable: ERA ≥115% liga
+    if (era >= lg.era * 1.15 && gs >= 3)
+      badges.push('Vulnerable');
+
   } else if (role === 'CL' && gp >= 3) {
     if (sv >= 2 && era <= 2.50) badges.push('Elite Closer');
-    else if (sv >= 1 && era <= 3.50) badges.push('Reliable');
-    const bs = parseInt(s.blownSaves) || 0;
+    else if (sv >= 1 && era <= lg.era * 0.85) badges.push('Reliable');
     if ((sv + bs) > 0 && sv/(sv+bs) >= 0.85) badges.push('Lockdown');
+
   } else if (role === 'RP' && gp >= 5) {
-    if (hld >= 3 && era <= 3.00) badges.push('Setup Man');
-    if (ip > 0 && (so/ip)*9 >= 10.5) badges.push('Swing Man');
-    if (era >= 5.50) badges.push('Shaky');
+    if (hld >= 3 && era <= lg.era * 0.75) badges.push('Setup Man');
+    // Swing Man: reliever with high innings (≥12 IP, ≥10 GP)
+    if (ip >= 12 && gp >= 10 && gs <= 1) badges.push('Swing Man');
+    // Shaky: ERA ≥115% liga + has save opps or blown saves
+    if (era >= lg.era * 1.15 && (bs >= 2 || sv + bs >= 3)) badges.push('Shaky');
   }
+
   return badges.slice(0, 2);
 }
 
@@ -2439,13 +2565,11 @@ function playerDetailHTML(p, type, roleOrPos) {
   // Narrative badges (purple)
   let narrativeHTML = '';
   if (isHitter) {
-    const lgAvg = (leagueTeamStatsCache || {})._leagueAvg || { avg:0.248, obp:0.317, slg:0.408 };
+    const lgAvg = (leagueTeamStatsCache || {})._leagueAvg || { avg:0.245, obp:0.315, slg:0.405 };
     const pa = parseInt(p.stats?.plateAppearances || p.stats?.atBats || 0);
-    const nbadges = getNarrativeBadges(p.stats, lgAvg, pa);
-    if (nbadges.length < 3 && !p.isRookie) {
-      const career = careerStatsCache[p.id];
-      if (career?.ops && p.ops && Math.abs(p.ops - career.ops) >= 0.095) nbadges.push('En racha');
-    }
+    // Use last-30d OPS vs season OPS for "En racha" (more reliable than career)
+    const opsLast30 = recentHittingCache[p.id] ?? null;
+    const nbadges = getNarrativeBadges(p.stats, lgAvg, pa, opsLast30);
     narrativeHTML = narrativeBadgesHTML(nbadges.slice(0, 3));
   } else {
     narrativeHTML = narrativeBadgesHTML(getPitcherNarrativeBadges(p, roleOrPos));
@@ -2864,31 +2988,66 @@ async function fetchLeagueTeamStats() {
       map[id].slg = parseFloat(s.stat?.slg) || 0;
     });
     // Compute league-wide averages for narrative badge thresholds
-    const lgAvgAccum = { avg:0, obp:0, slg:0, ops:0, n:0 };
+    // Fallbacks use 2026 MLB historical constants
+    const FALLBACK_HIT = { avg:0.245, obp:0.315, slg:0.405, ops:0.720, hrPA:0.032, sbPA:0.008, soPA:0.225 };
+    const FALLBACK_PITCH = { era:4.10, whip:1.28, k9:8.5, bb9:3.2 };
+
+    const lgAccum = { avg:0, obp:0, slg:0, ops:0, hr:0, pa:0, sb:0, cs:0, so:0, n:0 };
     hitSplits.forEach(s => {
       if (!s.stat?.avg) return;
-      lgAvgAccum.avg += parseFloat(s.stat.avg)||0;
-      lgAvgAccum.obp += parseFloat(s.stat.obp)||0;
-      lgAvgAccum.slg += parseFloat(s.stat.slg)||0;
-      lgAvgAccum.ops += parseFloat(s.stat.ops)||0;
-      lgAvgAccum.n++;
+      lgAccum.avg += parseFloat(s.stat.avg)||0;
+      lgAccum.obp += parseFloat(s.stat.obp)||0;
+      lgAccum.slg += parseFloat(s.stat.slg)||0;
+      lgAccum.ops += parseFloat(s.stat.ops)||0;
+      lgAccum.hr  += parseInt(s.stat.homeRuns)||0;
+      lgAccum.pa  += parseInt(s.stat.plateAppearances)||0;
+      lgAccum.sb  += parseInt(s.stat.stolenBases)||0;
+      lgAccum.cs  += parseInt(s.stat.caughtStealing)||0;
+      lgAccum.so  += parseInt(s.stat.strikeOuts)||0;
+      lgAccum.n++;
     });
-    if (lgAvgAccum.n) {
-      const n = lgAvgAccum.n;
-      map._leagueAvg = { avg: lgAvgAccum.avg/n, obp: lgAvgAccum.obp/n, slg: lgAvgAccum.slg/n, ops: lgAvgAccum.ops/n };
+    if (lgAccum.n && lgAccum.pa > 0) {
+      const n = lgAccum.n;
+      map._leagueAvg = {
+        avg:  lgAccum.avg/n,
+        obp:  lgAccum.obp/n,
+        slg:  lgAccum.slg/n,
+        ops:  lgAccum.ops/n,
+        hrPA: lgAccum.hr / lgAccum.pa,
+        sbPA: lgAccum.sb / lgAccum.pa,
+        soPA: lgAccum.so / lgAccum.pa,
+      };
     } else {
-      // MLB historical constants as fallback
-      map._leagueAvg = { avg: 0.248, obp: 0.317, slg: 0.408, ops: 0.724 };
+      map._leagueAvg = { ...FALLBACK_HIT };
     }
-    (pitchRes.stats?.[0]?.splits || []).forEach(s => {
+
+    const pitchSplits = pitchRes.stats?.[0]?.splits || [];
+    const lgPitch = { era:0, whip:0, k9:0, bb9:0, ip:0, n:0 };
+    pitchSplits.forEach(s => {
       const id = s.team?.id; if (!id) return;
       map[id] = map[id] || {};
       map[id].era  = parseFloat(s.stat?.era)  || 0;
       map[id].whip = parseFloat(s.stat?.whip) || 0;
-      // gamesStarted innings vs total innings → SP usage %
       map[id].spIp    = parseFloat(s.stat?.inningsPitchedStart) || 0;
       map[id].totalIp = parseFloat(s.stat?.inningsPitched)      || 0;
+      // Accumulate for league pitching averages
+      const ip = parseFloat(s.stat?.inningsPitched)||0;
+      if (ip > 0) {
+        lgPitch.era  += parseFloat(s.stat?.era)||0;
+        lgPitch.whip += parseFloat(s.stat?.whip)||0;
+        const so = parseInt(s.stat?.strikeOuts)||0;
+        const bb = parseInt(s.stat?.baseOnBalls)||0;
+        lgPitch.k9   += ip > 0 ? (so/ip)*9 : 0;
+        lgPitch.bb9  += ip > 0 ? (bb/ip)*9 : 0;
+        lgPitch.n++;
+      }
     });
+    if (lgPitch.n) {
+      const n = lgPitch.n;
+      map._leaguePitch = { era: lgPitch.era/n, whip: lgPitch.whip/n, k9: lgPitch.k9/n, bb9: lgPitch.bb9/n };
+    } else {
+      map._leaguePitch = { ...FALLBACK_PITCH };
+    }
     leagueTeamStatsCache = map;
     return map;
   } catch(e) { return {}; }
@@ -2897,6 +3056,30 @@ async function fetchLeagueTeamStats() {
 // ── Career stats cache (for trend detection) ──────────────────────────────
 const careerStatsCache = {};
 const recentPitchingCache = {};
+
+// Cache for last-30d hitter stats (for "En racha" badge)
+const recentHittingCache = {};
+
+async function fetchRecentHitting(pids) {
+  const missing = pids.filter(id => !(id in recentHittingCache));
+  if (!missing.length) return;
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+  // Batch in chunks of 20
+  for (let i = 0; i < missing.length; i += 20) {
+    const chunk = missing.slice(i, i+20).join(',');
+    await fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=byDateRange,group=hitting,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
+    ).then(r => r.json()).then(d => {
+      (d.people || []).forEach(p => {
+        const s = p.stats?.find(g => g.group?.displayName?.toLowerCase() === 'hitting')?.splits?.[0]?.stat;
+        recentHittingCache[p.id] = s ? parseFloat(s.ops)||0 : null;
+      });
+    }).catch(() => {
+      missing.slice(i, i+20).forEach(id => { recentHittingCache[id] = null; });
+    });
+  }
+}
 
 async function fetchRecentPitching(pids) {
   const missing = pids.filter(id => !(id in recentPitchingCache));
@@ -2981,7 +3164,7 @@ function trendFormaHTML(currentScore, careerScore) {
   }
 }
 
-const loaded = { standings: true, bracket: false, schedule: false, rosters: false, topgames: false };
+const loaded = { standings: true, bracket: false, schedule: false, rosters: false, topgames: false, players: false };
 
 function switchTab(tab) {
   try {
@@ -2997,6 +3180,7 @@ function switchTab(tab) {
       if (tab === 'schedule') loadSchedule();
       if (tab === 'rosters') loadRosters();
       if (tab === 'topgames') loadTopGames();
+      if (tab === 'players') loadPlayers();
     }
   } catch(e) { console.error('switchTab:', e); }
 }
@@ -3278,6 +3462,468 @@ async function loadTopGames() {
 
   } catch(e) {
     el.innerHTML = `<div class="error-box">Error loading top games: ${e.message}</div>`;
+  }
+}
+
+
+// ── PLAYERS TAB ───────────────────────────────────────────────────────────────
+// Fetches league-wide individual player stats and ranks them by narrative category.
+// Uses the MLB Stats API /stats endpoint (league-wide, type=season).
+
+const playersCache = {};  // category → [{player, teamId, statVal}]
+
+const PLAYER_CATEGORIES = [
+
+  // ── BATEADORES ──────────────────────────────────────────────────────────────
+
+  {
+    key: 'power', label: 'Power Hitter',
+    desc: 'Batea jonrones pero pocos hits simples',
+    type: 'hitter', statColor: '#e05a2b',
+    displayStat: s => `${s.homeRuns ?? '—'} HR · .${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const hr = parseInt(s.homeRuns)||0;
+      const hrPA = pa > 0 ? hr/pa : 0;
+      return pa >= 60 && hrPA >= (lg.hrPA||0.032) * 1.15 && (parseFloat(s.avg)||0) <= (lg.avg||0.245);
+    },
+    score: s => parseInt(s.homeRuns)||0,
+  },
+
+  {
+    key: 'contact', label: 'Contact Hitter',
+    desc: 'Golpea la bola constantemente sin poder',
+    type: 'hitter', statColor: '#16a34a',
+    displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · ${s.hits ?? '—'} H`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const avg = parseFloat(s.avg)||0;
+      const hrPA = pa > 0 ? (parseInt(s.homeRuns)||0)/pa : 0;
+      return pa >= 75 && avg >= (lg.avg||0.245) + 0.025 && hrPA <= (lg.hrPA||0.032) * 0.75;
+    },
+    score: s => parseFloat(s.avg)||0,
+  },
+
+  {
+    key: 'speed', label: 'Speed Threat',
+    desc: 'Roba bases constantemente',
+    type: 'hitter', statColor: '#0ea5e9',
+    displayStat: s => `${s.stolenBases ?? '—'} SB · ${s.caughtStealing ?? '—'} CS`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const sb = parseInt(s.stolenBases)||0;
+      const cs = parseInt(s.caughtStealing)||0;
+      const sbAtt = sb + cs;
+      return pa >= 40 && sbAtt >= 4 && (sb/pa) >= (lg.sbPA||0.008) * 2.5 && cs/Math.max(sbAtt,1) <= 0.25;
+    },
+    score: s => parseInt(s.stolenBases)||0,
+  },
+
+  {
+    key: 'tablesetter', label: 'Table Setter',
+    desc: 'Siempre llega a base para los siguientes',
+    type: 'hitter', statColor: '#16a34a',
+    displayStat: s => `.${(parseFloat(s.obp)||0).toFixed(3).slice(2)} OBP · ${s.walks ?? s.baseOnBalls ?? '—'} BB`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const obp = parseFloat(s.obp)||0;
+      const hrPA = pa > 0 ? (parseInt(s.homeRuns)||0)/pa : 0;
+      return pa >= 60 && obp >= (lg.obp||0.315) + 0.030 && hrPA <= (lg.hrPA||0.032) * 0.65;
+    },
+    score: s => parseFloat(s.obp)||0,
+  },
+
+  {
+    key: 'highvariance', label: 'High-Variance',
+    desc: 'Días de jonrones, días de fallos. Todo o nada',
+    type: 'hitter', statColor: '#f59e0b',
+    displayStat: s => `${s.homeRuns ?? '—'} HR · ${s.strikeOuts ?? '—'} K`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const so = parseInt(s.strikeOuts)||0;
+      const hr = parseInt(s.homeRuns)||0;
+      return pa >= 75 && pa > 0
+        && (so/pa) >= (lg.soPA||0.225) * 1.15
+        && (hr/pa) >= (lg.hrPA||0.032) * 1.05;
+    },
+    score: s => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||1;
+      return ((parseInt(s.strikeOuts)||0) + (parseInt(s.homeRuns)||0)*3) / pa;
+    },
+  },
+
+  {
+    key: 'emptyavg', label: 'Empty Average',
+    desc: 'Muchos hits... pero sin poder ni impacto',
+    type: 'hitter', statColor: '#94a3b8',
+    displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · .${(parseFloat(s.slg)||0).toFixed(3).slice(2)} SLG`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const avg = parseFloat(s.avg)||0;
+      const slg = parseFloat(s.slg)||0;
+      return pa >= 80 && avg >= (lg.avg||0.245) + 0.020 && slg <= (lg.slg||0.405);
+    },
+    score: s => parseFloat(s.avg)||0,
+  },
+
+  {
+    key: 'groundball', label: 'Groundball Machine',
+    desc: 'Muchos roletazos, pocos extrabases',
+    type: 'hitter', statColor: '#6b7280',
+    displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · ${s.homeRuns ?? '—'} HR`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const hr = parseInt(s.homeRuns)||0;
+      const avg = parseFloat(s.avg)||0;
+      return pa >= 70 && avg >= (lg.avg||0.245) + 0.015 && pa > 0 && (hr/pa) <= (lg.hrPA||0.032) * 0.60;
+    },
+    score: s => parseFloat(s.avg)||0,
+  },
+
+  {
+    key: 'clutch', label: 'Clutch Hitter',
+    desc: 'Responde cuando más se le necesita',
+    type: 'hitter', statColor: '#dc2626',
+    displayStat: s => {
+      const risp = parseFloat(s.avgWithRISP||s.rISP||0)||0;
+      return risp > 0
+        ? `.${risp.toFixed(3).slice(2)} RISP · .${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG`
+        : `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · ${s.rbi ?? '—'} RBI`;
+    },
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const avg = parseFloat(s.avg)||0;
+      const risp = parseFloat(s.avgWithRISP||s.rISP||0)||0;
+      const rbi = parseInt(s.rbi)||0;
+      // Accept either RISP data or high RBI rate as proxy
+      return pa >= 80 && ((risp > 0 && risp >= avg + 0.030) || (rbi/Math.max(pa,1) >= 0.12));
+    },
+    score: s => {
+      const risp = parseFloat(s.avgWithRISP||s.rISP||0)||0;
+      const pa = parseInt(s.plateAppearances||s.atBats)||1;
+      return risp > 0 ? risp : (parseInt(s.rbi)||0)/pa;
+    },
+  },
+
+  {
+    key: 'undisciplined', label: 'Poco Disciplinado',
+    desc: 'Ataca casi todo, con pocos boletos',
+    type: 'hitter', statColor: '#f97316',
+    displayStat: s => {
+      const bb = parseInt(s.baseOnBalls||s.walks)||0;
+      const so = parseInt(s.strikeOuts)||0;
+      const ratio = bb > 0 ? (so/bb).toFixed(1) : '∞';
+      return `${so} K / ${bb} BB (${ratio})`;
+    },
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const so = parseInt(s.strikeOuts)||0;
+      const bb = parseInt(s.baseOnBalls||s.walks)||0;
+      const avg = parseFloat(s.avg)||0;
+      const obp = parseFloat(s.obp)||0;
+      return pa >= 60 && (obp < avg + 0.025 || (bb > 0 && so/bb >= 2.8));
+    },
+    score: s => {
+      const bb = parseInt(s.baseOnBalls||s.walks)||1;
+      const so = parseInt(s.strikeOuts)||0;
+      return so/bb;
+    },
+  },
+
+  {
+    key: 'runproducer', label: 'Run Producer',
+    desc: 'Empuja carreras constantemente',
+    type: 'hitter', statColor: '#7c3aed',
+    displayStat: s => `${s.rbi ?? '—'} RBI · ${s.homeRuns ?? '—'} HR`,
+    filter: (s, lg) => {
+      const pa = parseInt(s.plateAppearances||s.atBats)||0;
+      const rbi = parseInt(s.rbi)||0;
+      return pa >= 80 && (rbi/Math.max(pa,1)) >= 0.12;
+    },
+    score: s => parseInt(s.rbi)||0,
+  },
+
+  // ── PITCHERS ────────────────────────────────────────────────────────────────
+
+  {
+    key: 'ace', label: 'Ace',
+    desc: 'El mejor pitcher del equipo',
+    type: 'pitcher', statColor: '#16a34a',
+    displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
+    filter: (s, lg) => {
+      const gs = parseInt(s.gamesStarted)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      const era = parseFloat(s.era)||0;
+      const whip = parseFloat(s.whip)||0;
+      const ipPS = gs > 0 ? ip/gs : 0;
+      return gs >= 2 && ip > 0 && era > 0
+        && era <= (lg.pitchEra||4.10) * 0.87
+        && whip <= (lg.pitchWhip||1.28) * 0.92
+        && ipPS >= 5.5;
+    },
+    score: s => -(parseFloat(s.era)||99),
+  },
+
+  {
+    key: 'topstarter', label: 'Top Starter',
+    desc: 'Abridor sólido y de confianza',
+    type: 'pitcher', statColor: '#1a56db',
+    displayStat: s => `${s.era ?? '—'} ERA · ${s.gamesStarted ?? '—'} GS`,
+    filter: (s, lg) => {
+      const gs = parseInt(s.gamesStarted)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      const era = parseFloat(s.era)||0;
+      const ipPS = gs > 0 ? ip/gs : 0;
+      const lgERA = lg.pitchEra||4.10;
+      // Top Starter but NOT Ace
+      return gs >= 2 && ip > 0 && era > 0
+        && era > lgERA * 0.87
+        && era <= lgERA * 0.97
+        && ipPS >= 5.0;
+    },
+    score: s => -(parseFloat(s.era)||99),
+  },
+
+  {
+    key: 'workhorse', label: 'Workhorse',
+    desc: 'Lanza muchas entradas, aguanta toda la carga',
+    type: 'pitcher', statColor: '#0ea5e9',
+    displayStat: s => `${s.inningsPitched ?? '—'} IP · ${s.gamesStarted ?? '—'} GS`,
+    filter: (s, lg) => {
+      const gs = parseInt(s.gamesStarted)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      return gs >= 2 && (ip/Math.max(gs,1)) >= 5.5;
+    },
+    score: s => parseFloat(s.inningsPitched)||0,
+  },
+
+  {
+    key: 'powerarm', label: 'Power Arm',
+    desc: 'Poncha bateadores como máquina',
+    type: 'pitcher', statColor: '#7c3aed',
+    displayStat: s => {
+      const ip = parseFloat(s.inningsPitched)||1;
+      return `${((parseInt(s.strikeOuts)||0)/ip*9).toFixed(1)} K/9 · ${s.strikeOuts ?? '—'} K`;
+    },
+    filter: (s, lg) => {
+      const gp = parseInt(s.gamesPitched)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      const k9 = ip > 0 ? (parseInt(s.strikeOuts)||0)/ip*9 : 0;
+      return gp >= 3 && ip >= 5 && k9 >= (lg.pitchK9||8.5) * 1.10;
+    },
+    score: s => {
+      const ip = parseFloat(s.inningsPitched)||1;
+      return (parseInt(s.strikeOuts)||0)/ip*9;
+    },
+  },
+
+  {
+    key: 'strikeoutartist', label: 'Strikeout Artist',
+    desc: 'Alta tasa de ponches, un poco menos dominante',
+    type: 'pitcher', statColor: '#a855f7',
+    displayStat: s => {
+      const ip = parseFloat(s.inningsPitched)||1;
+      return `${((parseInt(s.strikeOuts)||0)/ip*9).toFixed(1)} K/9 · ${s.strikeOuts ?? '—'} K`;
+    },
+    filter: (s, lg) => {
+      const gp = parseInt(s.gamesPitched)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      const k9 = ip > 0 ? (parseInt(s.strikeOuts)||0)/ip*9 : 0;
+      const lgK9 = lg.pitchK9||8.5;
+      // Strikeout Artist = K/9 >= 105% liga but < 115% liga (so it doesn't overlap with Power Arm)
+      return gp >= 3 && ip >= 5 && k9 >= lgK9 * 1.05 && k9 < lgK9 * 1.15;
+    },
+    score: s => {
+      const ip = parseFloat(s.inningsPitched)||1;
+      return (parseInt(s.strikeOuts)||0)/ip*9;
+    },
+  },
+
+  {
+    key: 'control', label: 'Control Specialist',
+    desc: 'Tira strikes precisos, casi nunca boletos',
+    type: 'pitcher', statColor: '#16a34a',
+    displayStat: s => {
+      const ip = parseFloat(s.inningsPitched)||1;
+      return `${((parseInt(s.baseOnBalls)||0)/ip*9).toFixed(1)} BB/9 · ${s.baseOnBalls ?? '—'} BB`;
+    },
+    filter: (s, lg) => {
+      const gs = parseInt(s.gamesStarted)||0;
+      const gp = parseInt(s.gamesPitched)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      const bb9 = ip > 0 ? (parseInt(s.baseOnBalls)||0)/ip*9 : 99;
+      return (gs >= 2 || gp >= 5) && ip >= 5 && bb9 <= (lg.pitchBb9||3.2) * 0.82;
+    },
+    score: s => {
+      const ip = parseFloat(s.inningsPitched)||1;
+      return -((parseInt(s.baseOnBalls)||0)/ip*9);
+    },
+  },
+
+  {
+    key: 'vulnerable', label: 'Vulnerable',
+    desc: 'Se le bate mucho, permite muchas carreras',
+    type: 'pitcher', statColor: '#dc2626',
+    displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
+    filter: (s, lg) => {
+      const gs = parseInt(s.gamesStarted)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      const era = parseFloat(s.era)||0;
+      return gs >= 3 && ip > 0 && era >= (lg.pitchEra||4.10) * 1.15;
+    },
+    score: s => parseFloat(s.era)||0,
+  },
+
+  {
+    key: 'closer', label: 'Elite Closer',
+    desc: 'Cierra novenos sin problemas',
+    type: 'pitcher', statColor: '#dc2626',
+    displayStat: s => `${s.saves ?? '—'} SV · ${s.saveOpportunities ?? '—'} SVO · ${s.era ?? '—'} ERA`,
+    filter: (s, lg) => {
+      const gp = parseInt(s.gamesPitched)||0;
+      const sv = parseInt(s.saves)||0;
+      const era = parseFloat(s.era)||0;
+      return gp >= 3 && sv >= 1 && era <= (lg.pitchEra||4.10) * 0.90;
+    },
+    score: s => parseInt(s.saves)||0,
+  },
+
+  {
+    key: 'setupman', label: 'Setup Man',
+    desc: 'Prepara el juego para el closer',
+    type: 'pitcher', statColor: '#0ea5e9',
+    displayStat: s => `${s.holds ?? '—'} HLD · ${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
+    filter: (s, lg) => {
+      const gp = parseInt(s.gamesPitched)||0;
+      const hld = parseInt(s.holds)||0;
+      const era = parseFloat(s.era)||0;
+      return gp >= 5 && hld >= 2 && era <= (lg.pitchEra||4.10) * 0.85;
+    },
+    score: s => parseInt(s.holds)||0,
+  },
+
+  {
+    key: 'swingman', label: 'Swing Man',
+    desc: 'Relevista con muchas entradas acumuladas',
+    type: 'pitcher', statColor: '#f59e0b',
+    displayStat: s => `${s.inningsPitched ?? '—'} IP · ${s.gamesPitched ?? '—'} GP`,
+    filter: (s, lg) => {
+      const gp = parseInt(s.gamesPitched)||0;
+      const gs = parseInt(s.gamesStarted)||0;
+      const ip = parseFloat(s.inningsPitched)||0;
+      return gp >= 10 && gs <= 1 && ip >= 12;
+    },
+    score: s => parseFloat(s.inningsPitched)||0,
+  },
+
+];
+
+async function loadPlayers() {
+  const el = document.getElementById('playersContent');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CARGANDO JUGADORES...</div></div>`;
+
+  try {
+    // Fetch league stats + league averages in parallel
+    await fetchLeagueTeamStats();
+    const lgMap = leagueTeamStatsCache || {};
+    const lgAvg = lgMap._leagueAvg || {};
+    const lgPitch = lgMap._leaguePitch || {};
+
+    const lg = {
+      avg: lgAvg.avg || 0.245,
+      obp: lgAvg.obp || 0.315,
+      slg: lgAvg.slg || 0.405,
+      hrPA: lgAvg.hrPA || 0.032,
+      sbPA: lgAvg.sbPA || 0.008,
+      soPA: lgAvg.soPA || 0.225,
+      pitchEra: lgPitch.era || 4.10,
+      pitchWhip: lgPitch.whip || 1.28,
+      pitchK9: lgPitch.k9 || 8.5,
+      pitchBb9: lgPitch.bb9 || 3.2,
+    };
+
+    // Fetch all MLB hitters and pitchers season stats
+    const [hitData, pitchData] = await Promise.all([
+      fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=hitting&gameType=R&sportId=1&limit=500&offset=0`)
+        .then(r => r.json()).catch(() => ({ stats: [] })),
+      fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=pitching&gameType=R&sportId=1&limit=500&offset=0`)
+        .then(r => r.json()).catch(() => ({ stats: [] })),
+    ]);
+
+    const hitters = (hitData.stats?.[0]?.splits || []).map(sp => ({
+      pid: sp.player?.id,
+      name: sp.player?.fullName || '?',
+      teamId: sp.team?.id,
+      teamAbbr: (sp.team?.id && TEAM_META[sp.team.id]?.abbr) || sp.team?.abbreviation || '?',
+      stats: sp.stat,
+    })).filter(p => p.pid);
+
+    const pitchers = (pitchData.stats?.[0]?.splits || []).map(sp => ({
+      pid: sp.player?.id,
+      name: sp.player?.fullName || '?',
+      teamId: sp.team?.id,
+      teamAbbr: (sp.team?.id && TEAM_META[sp.team.id]?.abbr) || sp.team?.abbreviation || '?',
+      stats: sp.stat,
+    })).filter(p => p.pid);
+
+    // Build each category's top 10
+    function buildCategory(cat) {
+      const pool = cat.type === 'hitter' ? hitters : pitchers;
+      return pool
+        .filter(p => cat.filter(p.stats, lg))
+        .sort((a, b) => cat.score(b.stats) - cat.score(a.stats))
+        .slice(0, 10)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+    }
+
+    // Render
+    const hitterCats = PLAYER_CATEGORIES.filter(c => c.type === 'hitter');
+    const pitcherCats = PLAYER_CATEGORIES.filter(c => c.type === 'pitcher');
+
+    function cardHTML(p, cat) {
+      const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.pid}/headshot/67/current`;
+      const teamMeta = TEAM_META[p.teamId];
+      const teamLogo = teamMeta ? `<img src="${teamMeta.logo}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display='none'">` : '';
+      return `<div class="player-rank-card">
+        <div class="player-rank-num${p.rank <= 3 ? ' top3' : ''}">${p.rank}</div>
+        <img class="player-rank-photo" src="${photoUrl}" alt="${p.name}"
+          onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+        <div class="player-rank-info">
+          <div class="player-rank-name">${p.name}</div>
+          <div class="player-rank-team">${teamLogo}${p.teamAbbr}</div>
+        </div>
+        <div class="player-rank-stat">
+          <span class="player-rank-stat-val" style="color:${cat.statColor}">${cat.displayStat(p.stats)}</span>
+          <span class="player-rank-stat-lbl">${cat.label}</span>
+        </div>
+      </div>`;
+    }
+
+    function sectionHTML(cat, players) {
+      if (!players.length) return '';
+      return `<div>
+        <div class="players-section-header">
+          <span class="players-section-title">${cat.label}</span>
+          <span class="players-section-desc">"${cat.desc}"</span>
+        </div>
+        <div class="players-grid">
+          ${players.map(p => cardHTML(p, cat)).join('')}
+        </div>
+      </div>`;
+    }
+
+    const hitterSections = hitterCats.map(c => sectionHTML(c, buildCategory(c))).filter(Boolean).join('');
+    const pitcherSections = pitcherCats.map(c => sectionHTML(c, buildCategory(c))).filter(Boolean).join('');
+
+    el.innerHTML = `<div class="players-layout">
+      <div class="section-title">⚾ BATEADORES</div>
+      ${hitterSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">No hay suficientes datos todavía.</div>'}
+      <div class="section-title">🎯 PITCHERS</div>
+      ${pitcherSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">No hay suficientes datos todavía.</div>'}
+    </div>`;
+
+  } catch(e) {
+    el.innerHTML = `<div class="error-box">Error cargando jugadores: ${e.message}</div>`;
   }
 }
 
