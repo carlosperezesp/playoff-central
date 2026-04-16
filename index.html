@@ -4468,38 +4468,6 @@ async function loadMVPTracker() {
         grid += cardHTML('NL CY YOUNG', 'NATIONAL LEAGUE', nlCY);
       }
 
-      const formulaMVP = `
-        <div class="mvp-formula-box">
-          <div class="mvp-formula-title">Fórmula MVP Hitters</div>
-          <div class="mvp-formula-chips">
-            <span class="mvp-chip">30% OPS</span>
-            <span class="mvp-chip">15% OBP</span>
-            <span class="mvp-chip">10% SLG</span>
-            <span class="mvp-chip">15% HR/PA</span>
-            <span class="mvp-chip">10% RBI/PA</span>
-            <span class="mvp-chip">5% R/PA</span>
-            <span class="mvp-chip">5% SB EFF</span>
-            <span class="mvp-chip">10% VOLUMEN PA</span>
-          </div>
-        </div>`;
-
-      const formulaCY = `
-        <div class="mvp-formula-box">
-          <div class="mvp-formula-title">Fórmula Cy Young Starters</div>
-          <div class="mvp-formula-chips">
-            <span class="mvp-chip pitch">28% ERA</span>
-            <span class="mvp-chip pitch">20% WHIP</span>
-            <span class="mvp-chip pitch">18% K/9</span>
-            <span class="mvp-chip pitch">12% BB/9</span>
-            <span class="mvp-chip pitch">12% IP</span>
-            <span class="mvp-chip pitch">10% QS%</span>
-          </div>
-        </div>`;
-
-      let formulaHtml = '';
-      if (showMVP) formulaHtml += formulaMVP;
-      if (showCY)  formulaHtml += formulaCY;
-
       el.innerHTML = `
         <div class="mvp-page-header">
           <div>
@@ -4512,7 +4480,6 @@ async function loadMVPTracker() {
             <button class="mvp-tab-btn ${filter==='cy'?'active':''}" onclick="setMVPFilter('cy')">CY YOUNG</button>
           </div>
         </div>
-        ${formulaHtml}
         <div class="mvp-grid">${grid}</div>
         <div class="mvp-last-update">Actualizado ${today} a las ${now} · Scores normalizados vs media de liga · Min. ${minPA} PA / ${minIP} IP</div>`;
     }
