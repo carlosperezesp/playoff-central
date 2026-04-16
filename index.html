@@ -234,7 +234,8 @@
     .dfield-pill { font-size: 11px; max-width: 88px; }
     .impact-row { grid-template-columns: 1fr 70px 48px; gap: 7px; }
     .il-row { grid-template-columns: 1fr 70px 48px; gap: 7px; }
-    .impact-stats-line { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .impact-stats-line { font-size: 10px; white-space: normal; overflow: visible; }
+    .impact-name { font-size: 12px; }
     .impact-name { font-size: 13px; }
     .impact-name > * { flex-shrink: 0; }
     .impact-bar-val { font-size: 14px; }
@@ -379,7 +380,7 @@
     width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
     border: 1.5px solid var(--border); flex-shrink: 0; background: var(--surface2);
   }
-  .impact-name-block { min-width: 0; }
+  .impact-name-block { min-width: 0; overflow: hidden; }
   .impact-name {
     font-weight: 700; font-size: 14px; color: var(--text);
     display: flex; align-items: center; gap: 5px; flex-wrap: wrap; line-height: 1.3;
@@ -472,9 +473,10 @@
     font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; letter-spacing: .5px;
     padding: 1px 5px; border-radius: 3px; white-space: nowrap;
   }
-  .team-stat-rank.top { background: rgba(22,163,74,.12); color: var(--win); }
-  .team-stat-rank.mid { background: rgba(234,179,8,.12); color: #b45309; }
-  .team-stat-rank.bot { background: rgba(220,38,38,.10); color: var(--loss); }
+  .team-stat-rank.top      { background: rgba(22,163,74,.12);  color: var(--win); }
+  .team-stat-rank.mid-blue { background: rgba(26,86,219,.10);  color: var(--accent); }
+  .team-stat-rank.mid      { background: rgba(107,114,128,.1); color: var(--muted); }
+  .team-stat-rank.bot      { background: rgba(220,38,38,.10);  color: var(--loss); }
   .team-stat-bar-wrap { position: relative; height: 5px; background: var(--border); border-radius: 999px; overflow: visible; }
   .team-stat-bar-fill { height: 100%; border-radius: 999px; transition: width .4s ease; }
   .team-stat-bar-dots {
@@ -1886,12 +1888,7 @@ async function fetchTeamImpact(teamId) {
   roster.forEach(p => {
     const debut = p.person?.mlbDebutDate;
     if (debut && debut.startsWith(String(season))) rookiePids.add(p.person.id);
-    // Pre-populate All-Star from roster data if available
-    const pid = p.person?.id;
-    if (pid && p.person?.allStarStatus === 'Y') {
-      if (!awardsCache[pid]) awardsCache[pid] = { allStar:false, goldGlove:false, silverSlugger:false, mvp:false, cyYoung:false };
-      awardsCache[pid].allStar = true;
-    }
+
   });
 
   // ── HITTERS ──────────────────────────────────────────────────────────────
@@ -2136,18 +2133,20 @@ async function fetchAwards(pids) {
           const name = (a.award?.name || a.name || '').toLowerCase();
           const id   = (a.awardId || '').toUpperCase();
           const cache = awardsCache[pid];
-          // All-Star
+          // All-Star: ASG selection award
           if (name.includes('all-star') || name.includes('all star') ||
-              id === 'ASG' || id === 'ALASF' || id === 'NLASF') cache.allStar = true;
+              id.includes('ASGSEL') || id === 'ASG') cache.allStar = true;
           // Gold Glove — exact match, avoid false positives
           if (name.includes('gold glove')) cache.goldGlove = true;
           // Silver Slugger — exact match only
           if (name.includes('silver slugger')) cache.silverSlugger = true;
-          // MVP — BBWAA seasonal award only, not All-Star/LCS/WS/Game MVPs
-          if ((name.includes('most valuable player') || name.includes(' mvp')) &&
+          // MVP — BBWAA seasonal award only (AL/NL Most Valuable Player)
+          // Exclude: All-Star MVP, LCS MVP, WS MVP, Game MVP
+          if (name.includes('most valuable player') &&
               !name.includes('all-star') && !name.includes('all star') &&
-              !name.includes('series') && !name.includes('game') &&
-              !name.includes('championship') && !name.includes('world')) cache.mvp = true;
+              !name.includes('series') && !name.includes('championship') &&
+              !name.includes('world') && !name.includes('game') &&
+              !name.includes('league championship')) cache.mvp = true;
           // Cy Young
           if (name.includes('cy young')) cache.cyYoung = true;
         });
@@ -2212,7 +2211,8 @@ function playerDetailHTML(p, type, roleOrPos) {
   if (isHitter) {
     statsLine = `AVG ${s.avg||'.---'} · HR ${s.homeRuns??'—'} · RBI ${s.rbi??'—'} · SB ${s.stolenBases??'—'}`;
   } else if (roleOrPos === 'SP') {
-    statsLine = `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · IP ${s.inningsPitched||'—'} · GS ${s.gamesStarted??'—'}`;
+    const qs = s.qualityStarts != null ? ` · QS ${s.qualityStarts}` : '';
+    statsLine = `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · IP ${s.inningsPitched||'—'} · GS ${s.gamesStarted??'—'}${qs}`;
   } else if (roleOrPos === 'CL') {
     statsLine = `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · SV ${s.saves??'—'} · SVO ${s.saveOpportunities??'—'}`;
   } else {
@@ -2273,7 +2273,7 @@ function playerDetailHTML(p, type, roleOrPos) {
       <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
       <div class="impact-name-block">
-        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${awardInlineBadges(p.id)}${restBadge}${trendBadge}</div>
+        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}${trendBadge}</div>
         <div class="impact-stats-line">${statsLine}</div>
       </div>
     </div>
@@ -2308,12 +2308,12 @@ function renderTeamStatsPanel(teamId, impact) {
     return { rank: r, total, pct };
   }
 
-  function rankBadge(r, lowerBetter = false) {
+  function rankBadge(r) {
     if (r.rank === '—') return '<span class="team-stat-rank mid">—</span>';
     const label = `#${r.rank} / ${r.total}`;
-    // top third = good, bottom third = bad (accounting for direction)
-    const pct = r.pct; // 0=worst, 1=best
-    const cls = pct >= 0.67 ? 'top' : pct <= 0.33 ? 'bot' : 'mid';
+    // Same thresholds as rankColor: 1-6 green, 7-12 blue, 13-22 grey, 23-30 red
+    const rk = r.rank;
+    const cls = rk <= 6 ? 'top' : rk <= 12 ? 'mid-blue' : rk <= 22 ? 'mid' : 'bot';
     return `<span class="team-stat-rank ${cls}">${label}</span>`;
   }
 
@@ -2460,7 +2460,7 @@ function renderDiamondPanel(teamId, impact) {
     const color = p ? getDiamondPlayerColor(ops, 'hitter') : '#9ca3af';
     const nameLabel = p ? p.name : '—';
     const rookieStar = p?.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
-    const pips = p ? awardPipsHTML(p.id) : '';
+    const pips = (p && !p.isRookie) ? awardPipsHTML(p.id) : '';
     const xy = DPOS[pos];
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
@@ -2482,7 +2482,7 @@ function renderDiamondPanel(teamId, impact) {
       const color = getDiamondPlayerColor(p.score, 'pitcher');
       const label = p.throws !== '?' ? p.throws : role;
       const rookieStar = p.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
-      const pips = awardPipsHTML(p.id);
+      const pips = p.isRookie ? '' : awardPipsHTML(p.id);
       const restPart   = p.restDays !== null && p.restDays !== undefined ? restDotHTML(p.restDays) : '';
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
