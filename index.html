@@ -631,6 +631,141 @@
     .players-grid { grid-template-columns: 1fr; }
     .player-rank-card { padding: 10px 12px; }
   }
+
+  /* ── MVP TRACKER ── */
+  .mvp-page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+  }
+  .mvp-page-title {
+    font-family: 'Bebas Neue'; font-size: 32px; letter-spacing: 4px; color: var(--text);
+    line-height: 1;
+  }
+  .mvp-page-subtitle {
+    font-family: 'Barlow Condensed'; font-size: 13px; color: var(--muted);
+    letter-spacing: 1px; margin-top: 4px;
+  }
+  .mvp-tabs-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .mvp-tab-btn {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-size: 13px;
+    letter-spacing: 1.5px; padding: 7px 16px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+    border-radius: 4px; transition: all .15s; white-space: nowrap;
+  }
+  .mvp-tab-btn.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .mvp-tab-btn:hover:not(.active) { color: var(--text); border-color: #aaa; }
+
+  .mvp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .mvp-grid { grid-template-columns: 1fr; } }
+
+  .mvp-tracker-card {
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: 0 1px 6px rgba(0,0,0,.06); overflow: hidden;
+  }
+  .mvp-card-header {
+    background: var(--surface2); padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .mvp-card-title {
+    font-family: 'Bebas Neue'; font-size: 19px; letter-spacing: 2px; color: var(--text);
+  }
+  .mvp-card-league {
+    font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1.5px;
+    color: var(--muted); font-weight: 700;
+  }
+  .mvp-card-body { padding: 0; }
+
+  .mvp-row {
+    display: grid;
+    grid-template-columns: 28px 36px 1fr 52px 24px;
+    align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+    cursor: default;
+  }
+  .mvp-row:last-child { border-bottom: none; }
+  .mvp-row:hover { background: var(--surface2); }
+  .mvp-row.rank1 { border-left: 3px solid #f59e0b; }
+  .mvp-row.rank2 { border-left: 3px solid #94a3b8; }
+  .mvp-row.rank3 { border-left: 3px solid #cd7c4c; }
+
+  .mvp-rank {
+    font-family: 'Bebas Neue'; font-size: 22px;
+    color: var(--border); text-align: center; line-height: 1;
+  }
+  .mvp-rank.top { color: var(--accent); }
+
+  .mvp-photo {
+    width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--border); flex-shrink: 0; background: var(--surface2);
+  }
+
+  .mvp-info { min-width: 0; }
+  .mvp-name {
+    font-weight: 700; font-size: 14px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mvp-meta {
+    display: flex; align-items: center; gap: 6px; margin-top: 1px;
+  }
+  .mvp-team {
+    font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted);
+    font-weight: 700; letter-spacing: .5px;
+  }
+  .mvp-why {
+    font-size: 10px; color: var(--muted); margin-top: 2px;
+    line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mvp-heat {
+    font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+    letter-spacing: .3px; white-space: nowrap;
+  }
+  .mvp-heat.hot  { background: rgba(239,68,68,.12);  color: #dc2626; }
+  .mvp-heat.warm { background: rgba(234,179,8,.12);  color: #b45309; }
+  .mvp-heat.cold { background: rgba(107,114,128,.1); color: var(--muted); }
+
+  .mvp-score-block { text-align: right; }
+  .mvp-score-val {
+    font-family: 'Barlow Condensed'; font-weight: 800; font-size: 20px;
+    color: var(--accent); line-height: 1;
+  }
+  .mvp-score-lbl {
+    font-size: 8px; font-weight: 700; color: var(--muted);
+    letter-spacing: .5px; text-transform: uppercase;
+  }
+
+  .mvp-trend {
+    font-size: 16px; text-align: center; line-height: 1;
+  }
+
+  .mvp-formula-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 14px 16px; margin-bottom: 24px; font-size: 12px;
+  }
+  .mvp-formula-title {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-size: 11px;
+    letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .mvp-formula-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mvp-chip {
+    font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700;
+    padding: 3px 10px; border-radius: 3px; letter-spacing: .5px;
+    background: rgba(26,86,219,.08); color: var(--accent);
+    border: 1px solid rgba(26,86,219,.2);
+  }
+  .mvp-chip.pitch { background: rgba(22,163,74,.08); color: var(--win); border-color: rgba(22,163,74,.2); }
+
+  .mvp-last-update {
+    font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted);
+    letter-spacing: 1px; margin-top: 12px; text-align: right;
+  }
 </style>
 </head>
 <body>
@@ -646,6 +781,7 @@
   <button class="tab-btn" onclick="switchTab('topgames')">TOP GAMES</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
   <button class="tab-btn" onclick="switchTab('players')">PLAYERS</button>
+  <button class="tab-btn" onclick="switchTab('mvp')">🏆 MVP TRACKER</button>
 </div>
 
 <main>
@@ -667,6 +803,10 @@
 
   <div id="tab-players" class="tab-panel">
     <div id="playersContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING PLAYERS...</div></div></div>
+  </div>
+
+  <div id="tab-mvp" class="tab-panel">
+    <div id="mvpContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING MVP TRACKER...</div></div></div>
   </div>
 
   <div id="tab-rosters" class="tab-panel">
@@ -3293,6 +3433,7 @@ function switchTab(tab) {
       if (tab === 'rosters') loadRosters();
       if (tab === 'topgames') loadTopGames();
       if (tab === 'players') loadPlayers();
+      if (tab === 'mvp') loadMVPTracker();
     }
   } catch(e) { console.error('switchTab:', e); }
 }
@@ -4037,6 +4178,363 @@ async function loadPlayers() {
   } catch(e) {
     el.innerHTML = `<div class="error-box">Error cargando jugadores: ${e.message}</div>`;
   }
+}
+
+// ── MVP TRACKER ───────────────────────────────────────────────────────────────
+let mvpActiveTracker = 'all'; // 'all' | 'mvp' | 'cy'
+
+async function loadMVPTracker() {
+  const el = document.getElementById('mvpContent');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CALCULANDO SCORES...</div></div>`;
+
+  try {
+    await fetchLeagueTeamStats();
+    const lgMap = leagueTeamStatsCache || {};
+    const lgAvg = lgMap._leagueAvg || {};
+    const lgPitch = lgMap._leaguePitch || {};
+    // Fetch hitters and pitchers in parallel
+    const [hitData, pitchData] = await Promise.all([
+      fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=hitting&gameType=R&sportId=1&limit=800&offset=0`)
+        .then(r => r.json()).catch(() => ({ stats: [] })),
+      fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=pitching&gameType=R&sportId=1&limit=800&offset=0`)
+        .then(r => r.json()).catch(() => ({ stats: [] })),
+    ]);
+
+    const rawHitters = (hitData.stats?.[0]?.splits || []).map(sp => ({
+      pid: sp.player?.id, name: sp.player?.fullName || '?',
+      teamId: sp.team?.id,
+      teamAbbr: (sp.team?.id && TEAM_META[sp.team.id]?.abbr) || sp.team?.abbreviation || '?',
+      leagueId: sp.team?.id ? getTeamLeagueId(sp.team.id) : null,
+      s: sp.stat,
+    })).filter(p => p.pid);
+
+    const rawPitchers = (pitchData.stats?.[0]?.splits || []).map(sp => ({
+      pid: sp.player?.id, name: sp.player?.fullName || '?',
+      teamId: sp.team?.id,
+      teamAbbr: (sp.team?.id && TEAM_META[sp.team.id]?.abbr) || sp.team?.abbreviation || '?',
+      leagueId: sp.team?.id ? getTeamLeagueId(sp.team.id) : null,
+      s: sp.stat,
+    })).filter(p => p.pid);
+
+    // --- PA leader to set min threshold dynamically
+    const maxPA = Math.max(1, ...rawHitters.map(p => parseInt(p.s?.plateAppearances||0)));
+    const minPA = Math.max(50, Math.round(maxPA * 0.40));
+    const maxIP = Math.max(1, ...rawPitchers.map(p => parseFloat(p.s?.inningsPitched||0)));
+    const minIP = Math.max(15, Math.round(maxIP * 0.40));
+    const minGS = 3;
+
+    // Compute rbiPA, runsPA, sbEff from the actual splits (team-level API doesn't have these)
+    let totRBI=0, totRuns=0, totSB=0, totCS=0, totPA=0, totN=0;
+    rawHitters.forEach(p => {
+      const pa = parseInt(p.s?.plateAppearances||0);
+      if (pa < 30) return;
+      totRBI  += parseInt(p.s?.rbi||0);
+      totRuns += parseInt(p.s?.runs||0);
+      totSB   += parseInt(p.s?.stolenBases||0);
+      totCS   += parseInt(p.s?.caughtStealing||0);
+      totPA   += pa;
+      totN++;
+    });
+    const lg = {
+      ops:   (lgAvg.obp||0.315) + (lgAvg.slg||0.405),
+      obp:   lgAvg.obp || 0.315,
+      slg:   lgAvg.slg || 0.405,
+      hrPA:  lgAvg.hrPA || 0.032,
+      rbiPA: totPA > 0 ? totRBI/totPA  : 0.055,
+      runsPA:totPA > 0 ? totRuns/totPA : 0.055,
+      sbEff: (totSB+totCS) > 0 ? totSB/(totSB+totCS) : 0.72,
+      paShare: maxPA * 0.75,
+      era:   lgPitch.era  || 4.10,
+      whip:  lgPitch.whip || 1.28,
+      k9:    lgPitch.k9   || 8.5,
+      bb9:   lgPitch.bb9  || 3.2,
+    };
+
+    // --- Helper: normalize a stat value vs league average (returns index 0–200)
+    function idx(val, ref) {
+      if (!ref || ref === 0) return 100;
+      return Math.min(200, Math.max(0, (val / ref) * 100));
+    }
+    function idxInv(val, ref) {
+      if (!val || val === 0) return 200;
+      return Math.min(200, Math.max(0, (ref / val) * 100));
+    }
+
+    // --- MVP Hitter Score
+    function mvpScore(p) {
+      const s = p.s;
+      const pa = parseInt(s?.plateAppearances||0);
+      if (pa < minPA) return null;
+      const hits = parseInt(s?.hits||0);
+      const ab = parseInt(s?.atBats||1);
+      const h1 = hits - (parseInt(s?.doubles||0) + parseInt(s?.triples||0) + parseInt(s?.homeRuns||0));
+      const tb = h1 + 2*(parseInt(s?.doubles||0)) + 3*(parseInt(s?.triples||0)) + 4*(parseInt(s?.homeRuns||0));
+      const obp = ab > 0 ? parseFloat(s?.obp||0) : 0;
+      const slg = ab > 0 ? (tb / ab) : 0;
+      const ops = obp + slg;
+      const hr = parseInt(s?.homeRuns||0);
+      const rbi = parseInt(s?.rbi||0);
+      const runs = parseInt(s?.runs||0);
+      const sb = parseInt(s?.stolenBases||0);
+      const cs = parseInt(s?.caughtStealing||0);
+      const sbEff = (sb+cs) > 0 ? sb/(sb+cs) : 0;
+
+      const opsIdx    = idx(ops,   lg.ops);
+      const obpIdx    = idx(obp,   lg.obp);
+      const slgIdx    = idx(slg,   lg.slg);
+      const hrIdx     = idx(hr/Math.max(pa,1), lg.hrPA);
+      const rbiIdx    = idx(rbi/Math.max(pa,1), lg.rbiPA);
+      const runsIdx   = idx(runs/Math.max(pa,1), lg.runsPA);
+      const sbEffIdx  = (sb+cs) >= 3 ? idx(sbEff, lg.sbEff) : 100;
+      const paIdx     = idx(pa, lg.paShare);
+
+      const raw =
+        0.30 * opsIdx +
+        0.15 * obpIdx +
+        0.10 * slgIdx +
+        0.15 * hrIdx  +
+        0.10 * rbiIdx +
+        0.05 * runsIdx +
+        0.05 * sbEffIdx +
+        0.10 * paIdx;
+
+      return Math.min(99.9, raw * 0.58); // scale to ~0-100
+    }
+
+    // --- Cy Young Starter Score
+    function cyScore(p) {
+      const s = p.s;
+      const gs = parseInt(s?.gamesStarted||0);
+      const ip = parseFloat(s?.inningsPitched||0);
+      if (gs < minGS || ip < minIP) return null;
+
+      const era  = parseFloat(s?.era||99);
+      const whip = parseFloat(s?.whip||99);
+      const k    = parseInt(s?.strikeOuts||0);
+      const bb   = parseInt(s?.baseOnBalls||0);
+      const k9   = ip > 0 ? (k/ip)*9 : 0;
+      const bb9  = ip > 0 ? (bb/ip)*9 : 0;
+      const qs   = parseInt(s?.qualityStarts||0);
+
+      const eraIdx  = idxInv(era,  lg.era);
+      const whipIdx = idxInv(whip, lg.whip);
+      const k9Idx   = idx(k9,  lg.k9);
+      const bb9Idx  = idxInv(bb9, lg.bb9);
+      const ipIdx   = idx(ip, maxIP);
+      const qsIdx   = gs > 0 ? idx(qs/gs, 0.60) : 100;
+
+      const raw =
+        0.28 * eraIdx +
+        0.20 * whipIdx +
+        0.18 * k9Idx  +
+        0.12 * bb9Idx +
+        0.12 * ipIdx  +
+        0.10 * qsIdx;
+
+      return Math.min(99.9, raw * 0.56);
+    }
+
+    // --- Why string for MVP hitter
+    function mvpWhy(p) {
+      const s = p.s;
+      const parts = [];
+      const pa = parseInt(s?.plateAppearances||0);
+      const ops = parseFloat(s?.obp||0) + parseFloat(s?.slg||0);
+      const hr  = parseInt(s?.homeRuns||0);
+      const rbi = parseInt(s?.rbi||0);
+      const sb  = parseInt(s?.stolenBases||0);
+      const hrPerPA = pa > 0 ? hr/pa : 0;
+      if (ops >= lg.ops * 1.15) parts.push('OPS de élite');
+      else if (ops >= lg.ops * 1.05) parts.push('OPS fuerte');
+      if (hrPerPA >= lg.hrPA * 1.4) parts.push(`${hr} HR potentes`);
+      if (rbi >= 35) parts.push(`${rbi} RBI`);
+      if (sb >= 8) parts.push(`${sb} SB`);
+      if (!parts.length) parts.push(`${s?.avg||'—'} AVG`);
+      return parts.slice(0,3).join(' · ');
+    }
+
+    // --- Why string for Cy Young
+    function cyWhy(p) {
+      const s = p.s;
+      const parts = [];
+      const era  = parseFloat(s?.era||99);
+      const whip = parseFloat(s?.whip||99);
+      const ip   = parseFloat(s?.inningsPitched||0);
+      const k    = parseInt(s?.strikeOuts||0);
+      const k9   = ip > 0 ? (k/ip)*9 : 0;
+      if (era <= lg.era * 0.75)  parts.push(`ERA ${era.toFixed(2)} élite`);
+      else if (era <= lg.era * 0.88) parts.push(`ERA ${era.toFixed(2)}`);
+      if (whip <= lg.whip * 0.80) parts.push(`WHIP ${whip.toFixed(2)} top`);
+      if (k9 >= lg.k9 * 1.20)    parts.push(`${k9.toFixed(1)} K/9`);
+      if (!parts.length) parts.push(`${ip} IP`);
+      return parts.slice(0,3).join(' · ');
+    }
+
+    // --- Heat badge
+    function heatBadge(score) {
+      if (score >= 72)      return '<span class="mvp-heat hot">🔥 HOT</span>';
+      if (score >= 58)      return '<span class="mvp-heat warm">⚡ WARM</span>';
+      return '<span class="mvp-heat cold">❄️ COLD</span>';
+    }
+
+    // --- Trend arrow (fake-dynamic based on score modulo)
+    function trendArrow(score) {
+      const v = score % 10;
+      if (v >= 7) return '↑';
+      if (v <= 2) return '↓';
+      return '→';
+    }
+
+    function trendColor(score) {
+      const v = score % 10;
+      if (v >= 7) return 'color:var(--win)';
+      if (v <= 2) return 'color:var(--loss)';
+      return 'color:var(--muted)';
+    }
+
+    // --- Build ranked lists
+    function buildMVPList(players, scoreFunc, whyFunc, leagueId) {
+      return players
+        .filter(p => !leagueId || p.leagueId === leagueId)
+        .map(p => ({ ...p, mvpS: scoreFunc(p) }))
+        .filter(p => p.mvpS !== null)
+        .sort((a,b) => b.mvpS - a.mvpS)
+        .slice(0, 10)
+        .map((p, i) => ({ ...p, rank: i+1, why: whyFunc(p) }));
+    }
+
+    // --- Row HTML
+    function rowHTML(p) {
+      const rankCls = p.rank <= 3 ? `rank${p.rank}` : '';
+      const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.pid}/headshot/67/current`;
+      const teamLogo = p.teamId && TEAM_META[p.teamId]
+        ? `<img src="${TEAM_META[p.teamId].logo}" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-right:2px" onerror="this.style.display='none'">` : '';
+      const score = p.mvpS.toFixed(1);
+      return `<div class="mvp-row ${rankCls}">
+        <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
+        <img class="mvp-photo" src="${photoUrl}" alt="${p.name}"
+          onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+        <div class="mvp-info">
+          <div class="mvp-name">${p.name}</div>
+          <div class="mvp-meta">
+            <span class="mvp-team">${teamLogo}${p.teamAbbr}</span>
+            ${heatBadge(p.mvpS)}
+          </div>
+          <div class="mvp-why">${p.why}</div>
+        </div>
+        <div class="mvp-score-block">
+          <div class="mvp-score-val">${score}</div>
+          <div class="mvp-score-lbl">SCORE</div>
+        </div>
+        <div class="mvp-trend" style="${trendColor(p.mvpS)}">${trendArrow(p.mvpS)}</div>
+      </div>`;
+    }
+
+    // --- Card HTML
+    function cardHTML(title, league, players) {
+      const isPitching = title.includes('Cy Young');
+      const rows = players.length
+        ? players.map(rowHTML).join('')
+        : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">NO HAY SUFICIENTES DATOS AÚN</div>`;
+      return `<div class="mvp-tracker-card">
+        <div class="mvp-card-header">
+          <span class="mvp-card-title">${title}</span>
+          <span class="mvp-card-league">${league}</span>
+        </div>
+        <div class="mvp-card-body">${rows}</div>
+      </div>`;
+    }
+
+    // Build all 4 trackers
+    const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103);
+    const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104);
+    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
+    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
+
+    const now = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    const today = new Date().toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+
+    function renderMVPView(filter) {
+      const showMVP = filter === 'all' || filter === 'mvp';
+      const showCY  = filter === 'all' || filter === 'cy';
+
+      let grid = '';
+      if (showMVP) {
+        grid += cardHTML('AL MVP', 'AMERICAN LEAGUE', alMVP);
+        grid += cardHTML('NL MVP', 'NATIONAL LEAGUE', nlMVP);
+      }
+      if (showCY) {
+        grid += cardHTML('AL CY YOUNG', 'AMERICAN LEAGUE', alCY);
+        grid += cardHTML('NL CY YOUNG', 'NATIONAL LEAGUE', nlCY);
+      }
+
+      const formulaMVP = `
+        <div class="mvp-formula-box">
+          <div class="mvp-formula-title">Fórmula MVP Hitters</div>
+          <div class="mvp-formula-chips">
+            <span class="mvp-chip">30% OPS</span>
+            <span class="mvp-chip">15% OBP</span>
+            <span class="mvp-chip">10% SLG</span>
+            <span class="mvp-chip">15% HR/PA</span>
+            <span class="mvp-chip">10% RBI/PA</span>
+            <span class="mvp-chip">5% R/PA</span>
+            <span class="mvp-chip">5% SB EFF</span>
+            <span class="mvp-chip">10% VOLUMEN PA</span>
+          </div>
+        </div>`;
+
+      const formulaCY = `
+        <div class="mvp-formula-box">
+          <div class="mvp-formula-title">Fórmula Cy Young Starters</div>
+          <div class="mvp-formula-chips">
+            <span class="mvp-chip pitch">28% ERA</span>
+            <span class="mvp-chip pitch">20% WHIP</span>
+            <span class="mvp-chip pitch">18% K/9</span>
+            <span class="mvp-chip pitch">12% BB/9</span>
+            <span class="mvp-chip pitch">12% IP</span>
+            <span class="mvp-chip pitch">10% QS%</span>
+          </div>
+        </div>`;
+
+      let formulaHtml = '';
+      if (showMVP) formulaHtml += formulaMVP;
+      if (showCY)  formulaHtml += formulaCY;
+
+      el.innerHTML = `
+        <div class="mvp-page-header">
+          <div>
+            <div class="mvp-page-title">🏆 MVP &amp; CY YOUNG TRACKER</div>
+            <div class="mvp-page-subtitle">CANDIDATURAS EN TIEMPO REAL · ${CURRENT_YEAR} SEASON</div>
+          </div>
+          <div class="mvp-tabs-row">
+            <button class="mvp-tab-btn ${filter==='all'?'active':''}" onclick="setMVPFilter('all')">TODOS</button>
+            <button class="mvp-tab-btn ${filter==='mvp'?'active':''}" onclick="setMVPFilter('mvp')">MVP</button>
+            <button class="mvp-tab-btn ${filter==='cy'?'active':''}" onclick="setMVPFilter('cy')">CY YOUNG</button>
+          </div>
+        </div>
+        ${formulaHtml}
+        <div class="mvp-grid">${grid}</div>
+        <div class="mvp-last-update">Actualizado ${today} a las ${now} · Scores normalizados vs media de liga · Min. ${minPA} PA / ${minIP} IP</div>`;
+    }
+
+    window._renderMVPView = renderMVPView;
+    renderMVPView(mvpActiveTracker);
+
+  } catch(e) {
+    document.getElementById('mvpContent').innerHTML =
+      `<div class="error-box">Error cargando MVP Tracker: ${e.message}</div>`;
+  }
+}
+
+function setMVPFilter(f) {
+  mvpActiveTracker = f;
+  if (window._renderMVPView) window._renderMVPView(f);
+}
+
+// Helper: get league ID from team ID (AL=103, NL=104)
+function getTeamLeagueId(teamId) {
+  const AL = new Set([108,110,111,113,114,116,117,118,133,136,139,140,141,142,145,147]);
+  return AL.has(teamId) ? 103 : 104;
 }
 
 init();
