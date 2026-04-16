@@ -612,6 +612,21 @@
   .players-divider {
     height: 1px; background: var(--border); margin: 4px 0 20px;
   }
+
+  /* Season history dots */
+  .season-dots-row {
+    display: flex; gap: 3px; align-items: center; justify-content: flex-end;
+    margin-top: 4px;
+  }
+  .season-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    flex-shrink: 0; opacity: 0.85;
+  }
+  .season-dot-label {
+    font-size: 8px; font-weight: 700; color: var(--muted);
+    letter-spacing: .5px; text-transform: uppercase; margin-right: 2px;
+    white-space: nowrap;
+  }
   @media (max-width: 768px) {
     .players-grid { grid-template-columns: 1fr; }
     .player-rank-card { padding: 10px 12px; }
@@ -1921,8 +1936,10 @@ async function fetchTeamImpact(teamId) {
     });
   });
 
-  // Fetch all season boxscores for QS calculation; use last 15 for hitter pos tracking
-  const last15 = allGameIds.slice(-15);
+  // Fetch all season boxscores for QS calculation AND full-season hitter pos tracking
+  // (Previously only last-15 were used for hitters, which caused wrong starters when
+  //  a player returned from the IL with few recent appearances despite more total games)
+  const last15 = allGameIds.slice(-15); // kept for pitcher rest-days only
   // Also store the date of each game by gamePk
   const gamePkToDate = {};
   (schedData.dates || []).forEach(d => {
@@ -1952,11 +1969,11 @@ async function fetchTeamImpact(teamId) {
         const pos = pl.position?.abbreviation;
         if (!pid) return;
 
-        if (isRecent && pos && pos !== 'P' && pos !== 'TWP' && pos !== 'N/A') {
+        // Track hitter positions across ALL games this season (not just last 15)
+        if (pos && pos !== 'P' && pos !== 'TWP' && pos !== 'N/A') {
           if (!hitterPosCount[pid]) hitterPosCount[pid] = {};
           hitterPosCount[pid][pos] = (hitterPosCount[pid][pos] || 0) + 1;
           if (pos === 'DH') dhCount[pid] = (dhCount[pid] || 0) + 1;
-          // Track most recent date at each position for tiebreaking
           if (gameDate) {
             if (!hitterPosRecent[pid]) hitterPosRecent[pid] = {};
             if (!hitterPosRecent[pid][pos] || gameDate > hitterPosRecent[pid][pos]) {
@@ -2079,7 +2096,9 @@ async function fetchTeamImpact(teamId) {
   });
 
   // STEP 2: For each valid position, collect all players who have appeared there
-  //   (or whose fallback is that pos). Sort by appearances desc, then OPS.
+  //   (or whose fallback is that pos). Sort by: appearances at this pos desc,
+  //   then total gamesPlayed desc (so Will Smith with 60 GP beats Dalton Rushing
+  //   with 10 GP even if both have the same posCount), then OPS as last tiebreaker.
   const POS_PRIORITY = ['C','SS','2B','3B','1B','CF','LF','RF','DH'];
   const candidatesByPos = {};
   POS_PRIORITY.forEach(pos => {
@@ -2089,6 +2108,9 @@ async function fetchTeamImpact(teamId) {
         const aCount = a.posCount[pos] || 0;
         const bCount = b.posCount[pos] || 0;
         if (bCount !== aCount) return bCount - aCount;
+        // Tiebreaker: total games played this season (favors the true starter
+        // who may have returned from IL with fewer recent boxscore appearances)
+        if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
         return b.ops - a.ops;
       });
   });
@@ -2592,6 +2614,7 @@ function playerDetailHTML(p, type, roleOrPos) {
       <span class="impact-bar-label">${barLabel}</span>
       <span class="impact-bar-val" style="color:${color}">${barDisp}</span>
       ${trendBadge ? `<div style="margin-top:3px;text-align:right">${trendBadge}</div>` : ''}
+      ${!p.isRookie ? seasonDotsHTML(p.id, isHitter ? 'hitter' : 'pitcher') : ''}
     </div>
   </div>`;
 }
@@ -2863,6 +2886,7 @@ function renderDiamondPanel(teamId, impact) {
           <span class="impact-bar-label">${barLabel}</span>
           <span class="impact-bar-val" style="color:${color};opacity:.7">${val}</span>
           ${ilTrend ? `<div style="margin-top:3px;text-align:right">${ilTrend}</div>` : ''}
+          ${!p.isRookie ? seasonDotsHTML(p.id, p.isPitcher ? 'pitcher' : 'hitter') : ''}
         </div>
       </div>`;
     }
@@ -3056,6 +3080,8 @@ async function fetchLeagueTeamStats() {
 // ── Career stats cache (for trend detection) ──────────────────────────────
 const careerStatsCache = {};
 const recentPitchingCache = {};
+// Per-season history for the last 5 years: { pid: { hit: {year: ops}, pitch: {year: formaScore} } }
+const seasonHistoryCache = {};
 
 // Cache for last-30d hitter stats (for "En racha" badge)
 const recentHittingCache = {};
@@ -3126,6 +3152,75 @@ async function fetchCareerStats(pids) {
       }).catch(()=>{})
     ]);
   }
+
+  // Fetch per-season history for the last 5 completed seasons (for season dots)
+  const seasons = Array.from({length: 5}, (_, k) => prevYear - (4 - k)); // [prevYear-4 .. prevYear]
+  const missingHistory = pids.filter(id => !seasonHistoryCache[id]);
+  if (!missingHistory.length) return;
+
+  for (let i = 0; i < missingHistory.length; i += 20) {
+    const chunk = missingHistory.slice(i, i+20).join(',');
+    await Promise.all([
+      // Hitting seasons
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting,startSeason=${seasons[0]},endSeason=${prevYear})`)
+        .then(r=>r.json()).then(d=>{
+          (d.people||[]).forEach(p => {
+            if (!seasonHistoryCache[p.id]) seasonHistoryCache[p.id] = { hit: {}, pitch: {} };
+            const sg = p.stats?.find(g => g.group?.displayName==='hitting');
+            if (!sg) return;
+            (sg.splits||[]).forEach(sp => {
+              const yr = sp.season ? parseInt(sp.season) : null;
+              if (yr && seasons.includes(yr) && sp.stat?.ops) {
+                seasonHistoryCache[p.id].hit[yr] = parseFloat(sp.stat.ops)||0;
+              }
+            });
+          });
+        }).catch(()=>{}),
+      // Pitching seasons
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching,startSeason=${seasons[0]},endSeason=${prevYear})`)
+        .then(r=>r.json()).then(d=>{
+          (d.people||[]).forEach(p => {
+            if (!seasonHistoryCache[p.id]) seasonHistoryCache[p.id] = { hit: {}, pitch: {} };
+            const sg = p.stats?.find(g => g.group?.displayName==='pitching');
+            if (!sg) return;
+            (sg.splits||[]).forEach(sp => {
+              const yr = sp.season ? parseInt(sp.season) : null;
+              if (yr && seasons.includes(yr) && sp.stat?.era != null) {
+                const era = parseFloat(sp.stat.era), whip = parseFloat(sp.stat.whip);
+                seasonHistoryCache[p.id].pitch[yr] = calcBaseScore(era, whip) ?? null;
+              }
+            });
+          });
+        }).catch(()=>{})
+    ]);
+  }
+}
+
+// Generate 5 small colored dots representing the last 5 seasons of OPS (hitters) or FORMA (pitchers)
+function seasonDotsHTML(pid, type) {
+  const hist = seasonHistoryCache[pid];
+  if (!hist) return '';
+  const prevYear = CURRENT_YEAR - 1;
+  const seasons = Array.from({length: 5}, (_, k) => prevYear - (4 - k));
+  const data = type === 'hitter' ? hist.hit : hist.pitch;
+  const hasDots = seasons.some(yr => data[yr] != null);
+  if (!hasDots) return '';
+
+  const dots = seasons.map(yr => {
+    const val = data[yr];
+    if (val == null) return ''; // no MLB season that year → skip dot
+    const color = getDiamondPlayerColor(val, type);
+    const tooltip = type === 'hitter'
+      ? `OPS ${val.toFixed(3)} (${yr})`
+      : `FORMA ${val} (${yr})`;
+    return `<span class="season-dot" style="background:${color}" title="${tooltip}"></span>`;
+  }).join('');
+
+  const dotsContent = dots.trim();
+  if (!dotsContent) return '';
+  return `<div class="season-dots-row">
+    <span class="season-dot-label">5y</span>${dots}
+  </div>`;
 }
 
 function trendBadgeHTML(current, career, metric) {
