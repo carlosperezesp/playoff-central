@@ -622,6 +622,15 @@
     width: 7px; height: 7px; border-radius: 50%;
     flex-shrink: 0; opacity: 0.85;
   }
+  /* ── Last 5 seasons dots ── */
+  .hist-dots { display: flex; gap: 3px; align-items: center; justify-content: flex-end; }
+  .hist-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; cursor: default; }
+  .hist-dot.ws  { background: #f59e0b; }
+  .hist-dot.div { background: #16a34a; }
+  .hist-dot.wc  { background: #1a56db; }
+  .hist-dot.out { background: #d1d5db; }
+  .hist-dot.bad { background: #dc2626; }
+
   .season-dot-label {
     font-size: 8px; font-weight: 700; color: var(--muted);
     letter-spacing: .5px; text-transform: uppercase; margin-right: 2px;
@@ -709,10 +718,16 @@
   .mvp-info { min-width: 0; }
   .mvp-name {
     font-weight: 700; font-size: 14px; color: var(--text);
+    display: flex; align-items: center; gap: 4px;
+    flex-wrap: wrap; line-height: 1.3;
+  }
+  .mvp-name > .mvp-name-text {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 0 1 auto; min-width: 0;
   }
   .mvp-meta {
     display: flex; align-items: center; gap: 6px; margin-top: 1px;
+    flex-wrap: wrap;
   }
   .mvp-team {
     font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted);
@@ -740,6 +755,17 @@
     letter-spacing: .5px; text-transform: uppercase;
   }
 
+  .mvp-pos-pill {
+    display: inline-block; font-family: 'Barlow Condensed'; font-size: 10px; font-weight: 700;
+    letter-spacing: .5px; padding: 1px 5px; margin-right: 4px;
+    background: rgba(107,114,128,.12); color: var(--muted); border-radius: 3px;
+  }
+  .mvp-award-badge {
+    display: inline-flex; align-items: center; font-size: 9px; font-weight: 800;
+    padding: 1px 5px; border-radius: 3px; letter-spacing: .3px;
+    background: rgba(245,158,11,.15); color: #b45309;
+    border: 1px solid rgba(245,158,11,.3); white-space: nowrap;
+  }
   .mvp-trend {
     font-size: 16px; text-align: center; line-height: 1;
   }
@@ -862,6 +888,58 @@ const TEAM_META = {
   147: { name: 'Yankees',     abbr: 'NYY', color: '#003087', logo: 'https://www.mlbstatic.com/team-logos/147.svg' },
   158: { name: 'Brewers',     abbr: 'MIL', color: '#12284B', logo: 'https://www.mlbstatic.com/team-logos/158.svg' },
 };
+
+// ── HISTORICAL RESULTS 2021–2025 ──────────────────────────────────────────
+// Index: 0=2021, 1=2022, 2=2023, 3=2024, 4=2025
+// ws=WS champ(amarillo) div=div champ(verde) wc=wild card(azul)
+// out=no playoffs(gris)  bad=último/mal récord(rojo)
+const TEAM_HISTORY = {
+  // ── NL East ──────────────────────────────────────────────────
+  144: ['ws', 'div','div','wc', 'out'], // ATL
+  143: ['out','wc', 'wc', 'div','div'], // PHI
+  121: ['out','wc', 'out','wc', 'out'], // NYM
+  146: ['out','out','wc', 'bad','out'], // MIA
+  120: ['bad','bad','bad','out','bad'], // WSN
+  // ── NL Central ───────────────────────────────────────────────
+  158: ['div','out','div','div','div'], // MIL
+  112: ['out','out','out','out','wc' ], // CHC
+  138: ['wc', 'div','bad','out','out'], // STL
+  113: ['out','bad','out','out','wc' ], // CIN
+  134: ['bad','bad','out','bad','bad'], // PIT
+  // ── NL West ──────────────────────────────────────────────────
+  119: ['wc', 'div','div','ws', 'ws' ], // LAD
+  135: ['out','wc', 'out','wc', 'wc' ], // SD
+  137: ['div','out','out','out','out'], // SF
+  109: ['bad','out','wc', 'out','out'], // ARI
+  115: ['out','bad','bad','bad','bad'], // COL
+  // ── AL East ──────────────────────────────────────────────────
+  147: ['wc', 'div','out','div','wc' ], // NYY
+  141: ['out','wc', 'wc', 'bad','div'], // TOR
+  111: ['wc', 'bad','bad','out','wc' ], // BOS
+  110: ['bad','out','div','wc', 'bad'], // BAL
+  139: ['div','wc', 'wc', 'out','out'], // TB
+  // ── AL Central ───────────────────────────────────────────────
+  114: ['out','div','out','div','div'], // CLE
+  142: ['bad','out','div','out','out'], // MIN
+  145: ['div','out','out','bad','bad'], // CWS
+  116: ['out','out','out','wc', 'wc' ], // DET
+  118: ['out','bad','bad','wc', 'out'], // KCR
+  // ── AL West ──────────────────────────────────────────────────
+  117: ['div','ws', 'div','div','out'], // HOU
+  133: ['out','bad','bad','out','out'], // OAK/ATH
+  108: ['out','out','out','bad','bad'], // LAA
+  136: ['out','wc', 'out','out','div'], // SEA
+  140: ['bad','out','ws', 'out','out'], // TEX
+};
+const HIST_YEARS = [2021,2022,2023,2024,2025];
+const HIST_LABELS = { ws:'WS Champion', div:'Division Champ', wc:'Wild Card', out:'Missed playoffs', bad:'Last in division' };
+function histDotsHTML(teamId) {
+  const hist = TEAM_HISTORY[teamId];
+  if (!hist) return '';
+  return '<div class="hist-dots">' +
+    hist.map((r,i) => `<span class="hist-dot ${r}" title="${HIST_YEARS[i]}: ${HIST_LABELS[r]}"></span>`).join('') +
+  '</div>';
+}
 
 let allData = { standings: null, playoffs: null, schedule: null };
 let playoffTeamIds = new Set();
@@ -1052,6 +1130,7 @@ async function renderStandings() {
       rows += `<tr class="${rowCls}">
         <td>
           <div class="team-cell" style="gap:7px">
+            ${badge}
             <img class="team-logo-sm" style="width:22px;height:22px" src="https://www.mlbstatic.com/team-logos/${tid}.svg" onerror="this.style.display='none'" alt="">
             <span style="font-weight:500;font-size:14px">${displayName}</span>
             ${gr}
@@ -1064,7 +1143,7 @@ async function renderStandings() {
         <td class="r">${l10html}</td>
         <td class="r">${streakHtml}</td>
         <td class="r">${mnHtml}</td>
-        <td>${badge}</td>
+        <td class="r">${histDotsHTML(tid)}</td>
       </tr>`;
     });
 
@@ -1080,7 +1159,7 @@ async function renderStandings() {
         <thead><tr>
           <th>TEAM</th><th class="r">W</th><th class="r">L</th>
           <th class="r">PCT</th><th class="r">GB</th>
-          <th class="r" style="white-space:nowrap">L10</th><th class="r">STRK</th><th class="r">MN</th><th></th>
+          <th class="r" style="white-space:nowrap">L10</th><th class="r">STRK</th><th class="r">MN</th><th class="r" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -2815,7 +2894,7 @@ function renderTeamStatsPanel(teamId, impact) {
   if (!mine) return '';
 
   // Build arrays for ranking
-  const allTeams = Object.entries(map);
+  const allTeams = Object.entries(map).filter(([k]) => !k.startsWith('_'));
   function rank(key, lowerBetter = false) {
     // Sort best→worst: for lowerBetter asc (lowest ERA = rank 1), for higherBetter desc (highest AVG = rank 1)
     const vals = allTeams.map(([,v]) => v[key]).filter(x => x && x > 0).sort((a,b) => lowerBetter ? a-b : b-a);
@@ -3311,6 +3390,52 @@ async function fetchRecentPitching(pids) {
           ip: parseFloat(s.inningsPitched) || 0,
         } : null;
       }).catch(() => { recentPitchingCache[pid] = null; })
+  ));
+}
+
+// ── MVP Tracker uses tighter time windows for HEAT (recent form) ──────────
+// Hitters bat almost daily — 10 days is enough to see real form
+// Pitchers start every 5 days — 15 days = ~3 starts, enough to see a trend
+const mvpHeatHittingCache = {};   // pid -> {ops, ab}
+const mvpHeatPitchingCache = {};  // pid -> {era, ip}
+
+async function fetchMvpHeatHitting(pids) {
+  const missing = pids.filter(id => !(id in mvpHeatHittingCache));
+  if (!missing.length) return;
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0];
+  for (let i = 0; i < missing.length; i += 20) {
+    const chunk = missing.slice(i, i+20).join(',');
+    await fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=byDateRange,group=hitting,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
+    ).then(r => r.json()).then(d => {
+      (d.people || []).forEach(p => {
+        const s = p.stats?.find(g => g.group?.displayName?.toLowerCase() === 'hitting')?.splits?.[0]?.stat;
+        mvpHeatHittingCache[p.id] = s ? {
+          ops: parseFloat(s.ops) || 0,
+          ab:  parseInt(s.atBats) || 0,
+        } : null;
+      });
+    }).catch(() => {
+      missing.slice(i, i+20).forEach(id => { mvpHeatHittingCache[id] = null; });
+    });
+  }
+}
+
+async function fetchMvpHeatPitching(pids) {
+  const missing = pids.filter(id => !(id in mvpHeatPitchingCache));
+  if (!missing.length) return;
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 15 * 86400000).toISOString().split('T')[0];
+  await Promise.all(missing.map(pid =>
+    fetchWithTimeout(`${MLB_API}/people/${pid}/stats?stats=byDateRange&group=pitching&startDate=${startDate}&endDate=${endDate}&season=${CURRENT_YEAR}`)
+      .then(r => r.json()).then(d => {
+        const s = d.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
+        mvpHeatPitchingCache[pid] = s ? {
+          era: parseFloat(s.era),
+          ip: parseFloat(s.inningsPitched) || 0,
+        } : null;
+      }).catch(() => { mvpHeatPitchingCache[pid] = null; })
   ));
 }
 
@@ -4215,6 +4340,54 @@ async function loadPlayers() {
   }
 }
 
+// ── PAST AWARD WINNERS ────────────────────────────────────────────────────
+// Active players only. Format: pid -> { mvp: [years], cy: [years] }
+// Player IDs from MLB Stats API
+const PAST_AWARDS = {
+  // ── MVP winners (active) ──
+  547989: { mvp: [2017] },              // José Altuve
+  592450: { mvp: [2022, 2024, 2025] },  // Aaron Judge
+  660271: { mvp: [2021, 2023, 2024, 2025] }, // Shohei Ohtani
+  545361: { mvp: [2014, 2016, 2019] },  // Mike Trout
+  605141: { mvp: [2018] },              // Mookie Betts
+  592885: { mvp: [2018] },              // Christian Yelich
+  592518: { mvp: [2019] },              // Cody Bellinger
+  547180: { mvp: [2015, 2021] },        // Bryce Harper
+  457705: { mvp: [2020] },              // Freddie Freeman
+  502671: { mvp: [2022] },              // Paul Goldschmidt
+  660670: { mvp: [2023] },              // Ronald Acuña Jr.
+  592102: { mvp: [2016] },              // Kris Bryant
+  571448: { mvp: [2017] },              // Giancarlo Stanton
+  457727: { mvp: [2013] },              // Andrew McCutchen
+  547963: { mvp: [2020] },              // José Abreu
+  // ── Cy Young winners (active) ──
+  434378: { cy: [2011, 2019, 2022] },   // Justin Verlander
+  453286: { cy: [2013, 2016, 2017] },   // Max Scherzer
+  605483: { cy: [2018, 2023] },         // Blake Snell
+  594798: { cy: [2018, 2019] },         // Jacob deGrom
+  669456: { cy: [2020] },               // Shane Bieber
+  592662: { cy: [2021] },               // Robbie Ray
+  669203: { cy: [2021] },               // Corbin Burnes
+  645261: { cy: [2022] },               // Sandy Alcántara
+  543037: { cy: [2023] },               // Gerrit Cole
+  519242: { cy: [2024] },               // Chris Sale
+  669373: { cy: [2024, 2025] },         // Tarik Skubal
+  694973: { cy: [2025] },               // Paul Skenes
+  545333: { cy: [2020] },               // Trevor Bauer
+};
+// Verlander also won MVP 2011
+if (PAST_AWARDS[434378]) PAST_AWARDS[434378].mvp = [2011];
+
+function awardsBadgeHTML(pid, type) {
+  const a = PAST_AWARDS[pid];
+  if (!a) return '';
+  const years = type === 'mvp' ? a.mvp : a.cy;
+  if (!years || !years.length) return '';
+  const label = type === 'mvp' ? 'MVP' : 'CY';
+  const yrText = years.length === 1 ? years[0] : years.join(', ');
+  return `<span class="mvp-award-badge" title="Ganador ${label}: ${yrText}">🏆 ${label} ${yrText}</span>`;
+}
+
 // ── MVP TRACKER ───────────────────────────────────────────────────────────────
 let mvpActiveTracker = 'all'; // 'all' | 'mvp' | 'cy'
 
@@ -4250,6 +4423,25 @@ async function loadMVPTracker() {
       leagueId: sp.team?.id ? getTeamLeagueId(sp.team.id) : null,
       s: sp.stat,
     })).filter(p => p.pid);
+
+    // Fetch primary positions for hitters (needed for displaying "1B", "SS", etc.)
+    const hitterPids = rawHitters.map(p => p.pid).slice(0, 200); // top 200 by PA-ish
+    const positionMap = {};
+    try {
+      // chunk into groups of 100 for the people endpoint
+      const chunks = [];
+      for (let i = 0; i < hitterPids.length; i += 100) chunks.push(hitterPids.slice(i, i+100));
+      await Promise.all(chunks.map(chunk =>
+        fetchWithTimeout(`${MLB_API}/people?personIds=${chunk.join(',')}`)
+          .then(r => r.json())
+          .then(d => (d.people || []).forEach(p => {
+            const pos = p.primaryPosition?.abbreviation;
+            if (pos) positionMap[p.id] = pos === 'TWP' ? 'DH' : pos;
+          }))
+          .catch(() => {})
+      ));
+    } catch(e) {}
+    rawHitters.forEach(p => { p.position = positionMap[p.pid] || ''; });
 
     // --- PA leader to set min threshold dynamically
     const maxPA = Math.max(1, ...rawHitters.map(p => parseInt(p.s?.plateAppearances||0)));
@@ -4406,10 +4598,11 @@ async function loadMVPTracker() {
     }
 
     // --- Heat badge
-    function heatBadge(score) {
-      if (score >= 72)      return '<span class="mvp-heat hot">🔥 HOT</span>';
-      if (score >= 58)      return '<span class="mvp-heat warm">⚡ WARM</span>';
-      return '<span class="mvp-heat cold">❄️ COLD</span>';
+    function heatBadge(level) {
+      if (level === 'hot')  return '<span class="mvp-heat hot" title="En racha — forma reciente mejor que la temporada">🔥 HOT</span>';
+      if (level === 'warm') return '<span class="mvp-heat warm" title="Forma estable — rendimiento similar al resto de la temporada">⚡ STEADY</span>';
+      if (level === 'cold') return '<span class="mvp-heat cold" title="En bajón — forma reciente peor que la temporada">❄️ COLD</span>';
+      return '';
     }
 
     // --- Trend arrow (fake-dynamic based on score modulo)
@@ -4428,32 +4621,59 @@ async function loadMVPTracker() {
     }
 
     // --- Build ranked lists
-    function buildMVPList(players, scoreFunc, whyFunc, leagueId) {
-      return players
+    function buildMVPList(players, scoreFunc, whyFunc, leagueId, forceTWP) {
+      const ranked = players
         .filter(p => !leagueId || p.leagueId === leagueId)
         .map(p => ({ ...p, mvpS: scoreFunc(p) }))
         .filter(p => p.mvpS !== null)
         .sort((a,b) => b.mvpS - a.mvpS)
-        .slice(0, 10)
-        .map((p, i) => ({ ...p, rank: i+1, why: whyFunc(p) }));
+        .slice(0, 10);
+      // For MVP: if a TWP (two-way player like Ohtani) exists in this league but
+      // didn't make the top 10 by score, force them in — but ONLY if their score
+      // is at least 70 (otherwise TWP status alone isn't enough, they're underperforming).
+      const TWP_MIN_SCORE = 70;
+      if (forceTWP) {
+        const twpInLeague = players.find(p =>
+          p.leagueId === leagueId &&
+          p.pid === 660271 &&        // Ohtani
+          !ranked.some(r => r.pid === p.pid)
+        );
+        if (twpInLeague) {
+          const score = scoreFunc(twpInLeague);
+          if (score !== null && score >= TWP_MIN_SCORE) {
+            ranked.pop();
+            ranked.push({ ...twpInLeague, mvpS: score });
+            ranked.sort((a,b) => b.mvpS - a.mvpS);
+          }
+          // If score < 70 or null, do NOT force include — TWP status alone
+          // isn't enough; player needs to actually be performing
+        }
+      }
+      return ranked.map((p, i) => ({ ...p, rank: i+1, why: whyFunc(p) }));
     }
 
     // --- Row HTML
-    function rowHTML(p) {
+    function rowHTML(p, awardType) {
       const rankCls = p.rank <= 3 ? `rank${p.rank}` : '';
       const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.pid}/headshot/67/current`;
       const teamLogo = p.teamId && TEAM_META[p.teamId]
         ? `<img src="${TEAM_META[p.teamId].logo}" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-right:2px" onerror="this.style.display='none'">` : '';
       const score = p.mvpS.toFixed(1);
+      // Position pill (only for hitters / MVP)
+      const posHtml = (awardType === 'mvp' && p.position)
+        ? `<span class="mvp-pos-pill">${p.position}</span>` : '';
+      // Past award badge
+      const awardHtml = awardsBadgeHTML(p.pid, awardType);
       return `<div class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
         <img class="mvp-photo" src="${photoUrl}" alt="${p.name}"
           onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
         <div class="mvp-info">
-          <div class="mvp-name">${p.name}</div>
+          <div class="mvp-name">${posHtml}<span class="mvp-name-text">${p.name}</span></div>
           <div class="mvp-meta">
             <span class="mvp-team">${teamLogo}${p.teamAbbr}</span>
-            ${heatBadge(p.mvpS)}
+            ${heatBadge(p.heatLevel)}
+            ${awardHtml}
           </div>
           <div class="mvp-why">${p.why}</div>
         </div>
@@ -4467,9 +4687,10 @@ async function loadMVPTracker() {
 
     // --- Card HTML
     function cardHTML(title, league, players) {
-      const isPitching = title.includes('Cy Young');
+      const isPitching = /cy young/i.test(title);
+      const awardType = isPitching ? 'cy' : 'mvp';
       const rows = players.length
-        ? players.map(rowHTML).join('')
+        ? players.map(p => rowHTML(p, awardType)).join('')
         : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">NO HAY SUFICIENTES DATOS AÚN</div>`;
       return `<div class="mvp-tracker-card">
         <div class="mvp-card-header">
@@ -4481,10 +4702,50 @@ async function loadMVPTracker() {
     }
 
     // Build all 4 trackers
-    const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103);
-    const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104);
+    const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103, true);
+    const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true);
     const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
     const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
+
+    // Fetch RECENT-FORM stats: 10d for hitters, 15d for pitchers
+    const allMvpPids = [...alMVP, ...nlMVP].map(p => p.pid);
+    const allCyPids  = [...alCY, ...nlCY ].map(p => p.pid);
+    try {
+      await Promise.all([
+        fetchMvpHeatHitting(allMvpPids),
+        fetchMvpHeatPitching(allCyPids),
+      ]);
+    } catch(e) {}
+
+    // Annotate hitters with recent form (last 10 days)
+    [...alMVP, ...nlMVP].forEach(p => {
+      const recent = mvpHeatHittingCache[p.pid];
+      const seasonOps = (parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0);
+      // Need at least 10 ABs in the last 10 days to consider sample valid
+      if (!recent || recent.ab < 10 || seasonOps === 0) {
+        p.heatLevel = 'unknown';
+      } else {
+        const delta = recent.ops - seasonOps;
+        if (delta >= 0.080) p.heatLevel = 'hot';
+        else if (delta >= -0.060) p.heatLevel = 'warm';
+        else p.heatLevel = 'cold';
+      }
+    });
+
+    // Annotate pitchers with recent form (last 15 days)
+    [...alCY, ...nlCY].forEach(p => {
+      const recent = mvpHeatPitchingCache[p.pid];
+      const seasonEra = parseFloat(p.s?.era) || 99;
+      // Need at least 6 IP recent (~1 quality start) to consider sample valid
+      if (!recent || !recent.era || recent.ip < 6) {
+        p.heatLevel = 'unknown';
+      } else {
+        const delta = seasonEra - recent.era; // positive = recent better than season
+        if (delta >= 1.00) p.heatLevel = 'hot';
+        else if (delta >= -0.80) p.heatLevel = 'warm';
+        else p.heatLevel = 'cold';
+      }
+    });
 
     const now = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
     const today = new Date().toLocaleDateString('es-ES', { day:'numeric', month:'short' });
