@@ -4597,27 +4597,66 @@ async function loadMVPTracker() {
       return parts.slice(0,3).join(' · ');
     }
 
-    // --- Heat badge
-    function heatBadge(level) {
-      if (level === 'hot')  return '<span class="mvp-heat hot" title="En racha — forma reciente mejor que la temporada">🔥 HOT</span>';
-      if (level === 'warm') return '<span class="mvp-heat warm" title="Forma estable — rendimiento similar al resto de la temporada">⚡ STEADY</span>';
-      if (level === 'cold') return '<span class="mvp-heat cold" title="En bajón — forma reciente peor que la temporada">❄️ COLD</span>';
-      return '';
+    // --- MVP score trend (based on recent form vs. season)
+    // Uses the same data that powered HOT/STEADY/COLD: recent OPS for hitters
+    // (last 10 days, min 10 ABs) and recent ERA for pitchers (last 15 days, min 6 IP).
+    // Translates the same thresholds into ↑ / → / ↓ arrows.
+    //
+    // Why arrows instead of HOT/COLD badges: an MVP-tier player whose OPS drops
+    // 70 pts isn't "cold" — they're regressing toward the mean from elite levels.
+    // ↓ correctly says "trending down" without the misleading temperature framing.
+
+    // Returns {delta, kind, source} or null if no comparable recent data.
+    // kind: 'up' | 'flat' | 'down'
+    // source: 'hitting' | 'pitching'
+    function getMvpTrend(p, awardType) {
+      if (awardType === 'mvp') {
+        const recent = mvpHeatHittingCache[p.pid];
+        const seasonOps = (parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0);
+        if (!recent || recent.ab < 10 || seasonOps === 0) return null;
+        const delta = recent.ops - seasonOps;
+        let kind;
+        if (delta >=  0.080) kind = 'up';
+        else if (delta <= -0.060) kind = 'down';
+        else kind = 'flat';
+        return { delta, kind, source: 'hitting', sampleSize: recent.ab };
+      } else {
+        const recent = mvpHeatPitchingCache[p.pid];
+        const seasonEra = parseFloat(p.s?.era) || 99;
+        if (!recent || !recent.era || recent.ip < 6) return null;
+        const delta = seasonEra - recent.era;  // positive = recent ERA better
+        let kind;
+        if (delta >=  1.00) kind = 'up';
+        else if (delta <= -0.80) kind = 'down';
+        else kind = 'flat';
+        return { delta, kind, source: 'pitching', sampleSize: recent.ip };
+      }
     }
 
-    // --- Trend arrow (fake-dynamic based on score modulo)
-    function trendArrow(score) {
-      const v = score % 10;
-      if (v >= 7) return '↑';
-      if (v <= 2) return '↓';
+    function trendArrow(trend) {
+      if (!trend) return '·';
+      if (trend.kind === 'up')   return '↑';
+      if (trend.kind === 'down') return '↓';
       return '→';
     }
-
-    function trendColor(score) {
-      const v = score % 10;
-      if (v >= 7) return 'color:var(--win)';
-      if (v <= 2) return 'color:var(--loss)';
+    function trendColor(trend) {
+      if (!trend) return 'color:var(--muted);opacity:.4';
+      if (trend.kind === 'up')   return 'color:var(--win)';
+      if (trend.kind === 'down') return 'color:var(--loss)';
       return 'color:var(--muted)';
+    }
+    function trendTitle(trend) {
+      if (!trend) return 'Muestra reciente insuficiente';
+      if (trend.source === 'hitting') {
+        const sign = trend.delta >= 0 ? '+' : '−';
+        const abs = Math.abs(trend.delta).toFixed(3).replace(/^0/, '');
+        return `OPS últimos 10 días: ${sign}${abs} vs. temporada (${trend.sampleSize} AB)`;
+      } else {
+        // For pitching, positive delta means recent ERA is BETTER (lower)
+        const sign = trend.delta >= 0 ? '−' : '+';  // flip for ERA narrative
+        const abs = Math.abs(trend.delta).toFixed(2);
+        return `ERA últimos 15 días: ${sign}${abs} vs. temporada (${trend.sampleSize} IP)`;
+      }
     }
 
     // --- Build ranked lists
@@ -4664,6 +4703,8 @@ async function loadMVPTracker() {
         ? `<span class="mvp-pos-pill">${p.position}</span>` : '';
       // Past award badge
       const awardHtml = awardsBadgeHTML(p.pid, awardType);
+      // Trend arrow based on recent form (last 10d hitting / 15d pitching) vs. season
+      const trend = getMvpTrend(p, awardType);
       return `<div class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
         <img class="mvp-photo" src="${photoUrl}" alt="${p.name}"
@@ -4672,7 +4713,6 @@ async function loadMVPTracker() {
           <div class="mvp-name">${posHtml}<span class="mvp-name-text">${p.name}</span></div>
           <div class="mvp-meta">
             <span class="mvp-team">${teamLogo}${p.teamAbbr}</span>
-            ${heatBadge(p.heatLevel)}
             ${awardHtml}
           </div>
           <div class="mvp-why">${p.why}</div>
@@ -4681,7 +4721,7 @@ async function loadMVPTracker() {
           <div class="mvp-score-val">${score}</div>
           <div class="mvp-score-lbl">SCORE</div>
         </div>
-        <div class="mvp-trend" style="${trendColor(p.mvpS)}">${trendArrow(p.mvpS)}</div>
+        <div class="mvp-trend" style="${trendColor(trend)}" title="${trendTitle(trend)}">${trendArrow(trend)}</div>
       </div>`;
     }
 
@@ -4707,45 +4747,16 @@ async function loadMVPTracker() {
     const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
     const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
 
-    // Fetch RECENT-FORM stats: 10d for hitters, 15d for pitchers
-    const allMvpPids = [...alMVP, ...nlMVP].map(p => p.pid);
-    const allCyPids  = [...alCY, ...nlCY ].map(p => p.pid);
+    // Fetch RECENT-FORM stats: last 10 days for hitters, last 15 days for pitchers.
+    // These power the trend arrows in rowHTML (via mvpHeatHittingCache / mvpHeatPitchingCache).
+    const allHitterPids  = [...alMVP, ...nlMVP].map(p => p.pid);
+    const allPitcherPids = [...alCY,  ...nlCY ].map(p => p.pid);
     try {
       await Promise.all([
-        fetchMvpHeatHitting(allMvpPids),
-        fetchMvpHeatPitching(allCyPids),
+        fetchMvpHeatHitting(allHitterPids),
+        fetchMvpHeatPitching(allPitcherPids),
       ]);
     } catch(e) {}
-
-    // Annotate hitters with recent form (last 10 days)
-    [...alMVP, ...nlMVP].forEach(p => {
-      const recent = mvpHeatHittingCache[p.pid];
-      const seasonOps = (parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0);
-      // Need at least 10 ABs in the last 10 days to consider sample valid
-      if (!recent || recent.ab < 10 || seasonOps === 0) {
-        p.heatLevel = 'unknown';
-      } else {
-        const delta = recent.ops - seasonOps;
-        if (delta >= 0.080) p.heatLevel = 'hot';
-        else if (delta >= -0.060) p.heatLevel = 'warm';
-        else p.heatLevel = 'cold';
-      }
-    });
-
-    // Annotate pitchers with recent form (last 15 days)
-    [...alCY, ...nlCY].forEach(p => {
-      const recent = mvpHeatPitchingCache[p.pid];
-      const seasonEra = parseFloat(p.s?.era) || 99;
-      // Need at least 6 IP recent (~1 quality start) to consider sample valid
-      if (!recent || !recent.era || recent.ip < 6) {
-        p.heatLevel = 'unknown';
-      } else {
-        const delta = seasonEra - recent.era; // positive = recent better than season
-        if (delta >= 1.00) p.heatLevel = 'hot';
-        else if (delta >= -0.80) p.heatLevel = 'warm';
-        else p.heatLevel = 'cold';
-      }
-    });
 
     const now = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
     const today = new Date().toLocaleDateString('es-ES', { day:'numeric', month:'short' });
