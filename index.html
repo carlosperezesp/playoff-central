@@ -2303,12 +2303,6 @@ async function fetchTeamImpact(teamId) {
     if (pos === 'DH' && twpPlayers.length) {
       // TWP always starts at DH
       starter = { ...twpPlayers[0], pos: 'DH', truePrimaryPos: 'DH' };
-    } else if (pos === 'DH') {
-      // Pick the DH with the most DH appearances (not just first in array order)
-      const dhCandidates = nonTWP
-        .filter(p => primaryPos[p.id] === 'DH')
-        .sort((a, b) => (b.posCount['DH'] || 0) - (a.posCount['DH'] || 0) || b.gamesPlayed - a.gamesPlayed);
-      if (dhCandidates[0]) starter = { ...dhCandidates[0], pos: 'DH', truePrimaryPos: 'DH' };
     } else {
       const found = nonTWP.find(p => primaryPos[p.id] === pos);
       if (found) starter = { ...found, pos, truePrimaryPos: pos };
@@ -3449,7 +3443,7 @@ function trendFormaHTML(currentScore, careerScore) {
   }
 }
 
-const loaded = { standings: true, bracket: false, schedule: false, rosters: false, topgames: false, players: false };
+const loaded = { standings: true, bracket: false, schedule: false, rosters: false, topgames: false, players: false, mvp: false };
 
 function switchTab(tab) {
   try {
@@ -3459,6 +3453,8 @@ function switchTab(tab) {
     if (btn) btn.classList.add('active');
     const panel = document.getElementById(`tab-${tab}`);
     if (panel) panel.classList.add('active');
+    // Update URL hash so the tab is shareable/bookmarkable
+    history.replaceState(null, '', `#${tab}`);
     if (!loaded[tab]) {
       loaded[tab] = true;
       if (tab === 'bracket') loadBracket();
@@ -4537,6 +4533,11 @@ function getTeamLeagueId(teamId) {
   return AL.has(teamId) ? 103 : 104;
 }
 
+// On load, jump to the tab specified in the URL hash (e.g. #mvp, #players)
+const VALID_TABS = new Set(['standings','bracket','topgames','rosters','players','mvp']);
+const hashTab = window.location.hash.replace('#', '');
+const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
+if (startTab !== 'standings') switchTab(startTab);
 init();
 </script>
 </body>
