@@ -2222,12 +2222,35 @@ async function fetchTeamImpact(teamId) {
   const hittersByPos = {};
   const nonTWP = allHitters.filter(p => !p.isTWP);
 
-  // STEP 1: Determine each player's "claim" position =
-  //   bestBoxscorePos if they have ≥1 appearance, else fallbackPos
+  // STEP 1: Determine each player's "claim" position.
+  // Priority order:
+  //   (a) If the roster API lists them as DH → always DH (e.g. Yordan Alvarez)
+  //   (b) If DH appearances in boxscores exceed any single field position → DH
+  //   (c) If DH appearances are ≥ 40% of their total appearances (primary DH who
+  //       also plays some LF/RF) → DH. Catches players listed as OF on roster
+  //       but used mainly as DH in-game.
+  //   (d) Otherwise use bestBoxscorePos, falling back to rosterPos
   nonTWP.forEach(p => {
-    p.claimPos = p.bestBoxscorePos || p.fallbackPos;
+    const dhApps = p.posCount['DH'] || 0;
+    const totalApps = Object.values(p.posCount).reduce((a, b) => a + b, 0);
+    const bestFieldPos = Object.entries(p.posCount)
+      .filter(([pp]) => VALID_POS.has(pp) && pp !== 'DH')
+      .sort((a, b) => b[1] - a[1])[0];
+    const bestFieldCount = bestFieldPos ? bestFieldPos[1] : 0;
+
+    if (p.rosterPos === 'DH') {
+      p.claimPos = 'DH';
+    } else if (dhApps > 0 && dhApps > bestFieldCount) {
+      p.claimPos = 'DH';
+    } else if (dhApps > 0 && totalApps > 0 && (dhApps / totalApps) >= 0.40) {
+      // Primary DH even if occasionally plays in the field
+      p.claimPos = 'DH';
+    } else {
+      p.claimPos = p.bestBoxscorePos || p.fallbackPos;
+    }
     p.claimCount = p.posCount[p.claimPos] || 0;
   });
+
 
   // STEP 2: For each valid position, collect all players who have appeared there
   //   (or whose fallback is that pos). Sort by: appearances at this pos desc,
@@ -2249,10 +2272,14 @@ async function fetchTeamImpact(teamId) {
       });
   });
 
-  // STEP 3: Greedy assignment — each position gets the best available unassigned player
+  // STEP 3: Greedy assignment — each position gets the best available unassigned player.
+  // Players whose claimPos is DH are excluded from field position slots so they
+  // don't get stranded at LF/RF/etc. before DH is processed.
   const primaryPos = {};  // pid → pos (starter assignment)
   POS_PRIORITY.forEach(pos => {
-    const candidates = candidatesByPos[pos] || [];
+    const candidates = (candidatesByPos[pos] || []).filter(p =>
+      pos === 'DH' || p.claimPos !== 'DH'
+    );
     const starter = candidates.find(p => !(p.id in primaryPos));
     if (starter) primaryPos[starter.id] = pos;
   });
@@ -2276,6 +2303,12 @@ async function fetchTeamImpact(teamId) {
     if (pos === 'DH' && twpPlayers.length) {
       // TWP always starts at DH
       starter = { ...twpPlayers[0], pos: 'DH', truePrimaryPos: 'DH' };
+    } else if (pos === 'DH') {
+      // Pick the DH with the most DH appearances (not just first in array order)
+      const dhCandidates = nonTWP
+        .filter(p => primaryPos[p.id] === 'DH')
+        .sort((a, b) => (b.posCount['DH'] || 0) - (a.posCount['DH'] || 0) || b.gamesPlayed - a.gamesPlayed);
+      if (dhCandidates[0]) starter = { ...dhCandidates[0], pos: 'DH', truePrimaryPos: 'DH' };
     } else {
       const found = nonTWP.find(p => primaryPos[p.id] === pos);
       if (found) starter = { ...found, pos, truePrimaryPos: pos };
@@ -4500,7 +4533,7 @@ function setMVPFilter(f) {
 
 // Helper: get league ID from team ID (AL=103, NL=104)
 function getTeamLeagueId(teamId) {
-  const AL = new Set([108,110,111,113,114,116,117,118,133,136,139,140,141,142,145,147]);
+  const AL = new Set([108,110,111,114,116,117,118,133,136,139,140,141,142,145,147]);
   return AL.has(teamId) ? 103 : 104;
 }
 
