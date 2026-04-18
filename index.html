@@ -154,6 +154,59 @@
   .team-name-full { display: inline; }
   .tracker-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
+  /* ── BOTTOM NAV (mobile only) ── */
+  .bottom-nav { display: none; }
+  @media (max-width: 768px) {
+    .bottom-nav {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+      z-index: 200; height: 60px;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bnav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 3px; background: none; border: none;
+      color: var(--muted); cursor: pointer; padding: 6px 4px; transition: color .15s;
+      font-family: 'Barlow Condensed'; font-size: 10px; font-weight: 700;
+      letter-spacing: .8px; text-transform: uppercase;
+    }
+    .bnav-btn svg { width: 20px; height: 20px; }
+    .bnav-btn.active { color: var(--accent); }
+    #desktopTabs { display: none; }
+    main { padding-bottom: 72px; }
+  }
+
+  /* ── STANDINGS VIEW TOGGLE ── */
+  .standings-toggle {
+    display: flex; margin-bottom: 20px;
+    border: 1px solid var(--border); overflow: hidden; width: fit-content;
+  }
+  .standings-toggle-btn {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-size: 13px;
+    letter-spacing: 1.5px; padding: 8px 20px; border: none; background: var(--surface2);
+    color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .standings-toggle-btn.active { background: var(--accent); color: #fff; }
+  .standings-toggle-btn:hover:not(.active) { color: var(--text); background: var(--border); }
+
+  /* ── WILD CARD TABLE ── */
+  .wc-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 8px; }
+  .wc-table th { font-family: 'Barlow Condensed'; font-weight: 600; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .wc-table th.r { text-align: right; }
+  .wc-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .wc-table td.r { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Barlow Condensed'; font-size: 14px; }
+  .wc-table tr:last-child td { border-bottom: none; }
+  .wc-table tr:hover td { background: var(--surface2); }
+  .wc-table tr.wc-div td { border-left: 3px solid var(--win); }
+  .wc-table tr.wc-wc td { border-left: 3px solid var(--accent); }
+  .wc-table tr.wc-elim td { opacity: .45; }
+  @media (max-width: 768px) {
+    .wc-table tr.wc-div td { background: rgba(22,163,74,.18); border-left: none; }
+    .wc-table tr.wc-wc td { background: rgba(26,86,219,.13); border-left: none; }
+    .wc-col-l10 { display: none; }
+  }
+
   .bracket-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
     margin-bottom: 32px;
@@ -845,9 +898,8 @@
   <div class="season-badge" id="seasonBadge">2026 SEASON</div>
 </header>
 
-<div class="tabs">
+<div class="tabs" id="desktopTabs">
   <button class="tab-btn active" onclick="switchTab('standings')">PLAYOFF RACE</button>
-  <button class="tab-btn" onclick="switchTab('bracket')">BRACKET</button>
   <button class="tab-btn" onclick="switchTab('topgames')">TOP GAMES</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
   <button class="tab-btn" onclick="switchTab('mvp')">MVP TRACKER</button>
@@ -891,6 +943,25 @@
     </div>
   </div>
 </main>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bnav-btn active" onclick="switchTab('standings')" data-tab="standings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>HOME</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('topgames')" data-tab="topgames">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>TOP GAMES</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('rosters')" data-tab="rosters">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>ROSTERS</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('mvp')" data-tab="mvp">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+    <span>MVP RACE</span>
+  </button>
+</nav>
 
 <script>
 const MLB_API = 'https://statsapi.mlb.com/api/v1';
@@ -1110,11 +1181,25 @@ async function renderStandings() {
   };
 
   let html = `
-    <div id="trackerWidget"></div>
-    <div class="legend" style="margin-bottom:20px;margin-top:16px">
-      <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
-      <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
-      <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
+    <div class="standings-toggle">
+      <button class="standings-toggle-btn active" onclick="setStandingsView('division')">DIVISION</button>
+      <button class="standings-toggle-btn" onclick="setStandingsView('wildcard')">WILD CARD</button>
+    </div>
+    <div id="view-division">
+      <div id="trackerWidget"></div>
+      <div class="legend" style="margin-bottom:20px;margin-top:16px">
+        <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
+        <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
+        <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
+      </div>
+    </div>
+    <div id="view-wildcard" style="display:none">
+      <div class="legend" style="margin-bottom:20px">
+        <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
+        <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
+        <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
+      </div>
+      <div id="wcTablesContent"></div>
     </div>`;
 
   const alDivs = allData.standings.filter(r => r.league?.id === 103);
@@ -1224,6 +1309,364 @@ async function renderStandings() {
   el.innerHTML = html;
   // Load tracker in background — don't block standings render
   setTimeout(() => initTracker(), 0);
+  // Render wild card tables
+  renderWildCardTables();
+}
+
+// ── STANDINGS VIEW TOGGLE ─────────────────────────────────────────────────
+let standingsView = 'division';
+
+function setStandingsView(view) {
+  standingsView = view;
+  document.querySelectorAll('.standings-toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(view === 'division' ? 'division' : 'wild'));
+  });
+  document.getElementById('view-division').style.display = view === 'division' ? '' : 'none';
+  document.getElementById('view-wildcard').style.display = view === 'wildcard' ? '' : 'none';
+}
+
+function renderWildCardTables() {
+  const el = document.getElementById('wcTablesContent');
+  if (!el || !allData.standings) return;
+
+  const renderLeague = (records, label) => {
+    let all = []; const divLeaderIds = new Set();
+    records.forEach(div => {
+      const sorted = div.teamRecords.slice().sort((a,b) => parseFloat(b.winningPercentage) - parseFloat(a.winningPercentage));
+      if (sorted[0]) divLeaderIds.add(sorted[0].team.id);
+      div.teamRecords.forEach(tr => all.push(tr));
+    });
+    const divLeaders = all.filter(t => divLeaderIds.has(t.team.id)).sort((a,b) => parseFloat(b.winningPercentage)-parseFloat(a.winningPercentage));
+    const rest = all.filter(t => !divLeaderIds.has(t.team.id)).sort((a,b) => parseFloat(b.winningPercentage)-parseFloat(a.winningPercentage));
+    const ordered = [...divLeaders, ...rest];
+    const wcIds = new Set(ordered.filter(t => !divLeaderIds.has(t.team.id)).slice(0,3).map(t => t.team.id));
+    const cutoffIdx = 5; // after 3 div leaders + 3 wc = 6 spots
+
+    let rows = ordered.map((t, i) => {
+      const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr:'???' };
+      const isDivW = divLeaderIds.has(t.team.id);
+      const isWC = wcIds.has(t.team.id);
+      const isElim = t.eliminationNumber === 'E' || t.wildCardEliminationNumber === 'E';
+      const rowCls = isElim ? 'wc-elim' : isDivW ? 'wc-div' : isWC ? 'wc-wc' : '';
+      const pct = parseFloat(t.winningPercentage||0).toFixed(3).replace(/^0/,'');
+      const wcgb = parseFloat(t.wildCardGamesBack);
+      const wcgbStr = isNaN(wcgb) || wcgb <= 0 ? '—' : `+${wcgb}`;
+      const l10 = t.records?.splitRecords?.find(s=>s.type==='lastTen');
+      const l10w = l10?.wins ?? 0, l10l = l10?.losses ?? 0;
+      const l10color = l10w > l10l ? 'var(--win)' : l10w < l10l ? 'var(--loss)' : 'var(--text)';
+      const badge = isDivW
+        ? `<span class="badge-div">DIV</span>`
+        : isWC ? `<span class="badge-wc">WC</span>` : '';
+      // Dashed cutline after 6th team
+      const cutlineStyle = i === cutoffIdx ? 'border-top: 2px dashed var(--border);' : '';
+      return `<tr class="${rowCls}" style="${cutlineStyle}">
+        <td style="width:20px;font-family:'Barlow Condensed';font-weight:700;color:var(--muted);font-size:12px">${i+1}</td>
+        <td>
+          <div class="team-cell" style="gap:7px">
+            <img style="width:22px;height:22px;object-fit:contain" src="https://www.mlbstatic.com/team-logos/${t.team.id}.svg" onerror="this.style.display='none'" alt="">
+            <span class="team-name-full" style="font-weight:500;font-size:14px">${meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name}</span>
+            <span class="team-name-abbr" style="font-weight:600;font-size:14px">${meta.abbr}</span>
+          </div>
+        </td>
+        <td class="r">${t.wins}</td>
+        <td class="r">${t.losses}</td>
+        <td class="r">${pct}</td>
+        <td class="r" style="color:${isWC||isDivW?'var(--win)':'var(--muted)'}">${wcgbStr}</td>
+        <td class="r wc-col-l10"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10w}-${l10l}</span></td>
+        <td>${badge}</td>
+      </tr>`;
+    }).join('');
+
+    return `
+      <div class="division-card" style="margin-bottom:20px">
+        <div class="division-header">
+          <span class="division-name">${label}</span>
+          <span class="division-league">PLAYOFF RACE</span>
+        </div>
+        <table class="wc-table">
+          <thead><tr>
+            <th style="width:20px">#</th>
+            <th>TEAM</th>
+            <th class="r">W</th><th class="r">L</th><th class="r">PCT</th>
+            <th class="r" style="white-space:nowrap">GB</th>
+            <th class="r wc-col-l10" style="white-space:nowrap">L10</th>
+            <th>STATUS</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  };
+
+  const al = allData.standings.filter(r => r.league?.id === 103);
+  const nl = allData.standings.filter(r => r.league?.id === 104);
+  el.innerHTML = renderLeague(al, 'AMERICAN LEAGUE') + renderLeague(nl, 'NATIONAL LEAGUE');
+}
+
+// ── WILD CARD TRACKER (AL vs NL league-wide PCT) ──────────────────────────
+let wcTrackerData = {};
+let wcTrackerDates = [];
+let wcTrackerLoaded = false;
+let wcTrackerHoverIdx = null;
+const WC_LEAGUE_COLORS = { 103: '#1a56db', 104: '#e05a2b' };
+const WC_LEAGUE_LABELS = { 103: 'AL', 104: 'NL' };
+
+async function initWCTracker() {
+  const wrap = document.getElementById('wcTrackerWidget');
+  if (!wrap) return;
+
+  const divBtns = ''; // no division pills needed for WC tracker
+  wrap.innerHTML = `<div class="tracker-section">
+    <div class="tracker-header">
+      <span class="tracker-title">WIN% TRACKER — LEAGUE</span>
+      <span style="display:flex;align-items:baseline;gap:6px">
+        <span class="tracker-date-label" id="wcTrackerDateLabel">—</span>
+      </span>
+    </div>
+    <div style="position:relative;user-select:none">
+      <canvas id="wcTrackerCanvas" height="200" style="cursor:crosshair;width:100%;display:block"></canvas>
+      <div id="wcTrackerOverlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none">
+        <span class="tracker-loading" id="wcTrackerLoadingMsg">CARGANDO…</span>
+      </div>
+      <div id="wcTrackerTooltip" style="display:none;position:absolute;background:#fff;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.12);padding:10px 14px;pointer-events:none;min-width:140px;z-index:10;font-size:12px"></div>
+    </div>
+  </div>`;
+
+  const canvas = document.getElementById('wcTrackerCanvas');
+  if (canvas) {
+    canvas.addEventListener('mousemove', onWCTrackerHover);
+    canvas.addEventListener('mouseleave', onWCTrackerLeave);
+    canvas.addEventListener('touchstart', onWCTrackerTouch, { passive: true });
+    canvas.addEventListener('touchmove', onWCTrackerTouch, { passive: true });
+    canvas.addEventListener('touchend', onWCTrackerLeave);
+  }
+
+  // Reuse trackerData if already loaded, otherwise wait
+  if (trackerLoaded) {
+    wcTrackerDates = trackerDates;
+    wcTrackerData = trackerData;
+    wcTrackerLoaded = true;
+    const loadMsg = document.getElementById('wcTrackerLoadingMsg');
+    if (loadMsg) loadMsg.style.display = 'none';
+    drawWCTracker();
+  } else {
+    // Poll until division tracker finishes loading
+    const poll = setInterval(() => {
+      if (trackerLoaded) {
+        clearInterval(poll);
+        wcTrackerDates = trackerDates;
+        wcTrackerData = trackerData;
+        wcTrackerLoaded = true;
+        const loadMsg = document.getElementById('wcTrackerLoadingMsg');
+        if (loadMsg) loadMsg.style.display = 'none';
+        drawWCTracker();
+      }
+    }, 300);
+  }
+}
+
+function onWCTrackerHover(e) {
+  const canvas = document.getElementById('wcTrackerCanvas');
+  if (!canvas || !wcTrackerLoaded) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const PAD = { top: 20, right: 50, bottom: 28, left: 50 };
+  const W = canvas.offsetWidth;
+  const cW = W - PAD.left - PAD.right;
+  const relX = mx - PAD.left;
+  if (relX < 0 || relX > cW) { onWCTrackerLeave(); return; }
+  const idx = Math.round((relX / cW) * Math.max(wcTrackerDates.length - 1, 1));
+  const clamped = Math.max(0, Math.min(idx, wcTrackerDates.length - 1));
+  if (wcTrackerHoverIdx === clamped) return;
+  wcTrackerHoverIdx = clamped;
+  drawWCTracker();
+  showWCTrackerTooltip(clamped, e.clientX - rect.left, canvas);
+}
+
+function onWCTrackerTouch(e) {
+  if (e.touches[0]) {
+    const canvas = document.getElementById('wcTrackerCanvas');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    onWCTrackerHover({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+  }
+}
+
+function onWCTrackerLeave() {
+  wcTrackerHoverIdx = null;
+  const tooltip = document.getElementById('wcTrackerTooltip');
+  if (tooltip) tooltip.style.display = 'none';
+  drawWCTracker();
+}
+
+function showWCTrackerTooltip(idx, mouseX, canvas) {
+  const tooltip = document.getElementById('wcTrackerTooltip');
+  if (!tooltip) return;
+  const date = wcTrackerDates[idx];
+  const recs = wcTrackerData[date] || [];
+  const d = new Date(date + 'T12:00:00');
+  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const leagueAvg = (leagueId) => {
+    const divs = recs.filter(r => r.league?.id === leagueId);
+    let wins = 0, games = 0;
+    divs.forEach(div => div.teamRecords.forEach(tr => { wins += tr.wins; games += tr.wins + tr.losses; }));
+    return games > 0 ? wins / games : null;
+  };
+
+  const rows = [103, 104].map(lid => {
+    const avg = leagueAvg(lid);
+    if (avg === null) return '';
+    const color = WC_LEAGUE_COLORS[lid];
+    const label = WC_LEAGUE_LABELS[lid];
+    const pct = avg.toFixed(3).replace(/^0/, '');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6">
+      <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+      <span style="font-family:'Barlow Condensed';font-weight:700;color:${color};width:28px">${label}</span>
+      <span style="font-family:'Barlow Condensed';font-weight:700;color:#111827">${pct}</span>
+    </div>`;
+  }).join('');
+
+  tooltip.innerHTML = `<div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:1.5px;color:#6b7280;margin-bottom:6px">${dateStr}</div>${rows}`;
+  tooltip.style.display = 'block';
+  const tipW = 160;
+  let left = mouseX + 12;
+  if (left + tipW > canvas.offsetWidth) left = mouseX - tipW - 12;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = '10px';
+}
+
+function drawWCTracker() {
+  const canvas = document.getElementById('wcTrackerCanvas');
+  if (!canvas || !wcTrackerLoaded || !wcTrackerDates.length) return;
+
+  const dateLabel = document.getElementById('wcTrackerDateLabel');
+  if (dateLabel) {
+    const d = new Date(wcTrackerDates[wcTrackerDates.length - 1] + 'T12:00:00');
+    dateLabel.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  const leagueAvgSeries = {};
+  [103, 104].forEach(lid => {
+    leagueAvgSeries[lid] = wcTrackerDates.map(date => {
+      const recs = wcTrackerData[date] || [];
+      const divs = recs.filter(r => r.league?.id === lid);
+      let wins = 0, games = 0;
+      divs.forEach(div => div.teamRecords.forEach(tr => { wins += tr.wins; games += tr.wins + tr.losses; }));
+      return games > 0 ? wins / games : null;
+    });
+  });
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || 600;
+  const H = 200;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { top: 20, right: 50, bottom: 28, left: 50 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+
+  let allVals = [];
+  [103,104].forEach(lid => leagueAvgSeries[lid].forEach(v => { if (v != null) allVals.push(v); }));
+  if (!allVals.length) return;
+  let minPct = Math.max(0, Math.floor(Math.min(...allVals) * 20) / 20 - 0.02);
+  let maxPct = Math.min(1, Math.ceil(Math.max(...allVals) * 20) / 20 + 0.02);
+  const pctRange = maxPct - minPct || 0.1;
+
+  const yFor = pct => PAD.top + cH - ((pct - minPct) / pctRange) * cH;
+  const xFor = i => PAD.left + (i / Math.max(wcTrackerDates.length - 1, 1)) * cW;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.font = '10px Barlow Condensed, sans-serif';
+  ctx.textAlign = 'right';
+  const step = 0.01;
+  for (let p = Math.ceil(minPct * 100) / 100; p <= maxPct + 0.001; p = Math.round((p + step) * 1000) / 1000) {
+    const y = yFor(p);
+    const is500 = Math.abs(p - 0.5) < 0.001;
+    ctx.strokeStyle = is500 ? 'rgba(107,114,128,.4)' : '#f0f0f0';
+    ctx.lineWidth = is500 ? 1.5 : 1;
+    ctx.setLineDash(is500 ? [4,3] : []);
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = is500 ? '#6b7280' : '#c0c0c0';
+    ctx.fillText(p.toFixed(3).replace(/^0/,''), PAD.left - 5, y + 3.5);
+  }
+
+  // Date labels
+  ctx.fillStyle = '#aaa'; ctx.textAlign = 'center';
+  const labelStep = Math.max(1, Math.floor(wcTrackerDates.length / 5));
+  wcTrackerDates.forEach((date, i) => {
+    if (i % labelStep !== 0 && i !== wcTrackerDates.length - 1) return;
+    const dd = new Date(date + 'T12:00:00');
+    ctx.fillText(dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), xFor(i), H - 7);
+  });
+
+  // Draw lines
+  [103, 104].forEach(lid => {
+    const vals = leagueAvgSeries[lid];
+    const pts = vals.map((v, i) => v != null ? { x: xFor(i), y: yFor(v) } : null).filter(Boolean);
+    if (pts.length < 2) return;
+    const color = WC_LEAGUE_COLORS[lid];
+
+    // Fill
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const cpx = (pts[i-1].x + pts[i].x) / 2;
+      ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.lineTo(pts[pts.length-1].x, PAD.top + cH);
+    ctx.lineTo(pts[0].x, PAD.top + cH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + cH);
+    grad.addColorStop(0, color + '33'); grad.addColorStop(1, color + '00');
+    ctx.fillStyle = grad; ctx.fill();
+
+    // Line
+    ctx.strokeStyle = color; ctx.lineWidth = 2.2;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const cpx = (pts[i-1].x + pts[i].x) / 2;
+      ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+
+    // End dot
+    const last = pts[pts.length-1];
+    ctx.beginPath(); ctx.arc(last.x, last.y, 4, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Label
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 11px Barlow Condensed, sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(WC_LEAGUE_LABELS[lid], PAD.left + cW + 5, last.y + 4);
+  });
+
+  // Hover line
+  if (wcTrackerHoverIdx !== null) {
+    const hx = xFor(wcTrackerHoverIdx);
+    ctx.strokeStyle = 'rgba(107,114,128,.4)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(hx, PAD.top); ctx.lineTo(hx, PAD.top + cH); ctx.stroke();
+    ctx.setLineDash([]);
+    [103,104].forEach(lid => {
+      const v = leagueAvgSeries[lid][wcTrackerHoverIdx];
+      if (v == null) return;
+      const color = WC_LEAGUE_COLORS[lid];
+      ctx.beginPath(); ctx.arc(hx, yFor(v), 4, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+    });
+  }
 }
 
 const TRACKER_DIVISIONS = {
@@ -2263,12 +2706,23 @@ async function fetchTeamImpact(teamId) {
     } catch(e) {}
   }));
 
-  // MLB debut year for rookie detection (debut year = current season)
+  // MLB debut year for rookie detection:
+  // - Debuted this season = definite rookie
+  // - Debuted last season but career AB < 130 AND career IP < 130 = still ROY-eligible (e.g. McLean)
   const rookiePids = new Set();
   roster.forEach(p => {
     const debut = p.person?.mlbDebutDate;
-    if (debut && debut.startsWith(String(season))) rookiePids.add(p.person.id);
-
+    if (!debut) return;
+    const debutYear = parseInt(debut.slice(0, 4));
+    if (debutYear === season) {
+      rookiePids.add(p.person.id); // true rookie
+    } else if (debutYear === season - 1) {
+      // Check career thresholds — if loaded, use them; if not yet loaded, mark tentatively
+      const c = careerStatsCache[p.person.id];
+      if (!c || ((c.careerAB ?? 0) < 130 && (c.careerIP ?? 0) < 130)) {
+        rookiePids.add(p.person.id);
+      }
+    }
   });
 
   // ── HITTERS ──────────────────────────────────────────────────────────────
@@ -3705,11 +4159,14 @@ function switchTab(tab) {
   try {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
     const btn = document.querySelector(`[onclick="switchTab('${tab}')"]`);
     if (btn) btn.classList.add('active');
+    // Also activate the matching bottom nav button
+    const bnavBtn = document.querySelector(`.bnav-btn[data-tab="${tab}"]`);
+    if (bnavBtn) bnavBtn.classList.add('active');
     const panel = document.getElementById(`tab-${tab}`);
     if (panel) panel.classList.add('active');
-    // Update URL hash so the tab is shareable/bookmarkable
     history.replaceState(null, '', `#${tab}`);
     if (!loaded[tab]) {
       loaded[tab] = true;
@@ -5015,8 +5472,17 @@ async function loadMVPTracker() {
       } else if (awardType === 'mvp' && p.position) {
         posHtml = `<span class="mvp-pos-pill">${p.position}</span>`;
       }
-      // Rookie badge for ROY
-      const rookieBadge = awardType === 'roy'
+      // Rookie badge — shown in ROY always, and in MVP/CY if player is ROY-eligible
+      const CAREER_AB_LIMIT = 130;
+      const CAREER_IP_LIMIT = 130;
+      function isRoyEligible(pid) {
+        const c = careerStatsCache[pid];
+        if (!c) return true; // no career data = assume eligible
+        const ab = c.careerAB ?? 0;
+        const ip = c.careerIP ?? 0;
+        return ab < CAREER_AB_LIMIT && ip < CAREER_IP_LIMIT;
+      }
+      const rookieBadge = (awardType === 'roy' || isRoyEligible(p.pid))
         ? `<span style="display:inline-block;font-size:8px;font-weight:800;padding:1px 4px;border-radius:3px;background:#b45309;color:#fff;margin-right:3px;letter-spacing:.3px">R</span>`
         : '';
       const awardHtml = awardsBadgeHTML(p.pid, awardType === 'roy' ? (p.isPitcher ? 'cy' : 'mvp') : awardType);
@@ -5207,7 +5673,7 @@ function getTeamLeagueId(teamId) {
 }
 
 // On load, jump to the tab specified in the URL hash (e.g. #mvp, #players)
-const VALID_TABS = new Set(['standings','bracket','topgames','rosters','mvp']);
+const VALID_TABS = new Set(['standings','topgames','rosters','mvp']);
 const hashTab = window.location.hash.replace('#', '');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
