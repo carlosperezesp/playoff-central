@@ -134,14 +134,24 @@
   .tracker-title { font-family: 'Bebas Neue'; font-size: 18px; letter-spacing: 2px; color: var(--text); }
   .tracker-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .tracker-select { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 600; letter-spacing: 1px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; cursor: pointer; }
-  .tracker-date-label { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--accent); min-width: 100px; text-align: right; }
   .tracker-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; background: var(--border); outline: none; cursor: pointer; margin: 10px 0; }
   .tracker-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
   .tracker-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
+  .tracker-div-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tracker-div-btn { font-family: 'Barlow Condensed'; font-weight: 700; font-size: 12px; letter-spacing: 1px; padding: 5px 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .tracker-div-btn:hover:not(.active) { color: var(--text); border-color: #aaa; }
+  .tracker-div-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tracker-date-label { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--accent); }
+  #trackerMaxGR { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--muted); font-weight: normal; }
+  .hist-tip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 600; letter-spacing: .5px; padding: 3px 8px; white-space: nowrap; pointer-events: none; z-index: 20; margin-bottom: 4px; }
+  .hist-dots { position: relative; }
   .tracker-loading { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 12px; letter-spacing: 1px; }
   #trackerCanvas { width: 100%; display: block; }
   .tracker-legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
   .tracker-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-family: 'Barlow Condensed'; }
+  /* By default show full name, hide abbr */
+  .team-name-abbr { display: none; }
+  .team-name-full { display: inline; }
   .tracker-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
   .bracket-grid {
@@ -196,6 +206,19 @@
     .standings-table th, .standings-table td { padding: 7px 8px; }
     .team-cell { gap: 6px; }
     .team-logo-sm { width: 22px; height: 22px; }
+    /* Hide secondary columns on mobile — keep TEAM W L PCT GB L10 MN HIST */
+    .div-col-strk { display: none; }
+    .div-col-l10, .div-col-mn, .div-col-hist { display: table-cell; }
+    /* Show abbr instead of full name on mobile */
+    .team-name-full { display: none; }
+    .team-name-abbr { display: inline; }
+    /* Hide DIV/WC badges on mobile, use row background color instead */
+    .badge-div, .badge-wc { display: none; }
+    .div-table tr.div-leader td { background: rgba(22,163,74,.18); border-left: none; }
+    .div-table tr.div-leader:hover td { background: rgba(22,163,74,.26); }
+    .div-table tr.wc-spot td { background: rgba(26,86,219,.13); border-left: none; }
+    .div-table tr.wc-spot:hover td { background: rgba(26,86,219,.2); }
+    .div-table tr.elim-row td { background: rgba(107,114,128,.07); opacity: 1; color: var(--muted); }
 
     /* Schedule rows — stack into 2-line layout */
     .game-row {
@@ -220,9 +243,13 @@
 
     /* Tracker */
     .tracker-section { padding: 14px 12px; }
-    .tracker-header { gap: 8px; }
-    .tracker-controls { gap: 8px; }
-    .tracker-date-label { font-size: 17px; min-width: 80px; }
+    /* Tracker division pills: 3 per row on mobile */
+    .tracker-div-pills { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .tracker-div-btn { text-align: center; }
+    .tracker-header { flex-wrap: nowrap; gap: 8px; align-items: center; }
+    .tracker-title { font-size: 15px; white-space: nowrap; }
+    .tracker-date-label { font-size: 17px; }
+    #trackerMaxGR { font-size: 17px; }
 
     /* Teams / roster panel */
     .team-selector-list { max-height: 220px; }
@@ -950,8 +977,18 @@ function histDotsHTML(teamId) {
   const hist = TEAM_HISTORY[teamId];
   if (!hist) return '';
   return '<div class="hist-dots">' +
-    hist.map((r,i) => `<span class="hist-dot ${r}" title="${HIST_YEARS[i]}: ${HIST_LABELS[r]}"></span>`).join('') +
+    hist.map((r,i) => `<span class="hist-dot ${r}" title="${HIST_YEARS[i]}: ${HIST_LABELS[r]}" data-label="${HIST_YEARS[i]}: ${HIST_LABELS[r]}" onclick="showHistTip(this)"></span>`).join('') +
   '</div>';
+}
+
+function showHistTip(el) {
+  // Remove any existing tip
+  document.querySelectorAll('.hist-tip').forEach(t => t.remove());
+  const tip = document.createElement('div');
+  tip.className = 'hist-tip';
+  tip.textContent = el.dataset.label;
+  el.parentElement.appendChild(tip);
+  setTimeout(() => tip.remove(), 2000);
 }
 
 let allData = { standings: null, playoffs: null, schedule: null };
@@ -1042,10 +1079,10 @@ async function renderStandings() {
   allData.standings.forEach(div => div.teamRecords.forEach(tr => allTeamIds.push(tr.team.id)));
   const gamesRem = {}; // render first with empty, then refresh
   loadGamesRemaining(allTeamIds).then(rem => {
-    // update GR badges once loaded without full re-render
-    Object.entries(rem).forEach(([tid, gr]) => {
-      document.querySelectorAll(`.gr-badge-${tid}`).forEach(el => { el.textContent = `${gr} GR`; el.style.display=''; });
-    });
+    // Update tracker max-GR label
+    const maxGR = Math.max(0, ...Object.values(rem));
+    const trackerGR = document.getElementById('trackerMaxGR');
+    if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
   }).catch(()=>{});
 
   const leagueWCIds = {};
@@ -1073,13 +1110,12 @@ async function renderStandings() {
   };
 
   let html = `
-    <div class="legend" style="margin-bottom:20px">
+    <div id="trackerWidget"></div>
+    <div class="legend" style="margin-bottom:20px;margin-top:16px">
       <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
       <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
       <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
-      <div class="legend-item" style="margin-left:auto; color:var(--muted); font-size:11px">GR = Partidos restantes</div>
-    </div>
-    <div id="trackerWidget"></div>`;
+    </div>`;
 
   const alDivs = allData.standings.filter(r => r.league?.id === 103);
   const nlDivs = allData.standings.filter(r => r.league?.id === 104);
@@ -1106,8 +1142,7 @@ async function renderStandings() {
       const tid = tr.team.id;
       const meta = TEAM_META[tid] || { name: tr.team.name, abbr: tr.team.abbreviation || '???', logo: `https://www.mlbstatic.com/team-logos/${tid}.svg` };
       // Shorten long names for table compactness
-      const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;
-      const isDivLeader = tid === divLeaderId;
+      const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;      const isDivLeader = tid === divLeaderId;
       const isWC = wcIds.has(tid) && !isDivLeader;
       const isElim = tr.eliminationNumber === 'E' || tr.wildCardEliminationNumber === 'E';
       const rowCls = isElim ? 'elim-row' : isDivLeader ? 'div-leader' : isWC ? 'wc-spot' : '';
@@ -1145,20 +1180,27 @@ async function renderStandings() {
           <div class="team-cell" style="gap:7px">
             ${badge}
             <img class="team-logo-sm" style="width:22px;height:22px" src="https://www.mlbstatic.com/team-logos/${tid}.svg" onerror="this.style.display='none'" alt="">
-            <span style="font-weight:500;font-size:14px">${displayName}</span>
-            ${gr}
+            <span class="team-name-full" style="font-weight:500;font-size:14px">${displayName}</span>
+            <span class="team-name-abbr" style="font-weight:600;font-size:14px">${meta.abbr}</span>
           </div>
         </td>
         <td class="r">${tr.wins}</td>
         <td class="r">${tr.losses}</td>
         <td class="r">${pct}</td>
-        <td class="r">${gb}</td>
-        <td class="r">${l10html}</td>
-        <td class="r">${streakHtml}</td>
-        <td class="r">${mnHtml}</td>
-        <td class="r">${histDotsHTML(tid)}</td>
+        <td class="r div-col-l10">${l10html}</td>
+        <td class="r div-col-strk">${streakHtml}</td>
+        <td class="r div-col-mn">${mnHtml}</td>
+        <td class="r div-col-hist">${histDotsHTML(tid)}</td>
       </tr>`;
     });
+
+    // Show MN column only if any team in this division has ≤30 games remaining or is eliminated
+    const showMN = teams.some(tr => {
+      const mn = tr.magicNumber;
+      const mnNum = parseInt(mn);
+      return mn === 'E' || (!isNaN(mnNum) && mnNum <= 30);
+    });
+    const mnColStyle = showMN ? '' : 'display:none';
 
     // On desktop: AL (league 103) goes in left column, NL in right. On mobile: AL first (natural order).
     const isAL = leagueId === 103;
@@ -1171,10 +1213,9 @@ async function renderStandings() {
       <table class="div-table">
         <thead><tr>
           <th>TEAM</th><th class="r">W</th><th class="r">L</th>
-          <th class="r">PCT</th><th class="r">GB</th>
-          <th class="r" style="white-space:nowrap">L10</th><th class="r">STRK</th><th class="r">MN</th><th class="r" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
+          <th class="r">PCT</th><th class="r div-col-l10" style="white-space:nowrap">L10</th><th class="r div-col-strk">STRK</th><th class="r div-col-mn" style="${mnColStyle}">MN</th><th class="r div-col-hist" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${rows.replace(/class="r div-col-mn"/g, `class="r div-col-mn" style="${mnColStyle}"`)}</tbody>
       </table>
     </div>`;
   });
@@ -1214,16 +1255,19 @@ async function initTracker() {
   const wrap = document.getElementById('trackerWidget');
   if (!wrap) return;
 
+  const divBtns = Object.entries(TRACKER_DIVISIONS).map(([id,d])=>
+    `<button class="tracker-div-btn ${parseInt(id)===trackerCurrentDiv?'active':''}" data-divid="${id}" onclick="changeTrackerDiv(${id})">${d.name}</button>`
+  ).join('');
+
   wrap.innerHTML = `<div class="tracker-section">
     <div class="tracker-header">
       <span class="tracker-title">WIN% TRACKER</span>
-      <div class="tracker-controls">
-        <select class="tracker-select" id="trackerDivSelect" onchange="changeTrackerDiv(this.value)">
-          ${Object.entries(TRACKER_DIVISIONS).map(([id,d])=>`<option value="${id}" ${parseInt(id)===trackerCurrentDiv?'selected':''}>${d.name}</option>`).join('')}
-        </select>
+      <span style="display:flex;align-items:baseline;gap:6px">
         <span class="tracker-date-label" id="trackerDateLabel">—</span>
-      </div>
+        <span id="trackerMaxGR"></span>
+      </span>
     </div>
+    <div class="tracker-div-pills" id="trackerDivPills">${divBtns}</div>
     <div style="position:relative;user-select:none">
       <canvas id="trackerCanvas" height="240" style="cursor:crosshair"></canvas>
       <div id="trackerOverlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none">
@@ -1231,8 +1275,6 @@ async function initTracker() {
       </div>
       <div id="trackerTooltip" style="display:none;position:absolute;background:#fff;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.12);padding:10px 14px;pointer-events:none;min-width:160px;z-index:10;font-size:12px"></div>
     </div>
-    <input type="range" class="tracker-slider" id="trackerSlider" min="0" max="0" value="0" oninput="onTrackerSlide(this.value)">
-    <div class="tracker-legend-row" id="trackerLegend"></div>
   </div>`;
 
   setTimeout(() => {
@@ -1302,8 +1344,6 @@ async function loadTrackerData() {
   });
 
   trackerLoaded = true;
-  const slider = document.getElementById('trackerSlider');
-  if (slider) { slider.max = dates.length - 1; slider.value = dates.length - 1; }
   const loadMsg = document.getElementById('trackerLoadingMsg');
   if (loadMsg) loadMsg.style.display = 'none';
   drawTracker(trackerDates.length - 1);
@@ -1312,13 +1352,11 @@ async function loadTrackerData() {
 function changeTrackerDiv(divId) {
   trackerCurrentDiv = parseInt(divId);
   trackerHoverIdx = null;
-  const slider = document.getElementById('trackerSlider');
-  if (slider) drawTracker(parseInt(slider.value));
-}
-
-function onTrackerSlide(val) {
-  trackerHoverIdx = null;
-  drawTracker(parseInt(val));
+  // Update active pill
+  document.querySelectorAll('.tracker-div-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.divid) === trackerCurrentDiv);
+  });
+  drawTracker(trackerDates.length - 1);
 }
 
 function onTrackerHover(e) {
@@ -1326,9 +1364,7 @@ function onTrackerHover(e) {
   if (!canvas || !trackerLoaded) return;
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
-  const slider = document.getElementById('trackerSlider');
-  const sliderIdx = slider ? parseInt(slider.value) : trackerDates.length - 1;
-  const visibleDates = trackerDates.slice(0, sliderIdx + 1);
+  const visibleDates = trackerDates;
   const PAD = { top: 20, right: 72, bottom: 28, left: 50 };
   const W = canvas.offsetWidth;
   const cW = W - PAD.left - PAD.right;
@@ -1338,7 +1374,7 @@ function onTrackerHover(e) {
   const clampedIdx = Math.max(0, Math.min(idx, visibleDates.length - 1));
   if (trackerHoverIdx === clampedIdx) return;
   trackerHoverIdx = clampedIdx;
-  drawTracker(sliderIdx);
+  drawTracker(trackerDates.length - 1);
   showTrackerTooltip(clampedIdx, visibleDates, e.clientX - rect.left, canvas);
 }
 
@@ -1346,8 +1382,7 @@ function onTrackerLeave() {
   trackerHoverIdx = null;
   const tooltip = document.getElementById('trackerTooltip');
   if (tooltip) tooltip.style.display = 'none';
-  const slider = document.getElementById('trackerSlider');
-  if (slider) drawTracker(parseInt(slider.value));
+  drawTracker(trackerDates.length - 1);
 }
 
 function showTrackerTooltip(idx, visibleDates, mouseX, canvas) {
@@ -1391,14 +1426,15 @@ function drawTracker(sliderIdx) {
   const canvas = document.getElementById('trackerCanvas');
   if (!canvas || !trackerLoaded || !trackerDates.length) return;
 
-  const visibleDates = trackerDates.slice(0, sliderIdx + 1);
+  const visibleDates = trackerDates;
+  const lastIdx = trackerDates.length - 1;
   const dateLabel = document.getElementById('trackerDateLabel');
   if (dateLabel) {
     const d = new Date(visibleDates[visibleDates.length - 1] + 'T12:00:00');
     dateLabel.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  const latestRec = trackerData[trackerDates[sliderIdx]] || [];
+  const latestRec = trackerData[trackerDates[lastIdx]] || [];
   const divRec = latestRec.find(r => r.division?.id === trackerCurrentDiv);
   if (!divRec) return;
   const divTeams = divRec.teamRecords.map(t => t.team.id);
@@ -1569,25 +1605,6 @@ function drawTracker(sliderIdx) {
     ctx.fillStyle = TEAM_COLORS_TRACKER[tid] || '#999';
     ctx.fillText(meta.abbr, PAD.left + cW + 5, labelY[i] + 4);
   });
-
-  const legendEl = document.getElementById('trackerLegend');
-  if (legendEl) {
-    legendEl.innerHTML = sortedTeams.map(tid => {
-      const meta = TEAM_META[tid] || { abbr: '???' };
-      const color = TEAM_COLORS_TRACKER[tid] || '#999';
-      const pct = currentPcts[tid].toFixed(3).replace(/^0/,'');
-      const recs = trackerData[trackerDates[sliderIdx]] || [];
-      const dr = recs.find(r => r.division?.id === trackerCurrentDiv);
-      const tr = dr?.teamRecords?.find(t => t.team.id === tid);
-      const wl = tr ? `${tr.wins}-${tr.losses}` : '';
-      return `<div class="tracker-legend-item">
-        <div class="tracker-legend-dot" style="background:${color}"></div>
-        <strong style="color:var(--text)">${meta.abbr}</strong>
-        <span style="color:var(--muted)">${wl}</span>
-        <span style="color:var(--text);font-weight:600">${pct}</span>
-      </div>`;
-    }).join('');
-  }
 }
 
 async function loadBracket() {
@@ -4559,7 +4576,7 @@ async function loadMVPTracker() {
         .then(r => r.json()).catch(() => ({ stats: [] })),
     ]);
 
-    const rawHitters = (hitData.stats?.[0]?.splits || []).map(sp => ({
+    rawHitters = (hitData.stats?.[0]?.splits || []).map(sp => ({
       pid: sp.player?.id, name: sp.player?.fullName || '?',
       teamId: sp.team?.id,
       teamAbbr: (sp.team?.id && TEAM_META[sp.team.id]?.abbr) || sp.team?.abbreviation || '?',
@@ -4567,7 +4584,7 @@ async function loadMVPTracker() {
       s: sp.stat,
     })).filter(p => p.pid);
 
-    const rawPitchers = (pitchData.stats?.[0]?.splits || []).map(sp => ({
+    rawPitchers = (pitchData.stats?.[0]?.splits || []).map(sp => ({
       pid: sp.player?.id, name: sp.player?.fullName || '?',
       teamId: sp.team?.id,
       teamAbbr: (sp.team?.id && TEAM_META[sp.team.id]?.abbr) || sp.team?.abbreviation || '?',
