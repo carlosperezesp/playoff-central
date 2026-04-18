@@ -4503,11 +4503,54 @@ async function loadMVPTracker() {
   const el = document.getElementById('mvpContent');
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CALCULANDO SCORES...</div></div>`;
 
+  // ── Daily cache: expires at 07:59 UTC (= 23:59 PT) ──────────────────────
+  // We store the heavy fetched data and reuse it until next refresh window.
+  const CACHE_KEY = `mvp_cache_${CURRENT_YEAR}`;
+  function getCacheExpiry() {
+    // Next 07:59 UTC from now
+    const now = new Date();
+    const expiry = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 59, 0));
+    if (now >= expiry) expiry.setUTCDate(expiry.getUTCDate() + 1);
+    return expiry.getTime();
+  }
+  function loadCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const cached = JSON.parse(raw);
+      if (Date.now() > cached.expiry) { localStorage.removeItem(CACHE_KEY); return null; }
+      return cached.data;
+    } catch(e) { return null; }
+  }
+  function saveCache(data) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ expiry: getCacheExpiry(), data }));
+    } catch(e) {} // ignore quota errors
+  }
+
   try {
     await fetchLeagueTeamStats();
     const lgMap = leagueTeamStatsCache || {};
     const lgAvg = lgMap._leagueAvg || {};
     const lgPitch = lgMap._leaguePitch || {};
+
+    // Try loading from cache first
+    let cached = loadCache();
+    let rawHitters, rawPitchers, positionMap, careerLoaded;
+
+    if (cached) {
+      // Restore from cache — skip all the heavy fetches
+      rawHitters   = cached.rawHitters;
+      rawPitchers  = cached.rawPitchers;
+      positionMap  = cached.positionMap;
+      // Restore career stats into the module-level cache
+      Object.assign(careerStatsCache, cached.careerStatsCache);
+      careerLoaded = true;
+    } else {
+      careerLoaded = false;
+    }
+
+    if (!cached) {
     // Fetch hitters and pitchers in parallel
     const [hitData, pitchData] = await Promise.all([
       fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=hitting&gameType=R&sportId=1&limit=800&offset=0`)
@@ -4565,7 +4608,7 @@ async function loadMVPTracker() {
 
     // Fetch primary positions for hitters (needed for displaying "1B", "SS", etc.)
     const hitterPids = rawHitters.map(p => p.pid).slice(0, 200); // top 200 by PA-ish
-    const positionMap = {};
+    positionMap = {};
     try {
       // chunk into groups of 100 for the people endpoint
       const chunks = [];
@@ -4580,6 +4623,9 @@ async function loadMVPTracker() {
           .catch(() => {})
       ));
     } catch(e) {}
+
+    } // end if(!cached)
+
     rawHitters.forEach(p => { p.position = positionMap[p.pid] || ''; });
 
     // --- PA leader to set min threshold dynamically
@@ -5055,6 +5101,16 @@ async function loadMVPTracker() {
           }
         }).catch(() => {})
       ));
+    }
+
+    // Save to localStorage after all heavy fetches complete (only if we just fetched fresh data)
+    if (!cached) {
+      saveCache({
+        rawHitters,
+        rawPitchers,
+        positionMap,
+        careerStatsCache: { ...careerStatsCache },
+      });
     }
 
     // Build ROY lists (now that career stats are available for eligibility check)
