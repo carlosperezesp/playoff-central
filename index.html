@@ -823,8 +823,7 @@
   <button class="tab-btn" onclick="switchTab('bracket')">BRACKET</button>
   <button class="tab-btn" onclick="switchTab('topgames')">TOP GAMES</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
-  <button class="tab-btn" onclick="switchTab('players')">PLAYERS</button>
-  <button class="tab-btn" onclick="switchTab('mvp')">🏆 MVP TRACKER</button>
+  <button class="tab-btn" onclick="switchTab('mvp')">MVP TRACKER</button>
 </div>
 
 <main>
@@ -844,9 +843,6 @@
     <div id="topGamesContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
   </div>
 
-  <div id="tab-players" class="tab-panel">
-    <div id="playersContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING PLAYERS...</div></div></div>
-  </div>
 
   <div id="tab-mvp" class="tab-panel">
     <div id="mvpContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING MVP TRACKER...</div></div></div>
@@ -3474,7 +3470,7 @@ async function fetchMvpSchedule() {
         const dateStr  = dateObj.date;
         const gameTime = game.gameDate ? new Date(game.gameDate) : null;
         const timeStr  = gameTime
-          ? gameTime.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', timeZone:'America/New_York' })
+          ? gameTime.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' })
           : null;
         const home = game.teams?.home;
         const away = game.teams?.away;
@@ -4997,7 +4993,7 @@ function getTeamLeagueId(teamId) {
 }
 
 // On load, jump to the tab specified in the URL hash (e.g. #mvp, #players)
-const VALID_TABS = new Set(['standings','bracket','topgames','rosters','players','mvp']);
+const VALID_TABS = new Set(['standings','bracket','topgames','rosters','mvp']);
 const hashTab = window.location.hash.replace('#', '');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
