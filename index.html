@@ -4424,6 +4424,31 @@ async function loadMVPTracker() {
       s: sp.stat,
     })).filter(p => p.pid);
 
+    // TWP fallback: if Ohtani isn't in the general pitching leaderboard (e.g. early season
+    // or low IP), fetch his pitching stats directly and inject him into rawPitchers so
+    // the Cy Young tracker can evaluate him.
+    const OHTANI_PID = 660271;
+    if (!rawPitchers.some(p => p.pid === OHTANI_PID)) {
+      try {
+        const od = await fetchWithTimeout(
+          `${MLB_API}/people/${OHTANI_PID}?hydrate=stats(group=[pitching],type=season,season=${CURRENT_YEAR})`
+        ).then(r => r.json()).catch(() => null);
+        const op = od?.people?.[0];
+        const os = op?.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
+        if (op && os && parseFloat(os.inningsPitched || 0) > 0) {
+          const teamId = op.currentTeam?.id;
+          rawPitchers.push({
+            pid: OHTANI_PID,
+            name: op.fullName || 'Shohei Ohtani',
+            teamId,
+            teamAbbr: (teamId && TEAM_META[teamId]?.abbr) || op.currentTeam?.abbreviation || 'LAD',
+            leagueId: teamId ? getTeamLeagueId(teamId) : 104,
+            s: os,
+          });
+        }
+      } catch(e) {}
+    }
+
     // Fetch primary positions for hitters (needed for displaying "1B", "SS", etc.)
     const hitterPids = rawHitters.map(p => p.pid).slice(0, 200); // top 200 by PA-ish
     const positionMap = {};
@@ -4667,9 +4692,9 @@ async function loadMVPTracker() {
         .filter(p => p.mvpS !== null)
         .sort((a,b) => b.mvpS - a.mvpS)
         .slice(0, 10);
-      // For MVP: if a TWP (two-way player like Ohtani) exists in this league but
-      // didn't make the top 10 by score, force them in — but ONLY if their score
-      // is at least 70 (otherwise TWP status alone isn't enough, they're underperforming).
+      // For MVP and Cy Young: if a TWP (two-way player like Ohtani) exists in this
+      // league but didn't make the top 10 by score, force them in — but ONLY if their
+      // score is at least 70 (otherwise TWP status alone isn't enough, they're underperforming).
       const TWP_MIN_SCORE = 70;
       if (forceTWP) {
         const twpInLeague = players.find(p =>
@@ -4744,8 +4769,8 @@ async function loadMVPTracker() {
     // Build all 4 trackers
     const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103, true);
     const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true);
-    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
-    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
+    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103, true);
+    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104, true);
 
     // Fetch RECENT-FORM stats: last 10 days for hitters, last 15 days for pitchers.
     // These power the trend arrows in rowHTML (via mvpHeatHittingCache / mvpHeatPitchingCache).
