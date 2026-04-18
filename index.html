@@ -4428,7 +4428,12 @@ async function loadMVPTracker() {
     // or low IP), fetch his pitching stats directly and inject him into rawPitchers so
     // the Cy Young tracker can evaluate him.
     const OHTANI_PID = 660271;
-    if (!rawPitchers.some(p => p.pid === OHTANI_PID)) {
+    // Mark Ohtani as TWP if already in rawPitchers (came from general leaderboard)
+    const ohtaniInList = rawPitchers.find(p => p.pid === OHTANI_PID);
+    if (ohtaniInList) {
+      ohtaniInList.isTWP = true;
+    } else {
+      // Not in leaderboard (low IP early season) — fetch directly and inject
       try {
         const od = await fetchWithTimeout(
           `${MLB_API}/people/${OHTANI_PID}?hydrate=stats(group=[pitching],type=season,season=${CURRENT_YEAR})`
@@ -4436,13 +4441,14 @@ async function loadMVPTracker() {
         const op = od?.people?.[0];
         const os = op?.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
         if (op && os && parseFloat(os.inningsPitched || 0) > 0) {
-          const teamId = op.currentTeam?.id;
+          const teamId = op.currentTeam?.id || 119; // 119 = Dodgers fallback
           rawPitchers.push({
             pid: OHTANI_PID,
             name: op.fullName || 'Shohei Ohtani',
             teamId,
             teamAbbr: (teamId && TEAM_META[teamId]?.abbr) || op.currentTeam?.abbreviation || 'LAD',
             leagueId: teamId ? getTeamLeagueId(teamId) : 104,
+            isTWP: true,
             s: os,
           });
         }
@@ -4558,7 +4564,11 @@ async function loadMVPTracker() {
       const s = p.s;
       const gs = parseInt(s?.gamesStarted||0);
       const ip = parseFloat(s?.inningsPitched||0);
-      if (gs < minGS || ip < minIP) return null;
+      // TWP (Ohtani): use a lower bar — at least 1 start and 5 IP to be considered.
+      // The ipIdx metric will naturally penalize him vs. full-season starters.
+      const gsMin = p.isTWP ? 1  : minGS;
+      const ipMin = p.isTWP ? 5  : minIP;
+      if (gs < gsMin || ip < ipMin) return null;
 
       const era  = parseFloat(s?.era||99);
       const whip = parseFloat(s?.whip||99);
@@ -4769,8 +4779,8 @@ async function loadMVPTracker() {
     // Build all 4 trackers
     const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103, true);
     const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true);
-    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103, true);
-    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104, true);
+    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
+    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
 
     // Fetch RECENT-FORM stats: last 10 days for hitters, last 15 days for pitchers.
     // These power the trend arrows in rowHTML (via mvpHeatHittingCache / mvpHeatPitchingCache).
