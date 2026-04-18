@@ -737,6 +737,23 @@
     font-size: 10px; color: var(--muted); margin-top: 2px;
     line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  /* Colored stat chips inside mvp-why */
+  .sw { color: var(--win);  font-weight: 700; }   /* green  — elite */
+  .sb { color: var(--accent); font-weight: 700; } /* blue   — good  */
+  .sg { color: var(--muted); }                    /* grey   — average */
+  .sr { color: var(--loss); font-weight: 700; }   /* red    — poor  */
+  /* Next game line */
+  .mvp-next {
+    font-size: 9.5px; font-weight: 600; color: var(--muted);
+    margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mvp-next.today { color: var(--accent); }
+  .mvp-next.unconfirmed { opacity: .45; font-weight: 400; }
+  /* IL badge */
+  .mvp-il {
+    font-size: 9px; font-weight: 700; color: var(--loss);
+    margin-top: 2px;
+  }
   .mvp-heat {
     font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
     letter-spacing: .3px; white-space: nowrap;
@@ -3439,6 +3456,92 @@ async function fetchMvpHeatPitching(pids) {
   ));
 }
 
+// ── MVP Tracker: next game + probable pitcher + IL status ─────────────────
+let mvpScheduleCache = null;       // teamId -> { date, opponent, time, probablePids, homeAway }
+const mvpILCache = {};             // teamId -> Set of pids on IL
+
+async function fetchMvpSchedule() {
+  if (mvpScheduleCache) return;
+  mvpScheduleCache = {};
+  const today  = new Date().toISOString().split('T')[0];
+  const future = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+  try {
+    const d = await fetchWithTimeout(
+      `${MLB_API}/schedule?sportId=1&startDate=${today}&endDate=${future}&gameType=R&hydrate=probablePitcher,team`
+    ).then(r => r.json()).catch(() => ({ dates: [] }));
+    for (const dateObj of (d.dates || [])) {
+      for (const game of (dateObj.games || [])) {
+        const dateStr  = dateObj.date;
+        const gameTime = game.gameDate ? new Date(game.gameDate) : null;
+        const timeStr  = gameTime
+          ? gameTime.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', timeZone:'America/New_York' })
+          : null;
+        const home = game.teams?.home;
+        const away = game.teams?.away;
+        if (!home || !away) continue;
+        const homeId   = home.team?.id;
+        const awayId   = away.team?.id;
+        const homeAbbr = (homeId && TEAM_META[homeId]?.abbr) || home.team?.abbreviation || '?';
+        const awayAbbr = (awayId && TEAM_META[awayId]?.abbr) || away.team?.abbreviation || '?';
+        const probPids = new Set();
+        [home.probablePitcher?.id, away.probablePitcher?.id].forEach(id => { if (id) probPids.add(id); });
+        if (homeId && !mvpScheduleCache[homeId])
+          mvpScheduleCache[homeId] = { date: dateStr, opponent: awayAbbr, time: timeStr, probablePids: probPids, homeAway: 'vs' };
+        if (awayId && !mvpScheduleCache[awayId])
+          mvpScheduleCache[awayId] = { date: dateStr, opponent: homeAbbr, time: timeStr, probablePids: probPids, homeAway: '@' };
+      }
+    }
+  } catch(e) {}
+}
+
+async function fetchMvpIL(teamIds) {
+  const missing = teamIds.filter(id => !(id in mvpILCache));
+  if (!missing.length) return;
+  const IL_STATUSES = new Set(['7-Day Injured List','10-Day Injured List','15-Day Injured List','60-Day Injured List']);
+  await Promise.all(missing.map(teamId =>
+    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${CURRENT_YEAR}`)
+      .then(r => r.json()).then(d => {
+        const ilSet = new Set();
+        (d.roster || []).forEach(e => {
+          if (IL_STATUSES.has(e.status?.description || '')) ilSet.add(e.person?.id);
+        });
+        mvpILCache[teamId] = ilSet;
+      }).catch(() => { mvpILCache[teamId] = new Set(); })
+  ));
+}
+
+function nextGameHTML(p, awardType) {
+  const game = mvpScheduleCache?.[p.teamId];
+  if (!game) return '';
+  const todayStr    = new Date().toISOString().split('T')[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const isToday = game.date === todayStr;
+  let dateLabel;
+  if (isToday) dateLabel = 'Hoy';
+  else if (game.date === tomorrowStr) dateLabel = 'Mañana';
+  else {
+    const d = new Date(game.date + 'T12:00:00');
+    dateLabel = d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+  }
+  const timeLabel = game.time ? ` · ${game.time}` : '';
+  const todayCls  = isToday ? ' today' : '';
+  if (awardType === 'cy') {
+    const isStarter = (parseInt(p.s?.gamesStarted||0) > 0);
+    const label = isStarter ? 'Próximo inicio' : 'Próximo partido';
+    if (game.probablePids.has(p.pid))
+      return `<div class="mvp-next${todayCls}">⚾ ${label}: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
+    else
+      return `<div class="mvp-next unconfirmed">⚾ ${label}: sin confirmar</div>`;
+  }
+  return `<div class="mvp-next${todayCls}">⚾ Próximo partido: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
+}
+
+function ilBadgeHTML(p) {
+  const ilSet = mvpILCache[p.teamId];
+  if (!ilSet || !ilSet.has(p.pid)) return '';
+  return `<div class="mvp-il">🏥 Lista de Lesionados</div>`;
+}
+
 async function fetchCareerStats(pids) {
   const missing = pids.filter(id => !(id in careerStatsCache));
   if (!missing.length) return;
@@ -4564,13 +4667,43 @@ async function loadMVPTracker() {
       const s = p.s;
       const gs = parseInt(s?.gamesStarted||0);
       const ip = parseFloat(s?.inningsPitched||0);
+      const sv = parseInt(s?.saves||0);
+      const svo = parseInt(s?.saveOpportunities||0);
+      const era = parseFloat(s?.era||99);
+      const isReliever = gs === 0 || (sv + svo > gs * 3); // more save activity than starts
+
+      // ── RELIEVER path: strict elite thresholds required ──────────────────
+      // ERA < 2.00, save% ≥ 90%, > 40 saves. Only truly dominant closers qualify.
+      if (isReliever) {
+        const savePct = svo > 0 ? sv / svo : 0;
+        if (era >= 2.00 || savePct < 0.90 || sv <= 40 || ip < 40) return null;
+        const whip  = parseFloat(s?.whip||99);
+        const k     = parseInt(s?.strikeOuts||0);
+        const bb    = parseInt(s?.baseOnBalls||0);
+        const k9    = ip > 0 ? (k/ip)*9 : 0;
+        const bb9   = ip > 0 ? (bb/ip)*9 : 0;
+        const eraIdx  = idxInv(era,  lg.era);
+        const whipIdx = idxInv(whip, lg.whip);
+        const k9Idx   = idx(k9,  lg.k9);
+        const bb9Idx  = idxInv(bb9, lg.bb9);
+        const svPctIdx = idx(savePct, 0.85); // 85% = solid closer baseline
+        const raw =
+          0.30 * eraIdx +
+          0.20 * whipIdx +
+          0.20 * k9Idx  +
+          0.10 * bb9Idx +
+          0.20 * svPctIdx;
+        // Cap at 75 so a reliever only displaces starters when the league is weak
+        return Math.min(70, raw * 0.56);
+      }
+
+      // ── STARTER path ──────────────────────────────────────────────────────
       // TWP (Ohtani): use a lower bar — at least 1 start and 5 IP to be considered.
       // The ipIdx metric will naturally penalize him vs. full-season starters.
       const gsMin = p.isTWP ? 1  : minGS;
       const ipMin = p.isTWP ? 5  : minIP;
       if (gs < gsMin || ip < ipMin) return null;
 
-      const era  = parseFloat(s?.era||99);
       const whip = parseFloat(s?.whip||99);
       const k    = parseInt(s?.strikeOuts||0);
       const bb   = parseInt(s?.baseOnBalls||0);
@@ -4596,23 +4729,34 @@ async function loadMVPTracker() {
       return Math.min(99.9, raw * 0.56);
     }
 
+    // --- Stat chip helper: wraps a value in a color class based on how it compares to league
+    // dir: 'hi' = higher is better (OPS, HR, SB), 'lo' = lower is better (ERA, WHIP, BB9)
+    function chip(label, val, ref, dir, decimals=0) {
+      const ratio = dir === 'hi' ? val / ref : ref / val;
+      const cls = ratio >= 1.20 ? 'sw' : ratio >= 1.05 ? 'sb' : ratio >= 0.88 ? 'sg' : 'sr';
+      const formatted = decimals > 0 ? val.toFixed(decimals) : val;
+      return `<span class="${cls}">${label} ${formatted}</span>`;
+    }
+
     // --- Why string for MVP hitter
     function mvpWhy(p) {
       const s = p.s;
       const parts = [];
-      const pa = parseInt(s?.plateAppearances||0);
-      const ops = parseFloat(s?.obp||0) + parseFloat(s?.slg||0);
+      const pa  = parseInt(s?.plateAppearances||0);
+      const ops = (parseFloat(s?.obp||0) + parseFloat(s?.slg||0));
       const hr  = parseInt(s?.homeRuns||0);
       const rbi = parseInt(s?.rbi||0);
       const sb  = parseInt(s?.stolenBases||0);
       const hrPerPA = pa > 0 ? hr/pa : 0;
-      if (ops >= lg.ops * 1.15) parts.push('OPS de élite');
-      else if (ops >= lg.ops * 1.05) parts.push('OPS fuerte');
-      if (hrPerPA >= lg.hrPA * 1.4) parts.push(`${hr} HR potentes`);
-      if (rbi >= 35) parts.push(`${rbi} RBI`);
-      if (sb >= 8) parts.push(`${sb} SB`);
-      if (!parts.length) parts.push(`${s?.avg||'—'} AVG`);
-      return parts.slice(0,3).join(' · ');
+      if (ops > 0)  parts.push(chip('OPS', ops, lg.ops, 'hi', 3));
+      if (hrPerPA >= lg.hrPA * 0.9) parts.push(chip('HR', hr, lg.hrPA * pa, 'hi', 0));
+      if (rbi >= 20) parts.push(chip('RBI', rbi, lg.rbiPA * pa, 'hi', 0));
+      // SB reference scales with season progress so early-season leaders aren't penalized.
+      // Full-season baseline: ~15 SB = solid. Scaled by PA share vs. full season (~600 PA).
+      const sbRef = Math.max(3, 15 * (Math.min(pa, 600) / 600));
+      if (sb >= 5)  parts.push(chip('SB', sb, sbRef, 'hi', 0));
+      if (!parts.length) parts.push(`<span class="sg">${s?.avg||'—'} AVG</span>`);
+      return parts.slice(0,3).join('<span class="sg"> · </span>');
     }
 
     // --- Why string for Cy Young
@@ -4624,12 +4768,14 @@ async function loadMVPTracker() {
       const ip   = parseFloat(s?.inningsPitched||0);
       const k    = parseInt(s?.strikeOuts||0);
       const k9   = ip > 0 ? (k/ip)*9 : 0;
-      if (era <= lg.era * 0.75)  parts.push(`ERA ${era.toFixed(2)} élite`);
-      else if (era <= lg.era * 0.88) parts.push(`ERA ${era.toFixed(2)}`);
-      if (whip <= lg.whip * 0.80) parts.push(`WHIP ${whip.toFixed(2)} top`);
-      if (k9 >= lg.k9 * 1.20)    parts.push(`${k9.toFixed(1)} K/9`);
-      if (!parts.length) parts.push(`${ip} IP`);
-      return parts.slice(0,3).join(' · ');
+      // Always show ERA and WHIP if available
+      if (era < 90) parts.push(chip('ERA', era, lg.era, 'lo', 2));
+      if (whip < 90) parts.push(chip('WHIP', whip, lg.whip, 'lo', 2));
+      // K/9 only if noteworthy (≥ 90% of league avg)
+      if (k9 >= lg.k9 * 0.90) parts.push(chip('K/9', k9, lg.k9, 'hi', 1));
+      // Fallback: IP workload if nothing else (rare in top 10)
+      if (!parts.length) parts.push(chip('IP', ip, maxIP * 0.6, 'hi', 1));
+      return parts.slice(0,3).join('<span class="sg"> · </span>');
     }
 
     // --- MVP score trend (based on recent form vs. season)
@@ -4733,13 +4879,12 @@ async function loadMVPTracker() {
       const teamLogo = p.teamId && TEAM_META[p.teamId]
         ? `<img src="${TEAM_META[p.teamId].logo}" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-right:2px" onerror="this.style.display='none'">` : '';
       const score = p.mvpS.toFixed(1);
-      // Position pill (only for hitters / MVP)
       const posHtml = (awardType === 'mvp' && p.position)
         ? `<span class="mvp-pos-pill">${p.position}</span>` : '';
-      // Past award badge
       const awardHtml = awardsBadgeHTML(p.pid, awardType);
-      // Trend arrow based on recent form (last 10d hitting / 15d pitching) vs. season
       const trend = getMvpTrend(p, awardType);
+      const ilHtml   = ilBadgeHTML(p);
+      const nextHtml = ilHtml ? '' : nextGameHTML(p, awardType); // hide next game if on IL
       return `<div class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
         <img class="mvp-photo" src="${photoUrl}" alt="${p.name}"
@@ -4751,6 +4896,8 @@ async function loadMVPTracker() {
             ${awardHtml}
           </div>
           <div class="mvp-why">${p.why}</div>
+          ${ilHtml}
+          ${nextHtml}
         </div>
         <div class="mvp-score-block">
           <div class="mvp-score-val">${score}</div>
@@ -4786,10 +4933,13 @@ async function loadMVPTracker() {
     // These power the trend arrows in rowHTML (via mvpHeatHittingCache / mvpHeatPitchingCache).
     const allHitterPids  = [...alMVP, ...nlMVP].map(p => p.pid);
     const allPitcherPids = [...alCY,  ...nlCY ].map(p => p.pid);
+    const allTeamIds = [...new Set([...alMVP, ...nlMVP, ...alCY, ...nlCY].map(p => p.teamId).filter(Boolean))];
     try {
       await Promise.all([
         fetchMvpHeatHitting(allHitterPids),
         fetchMvpHeatPitching(allPitcherPids),
+        fetchMvpSchedule(),
+        fetchMvpIL(allTeamIds),
       ]);
     } catch(e) {}
 
