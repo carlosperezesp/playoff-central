@@ -4892,7 +4892,7 @@ async function loadMVPTracker() {
       const ROY_MIN_PA = 20;
       const ROY_MIN_IP = 5;
       const CAREER_AB_LIMIT = 130;
-      const CAREER_IP_LIMIT = 50;
+      const CAREER_IP_LIMIT = 130;
 
       // Filter eligible hitters
       // TWP exception: a player with career IP > 50 but career AB < 130 can still
@@ -4918,36 +4918,21 @@ async function loadMVPTracker() {
         .filter(p => {
           const c = careerStatsCache[p.pid];
           if (!c || !('careerIP' in c)) return true;
-          // Debug: log any pitcher near the limit
-          if ((c.careerIP||0) >= 40) console.log(`[ROY pitcher borderline] ${p.name} careerIP=${c.careerIP}`);
           return (c.careerIP||0) < CAREER_IP_LIMIT && (c.careerAB||0) < CAREER_AB_LIMIT;
         })
         .map(p => ({ ...p, mvpS: cyScore(p), isPitcher: true }))
         .filter(p => p.mvpS !== null);
 
-      // Min-max normalize scores within each group so both types compete on equal footing.
-      // Best in each group → 100, worst → 0. Then merge and rank by normalized score.
-      function normalize(arr) {
-        if (!arr.length) return arr;
-        const max = Math.max(...arr.map(p => p.mvpS));
-        const min = Math.min(...arr.map(p => p.mvpS));
-        const range = max - min || 1;
-        return arr.map(p => ({ ...p, royPct: 100 * (p.mvpS - min) / range }));
-      }
-
-      const merged = [
-        ...normalize(royHitters),
-        ...normalize(royPitchers),
-      ].sort((a,b) => b.royPct - a.royPct).slice(0, 5);
-
-      // Debug: log McLean's eligibility status
-      const mcLean = [...hitters, ...pitchers].find(p => p.name?.includes('McLean'));
-      if (mcLean) {
-        const c = careerStatsCache[mcLean.pid];
-        console.log('[ROY McLean debug]', { pid: mcLean.pid, leagueId: mcLean.leagueId, targetLeague: leagueId,
-          pa: mcLean.s?.plateAppearances, careerAB: c?.careerAB, careerIP: c?.careerIP,
-          inCache: mcLean.pid in careerStatsCache, mvpS: mvpScore(mcLean) });
-      }
+      // Normalize over the combined pool so hitters and pitchers compete directly.
+      // Both groups use their raw mvpS score scaled to [0,100] relative to the full merged pool.
+      const allCandidates = [...royHitters, ...royPitchers];
+      if (!allCandidates.length) return [];
+      const maxS = Math.max(...allCandidates.map(p => p.mvpS));
+      const minS = Math.min(...allCandidates.map(p => p.mvpS));
+      const range = maxS - minS || 1;
+      const merged = allCandidates
+        .map(p => ({ ...p, royPct: 100 * (p.mvpS - minS) / range }))
+        .sort((a,b) => b.royPct - a.royPct).slice(0, 5);
 
       return merged.map((p, i) => ({ ...p, rank: i+1, why: royWhy(p) }));
     }
@@ -5044,13 +5029,28 @@ async function loadMVPTracker() {
     if (twpPids.length) {
       await Promise.all(twpPids.map(pid =>
         fetchWithTimeout(
-          `${MLB_API}/people/${pid}/stats?stats=season&group=hitting&season=${CURRENT_YEAR}&gameType=R`
+          `${MLB_API}/people?personIds=${pid}&hydrate=stats(type=season,group=hitting,season=${CURRENT_YEAR},gameType=R)`
         ).then(r => r.json()).then(d => {
-          const s = d.stats?.find(g => g.group?.displayName?.toLowerCase() === 'hitting')?.splits?.[0]?.stat;
+          const person = (d.people || [])[0];
+          if (!person) return;
+          // Try hydrate format first (group.displayName present)
+          let s = person.stats?.find(g =>
+            g.group?.displayName?.toLowerCase() === 'hitting' &&
+            g.type?.displayName?.toLowerCase() === 'season'
+          )?.splits?.[0]?.stat;
+          // Fallback: any hitting group
+          if (!s) s = person.stats?.find(g =>
+            g.group?.displayName?.toLowerCase() === 'hitting'
+          )?.splits?.[0]?.stat;
+          // Fallback: first stats entry with plateAppearances
+          if (!s) s = person.stats?.[0]?.splits?.[0]?.stat;
           if (s && parseInt(s.plateAppearances||0) >= 20) {
             const existing = rawPitchers.find(p => p.pid === pid);
             if (existing) {
-              rawHitters.push({ ...existing, s, position: positionMap[pid] || 'DH' });
+              // Attach leagueId from team if missing
+              const entry = { ...existing, s, position: positionMap[pid] || 'DH' };
+              if (!entry.leagueId && entry.teamId) entry.leagueId = getTeamLeagueId(entry.teamId);
+              rawHitters.push(entry);
             }
           }
         }).catch(() => {})
