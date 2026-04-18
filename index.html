@@ -3549,7 +3549,13 @@ async function fetchCareerStats(pids) {
         (d.people||[]).forEach(p => {
           const s = p.stats?.find(g => g.group?.displayName==='hitting')?.splits?.[0]?.stat;
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
-          if (s) { careerStatsCache[p.id].ops = parseFloat(s.ops)||0; careerStatsCache[p.id].avg = parseFloat(s.avg)||0; }
+          if (s) {
+            careerStatsCache[p.id].ops     = parseFloat(s.ops)||0;
+            careerStatsCache[p.id].avg     = parseFloat(s.avg)||0;
+            careerStatsCache[p.id].careerAB = parseInt(s.atBats)||0;
+          } else {
+            careerStatsCache[p.id].careerAB = 0; // no prior hitting stats = rookie-eligible
+          }
         });
       }).catch(()=>{}),
       fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${prevYear})`).then(r=>r.json()).then(d=>{
@@ -3558,9 +3564,12 @@ async function fetchCareerStats(pids) {
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
           if (s) {
             const era = parseFloat(s.era), whip = parseFloat(s.whip);
-            careerStatsCache[p.id].era  = era;
-            careerStatsCache[p.id].whip = whip;
+            careerStatsCache[p.id].era       = era;
+            careerStatsCache[p.id].whip      = whip;
             careerStatsCache[p.id].formaScore = calcBaseScore(era, whip);
+            careerStatsCache[p.id].careerIP  = parseFloat(s.inningsPitched)||0;
+          } else {
+            careerStatsCache[p.id].careerIP = 0; // no prior pitching stats = rookie-eligible
           }
         });
       }).catch(()=>{})
@@ -4868,25 +4877,110 @@ async function loadMVPTracker() {
       return ranked.map((p, i) => ({ ...p, rank: i+1, why: whyFunc(p) }));
     }
 
-    // --- Row HTML
+    // --- ROY why string (works for both hitters and pitchers)
+    function royWhy(p) {
+      if (p.isPitcher) return cyWhy(p);
+      return mvpWhy(p);
+    }
+
+    // --- Build ROY list for a league
+    // Eligibility: career AB < 130 AND career IP < 50 (MLB official thresholds).
+    // Players without career stats in cache are assumed eligible (true rookies).
+    // Scoring: mvpScore for hitters, cyScore for pitchers, then convert to
+    // percentile within the eligible pool so both types compete on equal footing.
+    function buildROYList(hitters, pitchers, leagueId) {
+      const ROY_MIN_PA = 20;
+      const ROY_MIN_IP = 5;
+      const CAREER_AB_LIMIT = 130;
+      const CAREER_IP_LIMIT = 50;
+
+      // Filter eligible hitters
+      // TWP exception: a player with career IP > 50 but career AB < 130 can still
+      // be eligible as a position player rookie (e.g. McLean pitched last year, bats this year).
+      // The MLB rule counts hitting and pitching service separately.
+      const royHitters = hitters
+        .filter(p => !leagueId || p.leagueId === leagueId)
+        .filter(p => parseInt(p.s?.plateAppearances||0) >= ROY_MIN_PA)
+        .filter(p => {
+          const c = careerStatsCache[p.pid];
+          if (!c || !('careerAB' in c)) return true;
+          // Eligible as hitter if career AB < 130, regardless of career IP
+          // (pitcher-turned-batter is judged on hitting service time)
+          return c.careerAB < CAREER_AB_LIMIT;
+        })
+        .map(p => ({ ...p, mvpS: mvpScore(p), isPitcher: false }))
+        .filter(p => p.mvpS !== null);
+
+      // Filter eligible pitchers
+      const royPitchers = pitchers
+        .filter(p => !leagueId || p.leagueId === leagueId)
+        .filter(p => parseFloat(p.s?.inningsPitched||0) >= ROY_MIN_IP)
+        .filter(p => {
+          const c = careerStatsCache[p.pid];
+          if (!c || !('careerIP' in c)) return true;
+          // Debug: log any pitcher near the limit
+          if ((c.careerIP||0) >= 40) console.log(`[ROY pitcher borderline] ${p.name} careerIP=${c.careerIP}`);
+          return (c.careerIP||0) < CAREER_IP_LIMIT && (c.careerAB||0) < CAREER_AB_LIMIT;
+        })
+        .map(p => ({ ...p, mvpS: cyScore(p), isPitcher: true }))
+        .filter(p => p.mvpS !== null);
+
+      // Min-max normalize scores within each group so both types compete on equal footing.
+      // Best in each group → 100, worst → 0. Then merge and rank by normalized score.
+      function normalize(arr) {
+        if (!arr.length) return arr;
+        const max = Math.max(...arr.map(p => p.mvpS));
+        const min = Math.min(...arr.map(p => p.mvpS));
+        const range = max - min || 1;
+        return arr.map(p => ({ ...p, royPct: 100 * (p.mvpS - min) / range }));
+      }
+
+      const merged = [
+        ...normalize(royHitters),
+        ...normalize(royPitchers),
+      ].sort((a,b) => b.royPct - a.royPct).slice(0, 5);
+
+      // Debug: log McLean's eligibility status
+      const mcLean = [...hitters, ...pitchers].find(p => p.name?.includes('McLean'));
+      if (mcLean) {
+        const c = careerStatsCache[mcLean.pid];
+        console.log('[ROY McLean debug]', { pid: mcLean.pid, leagueId: mcLean.leagueId, targetLeague: leagueId,
+          pa: mcLean.s?.plateAppearances, careerAB: c?.careerAB, careerIP: c?.careerIP,
+          inCache: mcLean.pid in careerStatsCache, mvpS: mvpScore(mcLean) });
+      }
+
+      return merged.map((p, i) => ({ ...p, rank: i+1, why: royWhy(p) }));
+    }
+
+    // --- Row HTML (shared by MVP, CY, and ROY)
     function rowHTML(p, awardType) {
       const rankCls = p.rank <= 3 ? `rank${p.rank}` : '';
       const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.pid}/headshot/67/current`;
       const teamLogo = p.teamId && TEAM_META[p.teamId]
         ? `<img src="${TEAM_META[p.teamId].logo}" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-right:2px" onerror="this.style.display='none'">` : '';
       const score = p.mvpS.toFixed(1);
-      const posHtml = (awardType === 'mvp' && p.position)
-        ? `<span class="mvp-pos-pill">${p.position}</span>` : '';
-      const awardHtml = awardsBadgeHTML(p.pid, awardType);
-      const trend = getMvpTrend(p, awardType);
+      // For ROY: same pill style for both pitchers (P) and hitters (position)
+      let posHtml = '';
+      if (awardType === 'roy') {
+        const posLabel = p.isPitcher ? 'P' : (p.position || '');
+        posHtml = posLabel ? `<span class="mvp-pos-pill">${posLabel}</span>` : '';
+      } else if (awardType === 'mvp' && p.position) {
+        posHtml = `<span class="mvp-pos-pill">${p.position}</span>`;
+      }
+      // Rookie badge for ROY
+      const rookieBadge = awardType === 'roy'
+        ? `<span style="display:inline-block;font-size:8px;font-weight:800;padding:1px 4px;border-radius:3px;background:#b45309;color:#fff;margin-right:3px;letter-spacing:.3px">R</span>`
+        : '';
+      const awardHtml = awardsBadgeHTML(p.pid, awardType === 'roy' ? (p.isPitcher ? 'cy' : 'mvp') : awardType);
+      const trend = getMvpTrend(p, p.isPitcher ? 'cy' : awardType);
       const ilHtml   = ilBadgeHTML(p);
-      const nextHtml = ilHtml ? '' : nextGameHTML(p, awardType); // hide next game if on IL
+      const nextHtml = ilHtml ? '' : nextGameHTML(p, p.isPitcher ? 'cy' : awardType);
       return `<div class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
         <img class="mvp-photo" src="${photoUrl}" alt="${p.name}"
           onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
         <div class="mvp-info">
-          <div class="mvp-name">${posHtml}<span class="mvp-name-text">${p.name}</span></div>
+          <div class="mvp-name">${rookieBadge}${posHtml}<span class="mvp-name-text">${p.name}</span></div>
           <div class="mvp-meta">
             <span class="mvp-team">${teamLogo}${p.teamAbbr}</span>
             ${awardHtml}
@@ -4897,19 +4991,23 @@ async function loadMVPTracker() {
         </div>
         <div class="mvp-score-block">
           <div class="mvp-score-val">${score}</div>
-          <div class="mvp-score-lbl">SCORE</div>
+          <div class="mvp-score-lbl">${awardType === 'roy' ? 'SCORE' : 'SCORE'}</div>
         </div>
         <div class="mvp-trend" style="${trendColor(trend)}" title="${trendTitle(trend)}">${trendArrow(trend)}</div>
       </div>`;
     }
 
     // --- Card HTML
-    function cardHTML(title, league, players) {
+    function cardHTML(title, league, players, awardTypeOverride) {
       const isPitching = /cy young/i.test(title);
-      const awardType = isPitching ? 'cy' : 'mvp';
+      const isROY = /rookie/i.test(title);
+      const awardType = awardTypeOverride || (isROY ? 'roy' : isPitching ? 'cy' : 'mvp');
+      const emptyMsg = isROY
+        ? 'AÚN NO HAY ROOKIES CON SUFICIENTES DATOS'
+        : 'NO HAY SUFICIENTES DATOS AÚN';
       const rows = players.length
         ? players.map(p => rowHTML(p, awardType)).join('')
-        : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">NO HAY SUFICIENTES DATOS AÚN</div>`;
+        : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">${emptyMsg}</div>`;
       return `<div class="mvp-tracker-card">
         <div class="mvp-card-header">
           <span class="mvp-card-title">${title}</span>
@@ -4919,17 +5017,54 @@ async function loadMVPTracker() {
       </div>`;
     }
 
-    // Build all 4 trackers
+    // Build all 4 MVP/CY trackers
     const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103, true);
     const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true);
     const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
     const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
 
-    // Fetch RECENT-FORM stats: last 10 days for hitters, last 15 days for pitchers.
-    // These power the trend arrows in rowHTML (via mvpHeatHittingCache / mvpHeatPitchingCache).
-    const allHitterPids  = [...alMVP, ...nlMVP].map(p => p.pid);
-    const allPitcherPids = [...alCY,  ...nlCY ].map(p => p.pid);
-    const allTeamIds = [...new Set([...alMVP, ...nlMVP, ...alCY, ...nlCY].map(p => p.teamId).filter(Boolean))];
+    // Fetch career stats for ROY eligibility check.
+    const royCandidateHitters  = rawHitters.filter(p => parseInt(p.s?.plateAppearances||0) >= 20);
+    const royCandidatePitchers = rawPitchers.filter(p => parseFloat(p.s?.inningsPitched||0) >= 5);
+    const royCandidatePids = [...new Set([
+      ...royCandidateHitters.map(p => p.pid),
+      ...royCandidatePitchers.map(p => p.pid),
+    ])];
+    await fetchCareerStats(royCandidatePids);
+
+    // TWP hitters: some players (like McLean) appear in rawPitchers but are batting
+    // this year. Their hitting stats aren't in the general /stats?group=hitting leaderboard.
+    // Fetch each one's season hitting stats via the individual stats endpoint.
+    const twpPids = rawPitchers
+      .filter(p => {
+        const c = careerStatsCache[p.pid];
+        return c && c.careerAB < 130 && !rawHitters.some(h => h.pid === p.pid);
+      })
+      .map(p => p.pid);
+    if (twpPids.length) {
+      await Promise.all(twpPids.map(pid =>
+        fetchWithTimeout(
+          `${MLB_API}/people/${pid}/stats?stats=season&group=hitting&season=${CURRENT_YEAR}&gameType=R`
+        ).then(r => r.json()).then(d => {
+          const s = d.stats?.find(g => g.group?.displayName?.toLowerCase() === 'hitting')?.splits?.[0]?.stat;
+          if (s && parseInt(s.plateAppearances||0) >= 20) {
+            const existing = rawPitchers.find(p => p.pid === pid);
+            if (existing) {
+              rawHitters.push({ ...existing, s, position: positionMap[pid] || 'DH' });
+            }
+          }
+        }).catch(() => {})
+      ));
+    }
+
+    // Build ROY lists (now that career stats are available for eligibility check)
+    const alROY = buildROYList(rawHitters, rawPitchers, 103);
+    const nlROY = buildROYList(rawHitters, rawPitchers, 104);
+
+    // Fetch RECENT-FORM stats for all top-10 players + ROY candidates
+    const allHitterPids  = [...new Set([...alMVP, ...nlMVP, ...alROY.filter(p => !p.isPitcher), ...nlROY.filter(p => !p.isPitcher)].map(p => p.pid))];
+    const allPitcherPids = [...new Set([...alCY, ...nlCY, ...alROY.filter(p => p.isPitcher), ...nlROY.filter(p => p.isPitcher)].map(p => p.pid))];
+    const allTeamIds = [...new Set([...alMVP, ...nlMVP, ...alCY, ...nlCY, ...alROY, ...nlROY].map(p => p.teamId).filter(Boolean))];
     try {
       await Promise.all([
         fetchMvpHeatHitting(allHitterPids),
@@ -4945,6 +5080,7 @@ async function loadMVPTracker() {
     function renderMVPView(filter) {
       const showMVP = filter === 'all' || filter === 'mvp';
       const showCY  = filter === 'all' || filter === 'cy';
+      const showROY = filter === 'all' || filter === 'roy';
 
       let grid = '';
       if (showMVP) {
@@ -4955,17 +5091,22 @@ async function loadMVPTracker() {
         grid += cardHTML('AL CY YOUNG', 'AMERICAN LEAGUE', alCY);
         grid += cardHTML('NL CY YOUNG', 'NATIONAL LEAGUE', nlCY);
       }
+      if (showROY) {
+        grid += cardHTML('AL ROOKIE DEL AÑO', 'AMERICAN LEAGUE', alROY);
+        grid += cardHTML('NL ROOKIE DEL AÑO', 'NATIONAL LEAGUE', nlROY);
+      }
 
       el.innerHTML = `
         <div class="mvp-page-header">
           <div>
-            <div class="mvp-page-title">🏆 MVP &amp; CY YOUNG TRACKER</div>
+            <div class="mvp-page-title">MVP · CY YOUNG · ROOKIE DEL AÑO</div>
             <div class="mvp-page-subtitle">CANDIDATURAS EN TIEMPO REAL · ${CURRENT_YEAR} SEASON</div>
           </div>
           <div class="mvp-tabs-row">
             <button class="mvp-tab-btn ${filter==='all'?'active':''}" onclick="setMVPFilter('all')">TODOS</button>
             <button class="mvp-tab-btn ${filter==='mvp'?'active':''}" onclick="setMVPFilter('mvp')">MVP</button>
             <button class="mvp-tab-btn ${filter==='cy'?'active':''}" onclick="setMVPFilter('cy')">CY YOUNG</button>
+            <button class="mvp-tab-btn ${filter==='roy'?'active':''}" onclick="setMVPFilter('roy')">ROOKIE</button>
           </div>
         </div>
         <div class="mvp-grid">${grid}</div>
