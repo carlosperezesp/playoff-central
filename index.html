@@ -888,6 +888,37 @@
     font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted);
     letter-spacing: 1px; margin-top: 12px; text-align: right;
   }
+  /* ── TOP GAMES ACCORDION ── */
+  .tg-day-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .tg-day-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; user-select: none; background: var(--surface2); border-bottom: 1px solid transparent; transition: background .12s; }
+  .tg-day-header:hover { background: #e8ecf4; }
+  .tg-day-header.open { border-bottom-color: var(--border); }
+  .tg-day-title { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--text); }
+  .tg-day-count { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
+  .tg-day-chevron { transition: transform .2s; color: var(--muted); flex-shrink: 0; }
+  .tg-day-chevron.open { transform: rotate(180deg); }
+  .tg-day-body { display: none; }
+  .tg-day-body.open { display: block; }
+  .tg-game-row { display: flex; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; gap: 0; }
+  .tg-game-row:last-child { border-bottom: none; }
+  .tg-game-row:hover { background: var(--surface2); }
+  .tg-score-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-right: 12px; }
+  .tg-teams { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+  .tg-team-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+  .tg-abbr { font-family: 'Barlow Condensed'; font-weight: 800; font-size: 16px; }
+  .tg-score { font-family: 'Bebas Neue'; font-size: 18px; color: var(--text); margin: 0 6px; }
+  .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 6px; }
+  .tg-time { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 10px; }
+  .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; }
+  .tg-detail { display: none; background: #f8f9fd; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
+  .tg-detail.open { display: block; }
+  .tg-detail-grid { display: grid; grid-template-columns: 1fr 36px 1fr; gap: 10px; align-items: start; }
+  @media (max-width: 768px) {
+    .tg-day-title { font-size: 16px; }
+    .tg-game-row { padding: 10px 14px; }
+    .tg-detail { padding: 12px 14px 14px; }
+    .tg-detail-grid { grid-template-columns: 1fr 28px 1fr; gap: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -948,7 +979,7 @@
 
 <nav class="bottom-nav" id="bottomNav">
   <button class="bnav-btn active" onclick="switchTab('standings')" data-tab="standings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12,22 22,15 22,2 2,2 2,15"/></svg>
     <span>HOME</span>
   </button>
   <button class="bnav-btn" onclick="switchTab('topgames')" data-tab="topgames">
@@ -2490,6 +2521,15 @@ function calcPitcherScore(stat) {
 
 async function loadRosters() {
   const listEl = document.getElementById('teamSelectorList');
+  if (!allData.standings) {
+    // Standings not yet loaded — wait up to 10s
+    listEl.innerHTML = '<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING...</div></div>';
+    let attempts = 0;
+    while (!allData.standings && attempts < 40) {
+      await new Promise(r => setTimeout(r, 250));
+      attempts++;
+    }
+  }
   if (!allData.standings) {
     listEl.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px">No standings data.</div>';
     return;
@@ -4290,6 +4330,10 @@ function switchTab(tab) {
       if (tab === 'topgames') loadTopGames();
       if (tab === 'players') loadPlayers();
       if (tab === 'mvp') loadMVPTracker();
+    } else if (tab === 'rosters') {
+      // Re-render team list if it's empty (standings may have loaded after first visit)
+      const listEl = document.getElementById('teamSelectorList');
+      if (listEl && !listEl.querySelector('.team-selector-item')) loadRosters();
     }
   } catch(e) { console.error('switchTab:', e); }
 }
@@ -4360,23 +4404,49 @@ function topGameCardHTML(game, gameScore, rank) {
 }
 
 // ── TOP GAMES ─────────────────────────────────────────────────────────────
+// Accordion: AYER (colapsed) | HOY (expanded) | MAÑANA (collapsed)
+// Games ordered by time. Score-based color dot: green=top15%, blue=top40%, grey=rest.
+
+function tgToggleDay(blockId) {
+  const block = document.getElementById(blockId);
+  if (!block) return;
+  const header = block.querySelector('.tg-day-header');
+  const body   = block.querySelector('.tg-day-body');
+  const chev   = block.querySelector('.tg-day-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  header.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+function tgToggleGame(gameId) {
+  const detail = document.getElementById('tgd-' + gameId);
+  if (!detail) return;
+  const row = document.getElementById('tgr-' + gameId);
+  detail.classList.toggle('open');
+  if (row) row.classList.toggle('tg-row-open');
+}
+
 async function loadTopGames() {
   const el = document.getElementById('topGamesContent');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div>`;
   try {
-    const today = new Date();
-    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const todayD = new Date();
+    const yesterdayD = new Date(todayD); yesterdayD.setDate(todayD.getDate() - 1);
+    const tomorrowD  = new Date(todayD); tomorrowD.setDate(todayD.getDate() + 1);
     const fmt = d => d.toISOString().split('T')[0];
 
-    // Fetch today + tomorrow schedules with probable pitchers and team records
-    const [todayData, tomorrowData] = await Promise.all([
-      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(today)}&gameType=R&hydrate=probablePitcher,team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
-      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(tomorrow)}&gameType=R&hydrate=probablePitcher,team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
+    const [yData, todayData, tmrData] = await Promise.all([
+      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(yesterdayD)}&gameType=R&hydrate=team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
+      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(todayD)}&gameType=R&hydrate=probablePitcher,team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
+      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${fmt(tomorrowD)}&gameType=R&hydrate=probablePitcher,team,linescore`).then(r=>r.json()).catch(()=>({dates:[]})),
     ]);
 
-    const todayGames    = (todayData.dates?.[0]?.games    || []).filter(g => g.status.abstractGameState !== 'Final');
-    const tomorrowGames = (tomorrowData.dates?.[0]?.games || []);
+    const yesterdayGames = (yData.dates?.[0]?.games || []);
+    const todayGames     = (todayData.dates?.[0]?.games || []).slice().sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
+    const tomorrowGames  = (tmrData.dates?.[0]?.games  || []).slice().sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
 
-    // Fetch pitcher stats for all probable pitchers
+    // Fetch pitcher stats for probable pitchers (today + tomorrow only)
     const pitcherIds = new Set();
     [...todayGames, ...tomorrowGames].forEach(g => {
       const ap = g.teams.away.probablePitcher?.id;
@@ -4384,9 +4454,8 @@ async function loadTopGames() {
       if (ap) pitcherIds.add(ap);
       if (hp) pitcherIds.add(hp);
     });
-
-    const pitcherForma = {};  // id → FORMA score
-    const pitcherStats = {};  // id → full season stat object
+    const pitcherForma = {};
+    const pitcherStats = {};
     if (pitcherIds.size) {
       const ids = [...pitcherIds];
       for (let i = 0; i < ids.length; i += 20) {
@@ -4395,185 +4464,229 @@ async function loadTopGames() {
           .then(r=>r.json()).then(d=>{
             (d.people||[]).forEach(p => {
               const s = p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat;
-              if (s) {
-                pitcherStats[p.id] = s;
-                pitcherForma[p.id] = calcBaseScore(parseFloat(s.era), parseFloat(s.whip)) ?? 0;
-              }
+              if (s) { pitcherStats[p.id]=s; pitcherForma[p.id]=calcBaseScore(parseFloat(s.era),parseFloat(s.whip))??0; }
             });
           }).catch(()=>{});
       }
     }
 
-    // Score each game
+    // Score a game (same formula as before)
     function scoreGame(g) {
       const away = g.teams.away, home = g.teams.home;
-      const awayW = away.leagueRecord?.wins   || 0;
-      const awayL = away.leagueRecord?.losses || 0;
-      const homeW = home.leagueRecord?.wins   || 0;
-      const homeL = home.leagueRecord?.losses || 0;
-
-      const awayPct = awayW / Math.max(awayW + awayL, 1);
-      const homePct = homeW / Math.max(homeW + homeL, 1);
-
-      // Record quality (30%): average win% of both teams
-      const recordScore = ((awayPct + homePct) / 2) * 100;
-
-      // Matchup balance (20%): how evenly matched the teams are
-      const balance = 100 - Math.abs(awayPct - homePct) * 100;
-
-      // Pitcher FORMA (40%): reward seeing great pitchers, not just "balanced" ones
-      // Use the MINIMUM of the two — a 90 vs 10 matchup (min=10) scores worse than 70 vs 70 (min=70)
-      // because you want BOTH pitchers to be good, not just one star vs a punching bag.
-      // Formula: (min * 0.6 + avg * 0.4) rewards two good pitchers more than one star + one bad
-      const awayForma = pitcherForma[g.teams.away.probablePitcher?.id] ?? 50;
-      const homeForma = pitcherForma[g.teams.home.probablePitcher?.id] ?? 50;
-      const formaMin  = Math.min(awayForma, homeForma);
-      const formaAvg  = (awayForma + homeForma) / 2;
-      const pitcherScore = formaMin * 0.6 + formaAvg * 0.4;
-
-      // Division rivalry bonus (10%)
-      const sameDivision = away.team?.division?.id && away.team?.division?.id === home.team?.division?.id;
-      const divBonus = sameDivision ? 10 : 0;
-
-      // Weights: 40% pitchers · 30% record · 20% balance · 10% rivalry
-      return pitcherScore * 0.40 + recordScore * 0.30 + balance * 0.20 + divBonus;
+      const awayPct = (away.leagueRecord?.wins||0) / Math.max((away.leagueRecord?.wins||0)+(away.leagueRecord?.losses||0),1);
+      const homePct = (home.leagueRecord?.wins||0) / Math.max((home.leagueRecord?.wins||0)+(home.leagueRecord?.losses||0),1);
+      const recordScore = ((awayPct+homePct)/2)*100;
+      const balance = 100 - Math.abs(awayPct-homePct)*100;
+      const awayF = pitcherForma[g.teams.away.probablePitcher?.id] ?? 50;
+      const homeF = pitcherForma[g.teams.home.probablePitcher?.id] ?? 50;
+      const pitcherScore = Math.min(awayF,homeF)*0.6 + ((awayF+homeF)/2)*0.4;
+      const divBonus = (away.team?.division?.id && away.team?.division?.id===home.team?.division?.id) ? 10 : 0;
+      return pitcherScore*0.40 + recordScore*0.30 + balance*0.20 + divBonus;
     }
 
-    const scoredToday    = todayGames.map(g    => ({ g, score: scoreGame(g), day: 'today' }))
-                                     .sort((a,b) => b.score - a.score);
-    const scoredTomorrow = tomorrowGames.map(g  => ({ g, score: scoreGame(g), day: 'tomorrow' }))
-                                        .sort((a,b) => b.score - a.score);
+    // Assign color tier based on score percentile within the day
+    function scoreTiers(games) {
+      const scored = games.map(g => scoreGame(g));
+      const sorted = [...scored].sort((a,b)=>b-a);
+      const n = sorted.length;
+      return scored.map(s => {
+        if (n === 0) return 'grey';
+        const rank = sorted.indexOf(s); // 0 = best
+        const pct = rank / Math.max(n-1, 1);
+        if (pct <= 0.15) return 'green';
+        if (pct <= 0.40) return 'blue';
+        return 'grey';
+      });
+    }
+    const DOT_COLOR = { green: 'var(--win)', blue: 'var(--accent)', grey: 'var(--border)' };
 
-    const topToday    = scoredToday.slice(0, 5);
-    const topTomorrow = scoredTomorrow.slice(0, 5);
-
-    function gameCardHTML(item) {
-      const g = item.g;
+    // ── YESTERDAY: simple result line ────────────────────────────────────────
+    function yesterdayRowHTML(g) {
       const away = g.teams.away, home = g.teams.home;
-      const awayMeta = TEAM_META[away.team.id] || { name: away.team.name, abbr: away.team.abbreviation, logo: `https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
-      const homeMeta = TEAM_META[home.team.id] || { name: home.team.name, abbr: home.team.abbreviation, logo: `https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
-
-      const awayRec   = `${away.leagueRecord?.wins||0}-${away.leagueRecord?.losses||0}`;
-      const homeRec   = `${home.leagueRecord?.wins||0}-${home.leagueRecord?.losses||0}`;
-      const awayPid   = away.probablePitcher?.id;
-      const homePid   = home.probablePitcher?.id;
-      const awayPName = away.probablePitcher?.fullName || 'Por confirmar';
-      const homePName = home.probablePitcher?.fullName || 'Por confirmar';
-      const awayF     = awayPid ? (pitcherForma[awayPid] ?? null) : null;
-      const homeF     = homePid ? (pitcherForma[homePid] ?? null) : null;
-      const awayS     = awayPid ? (pitcherStats[awayPid] || null) : null;
-      const homeS     = homePid ? (pitcherStats[homePid] || null) : null;
-
-      // Pitcher block: name + FORMA + full stats line (same as TEAMS tab)
-      const pitcherBlock = (score, name, stat, align='left') => {
-        const isTBD = !name || name === 'Por confirmar';
-        const isRight = align === 'right';
-
-        let bg = 'var(--bg)', border = 'var(--border)';
-        if (score !== null && !isTBD) {
-          if      (score >= 75) { bg = 'rgba(22,163,74,.09)';   border = 'rgba(22,163,74,.28)'; }
-          else if (score >= 60) { bg = 'rgba(26,86,219,.08)';   border = 'rgba(26,86,219,.22)'; }
-          else if (score >= 40) { bg = 'rgba(148,163,184,.12)'; border = 'rgba(148,163,184,.35)'; }
-          else                  { bg = 'rgba(220,38,38,.07)';   border = 'rgba(220,38,38,.22)'; }
-        }
-
-        const color = score !== null ? getDiamondPlayerColor(score, 'pitcher') : 'var(--muted)';
-        const nameColor = isTBD ? 'var(--muted)' : 'var(--text)';
-
-        // Stats line matching TEAMS tab format
-        let statsLine = '';
-        if (stat && !isTBD) {
-          const era  = stat.era  || '—';
-          const whip = stat.whip || '—';
-          const w    = stat.wins   != null ? stat.wins   : '—';
-          const l    = stat.losses != null ? stat.losses : '—';
-          const qs   = stat.qualityStarts != null ? ` · QS ${stat.qualityStarts}` : '';
-          statsLine = `ERA ${era} · WHIP ${whip} · ${w}W-${l}L${qs}`;
-        }
-
-        return `<div style="padding:10px 12px;background:${bg};border-radius:7px;border:1px solid ${border};text-align:${align}">
-          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">PROBABLE</div>
-          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:15px;color:${nameColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">${isTBD ? 'Por confirmar' : name}</div>
-          ${isTBD ? `<div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">FORMA —</div>` : `
-          <div style="margin-bottom:${statsLine ? '4px' : '0'}">
-            <span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:.5px">FORMA </span>
-            <span style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;color:${color};line-height:1">${score ?? '—'}</span>
-          </div>
-          ${statsLine ? `<div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:.2px">${statsLine}</div>` : ''}`}
-        </div>`;
-      };
-
-      const gdate = new Date(g.gameDate);
-      const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-      const venueName = g.venue?.name || '';
-
-      const sameDivision = away.team?.division?.id && away.team?.division?.id === home.team?.division?.id;
-      const divBadge = sameDivision
-        ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span>`
-        : '';
-
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <span style="font-family:'Barlow Condensed';font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--muted)">${timeStr}</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            ${venueName ? `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);letter-spacing:.3px">📍 ${venueName}</span>` : ''}
-            ${divBadge}
-          </div>
+      const awayMeta = TEAM_META[away.team.id] || { abbr: away.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
+      const homeMeta = TEAM_META[home.team.id] || { abbr: home.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
+      const awayScore = away.score ?? '—';
+      const homeScore = home.score ?? '—';
+      const awayWon = typeof awayScore === 'number' && typeof homeScore === 'number' && awayScore > homeScore;
+      const homeWon = typeof homeScore === 'number' && typeof awayScore === 'number' && homeScore > awayScore;
+      const boldA = awayWon ? 'font-weight:800;color:var(--text)' : 'color:var(--muted)';
+      const boldH = homeWon ? 'font-weight:800;color:var(--text)' : 'color:var(--muted)';
+      return `<div class="tg-game-row" style="cursor:default">
+        <div class="tg-score-dot" style="background:var(--border)"></div>
+        <div class="tg-teams">
+          <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
+          <span class="tg-abbr" style="${boldA}">${awayMeta.abbr}</span>
+          <span class="tg-score" style="${boldA}">${awayScore}</span>
+          <span class="tg-sep">-</span>
+          <span class="tg-score" style="${boldH}">${homeScore}</span>
+          <span class="tg-abbr" style="${boldH}">${homeMeta.abbr}</span>
+          <img class="tg-team-logo" src="${homeMeta.logo}" onerror="this.style.display='none'" alt="">
         </div>
-        <div style="margin-bottom:12px"></div>
-        <div style="display:grid;grid-template-columns:1fr 44px 1fr;align-items:start;gap:10px">
-          <!-- Away -->
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;gap:10px">
-              <img src="${awayMeta.logo}" style="width:40px;height:40px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-              <div>
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1">${awayMeta.abbr}</div>
-                <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">${awayRec}</div>
-              </div>
-            </div>
-            ${pitcherBlock(awayF, awayPName, awayS, 'left')}
-          </div>
-          <!-- @ -->
-          <div style="text-align:center;font-family:'Bebas Neue';font-size:22px;color:var(--muted);padding-top:10px">@</div>
-          <!-- Home -->
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;gap:10px;flex-direction:row-reverse">
-              <img src="${homeMeta.logo}" style="width:40px;height:40px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-              <div style="text-align:right">
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1">${homeMeta.abbr}</div>
-                <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">${homeRec}</div>
-              </div>
-            </div>
-            ${pitcherBlock(homeF, homePName, homeS, 'right')}
-          </div>
-        </div>
+        <span class="tg-time" style="font-size:11px;letter-spacing:.5px;color:var(--muted)">${g.status?.detailedState==='Final'?'FINAL':g.status?.detailedState||''}</span>
       </div>`;
     }
 
-    function daySection(label, items, emptyMsg) {
-      if (!items.length) return `
-        <div style="margin-bottom:32px">
-          <div class="section-title">${label}</div>
-          <div style="color:var(--muted);font-family:'Barlow Condensed';font-size:14px;letter-spacing:1px;padding:20px 0">${emptyMsg}</div>
+    // ── TODAY / TOMORROW: row + expandable detail ─────────────────────────────
+    function futureRowHTML(g, gIdx, dayKey, tier) {
+      const away = g.teams.away, home = g.teams.home;
+      const awayMeta = TEAM_META[away.team.id] || { abbr: away.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
+      const homeMeta = TEAM_META[home.team.id] || { abbr: home.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
+      const gdate = new Date(g.gameDate);
+      const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+      const dotColor = DOT_COLOR[tier];
+      const gameId = `${dayKey}-${gIdx}`;
+
+      // Determine if game is live/final for today
+      const state = g.status?.abstractGameState;
+      let statusBadge = '';
+      if (state === 'Live') {
+        const inn = g.linescore?.currentInningOrdinal || 'LIVE';
+        statusBadge = `<span style="font-family:'Barlow Condensed';font-size:11px;font-weight:700;color:var(--win);letter-spacing:.5px;animation:pulse 1.5s infinite">● ${inn}</span>`;
+      } else if (state === 'Final') {
+        statusBadge = `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">FINAL</span>`;
+      }
+
+      // Scores if live/final
+      const awayScoreStr = (state==='Live'||state==='Final') ? (away.score??'0') : '';
+      const homeScoreStr = (state==='Live'||state==='Final') ? (home.score??'0') : '';
+      const scoreHTML = awayScoreStr !== ''
+        ? `<span class="tg-score">${awayScoreStr}</span><span class="tg-sep">-</span><span class="tg-score">${homeScoreStr}</span>`
+        : `<span class="tg-sep" style="padding:0 2px">@</span>`;
+
+      // Tier badges on the row
+      let tierBadge = '';
+      if (tier === 'green') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px">TOP</span>`;
+      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(26,86,219,.1);color:var(--accent);letter-spacing:.5px">GOOD</span>`;
+
+      // Detail panel
+      const awayPid = away.probablePitcher?.id;
+      const homePid = home.probablePitcher?.id;
+      const awayPName = away.probablePitcher?.fullName || null;
+      const homePName = home.probablePitcher?.fullName || null;
+      const awayF = awayPid ? (pitcherForma[awayPid]??null) : null;
+      const homeF = homePid ? (pitcherForma[homePid]??null) : null;
+      const awayS = awayPid ? (pitcherStats[awayPid]||null) : null;
+      const homeS = homePid ? (pitcherStats[homePid]||null) : null;
+      const sameDivision = away.team?.division?.id && away.team?.division?.id===home.team?.division?.id;
+      const venueName = g.venue?.name || '';
+
+      // Label: "STARTING PITCHER" if game is live or final, "PROBABLE SP" otherwise
+      const spLabel = (state === 'Live' || state === 'Final') ? 'STARTING PITCHER' : 'PROBABLE SP';
+
+      function spMini(name, forma, stat, align) {
+        const isTBD = !name;
+        const color = forma !== null ? getDiamondPlayerColor(forma, 'pitcher') : 'var(--muted)';
+        // Background card color based on forma score (matching TEAMS tab style)
+        let bg = 'var(--surface2)', border = 'var(--border)';
+        if (!isTBD && forma !== null) {
+          if      (forma >= 75) { bg = 'rgba(22,163,74,.09)';   border = 'rgba(22,163,74,.28)'; }
+          else if (forma >= 60) { bg = 'rgba(26,86,219,.08)';   border = 'rgba(26,86,219,.22)'; }
+          else if (forma >= 40) { bg = 'rgba(148,163,184,.12)'; border = 'rgba(148,163,184,.35)'; }
+          else                  { bg = 'rgba(220,38,38,.07)';   border = 'rgba(220,38,38,.22)'; }
+        }
+        let statsLine = '';
+        if (stat && !isTBD) {
+          const era = stat.era||'—', whip = stat.whip||'—';
+          const w = stat.wins??'—', l = stat.losses??'—';
+          statsLine = `ERA ${era} · WHIP ${whip} · ${w}W-${l}L`;
+        }
+        return `<div style="background:${bg};border:1px solid ${border};border-radius:7px;padding:8px 10px;text-align:${align};min-width:0">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
+          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:${isTBD?'var(--muted)':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isTBD?'Por confirmar':name}</div>
+          ${!isTBD ? `<div style="font-family:'Barlow Condensed';font-size:12px;margin-top:2px"><span style="color:var(--muted)">FORMA </span><span style="font-weight:800;color:${color}">${forma??'—'}</span></div>` : ''}
+          ${statsLine ? `<div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:2px">${statsLine}</div>` : ''}
         </div>`;
-      return `
-        <div style="margin-bottom:32px">
-          <div class="section-title">${label}</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px">
-            ${items.map(gameCardHTML).join('')}
+      }
+
+      const detailHTML = `<div class="tg-detail" id="tgd-${gameId}">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          ${sameDivision ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span>` : ''}
+          ${venueName ? `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">📍 ${venueName}</span>` : ''}
+        </div>
+        <div class="tg-detail-grid">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+            <div style="display:flex;align-items:center;gap:8px">
+              <img src="${awayMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
+              <div>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${awayMeta.abbr}</div>
+                <div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">${away.leagueRecord?.wins||0}-${away.leagueRecord?.losses||0}</div>
+              </div>
+            </div>
+            ${spMini(awayPName, awayF, awayS, 'left')}
           </div>
-        </div>`;
+          <div style="text-align:center;font-family:'Bebas Neue';font-size:18px;color:var(--muted);padding-top:8px">@</div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <div style="display:flex;align-items:center;gap:8px;flex-direction:row-reverse">
+              <img src="${homeMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
+              <div style="text-align:right">
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${homeMeta.abbr}</div>
+                <div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">${home.leagueRecord?.wins||0}-${home.leagueRecord?.losses||0}</div>
+              </div>
+            </div>
+            ${spMini(homePName, homeF, homeS, 'right')}
+          </div>
+        </div>
+      </div>`;
+
+      return `<div>
+        <div class="tg-game-row" id="tgr-${gameId}" onclick="tgToggleGame('${gameId}')">
+          <div class="tg-score-dot" style="background:${dotColor}"></div>
+          <div class="tg-teams">
+            <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
+            <span class="tg-abbr">${awayMeta.abbr}</span>
+            ${scoreHTML}
+            <span class="tg-abbr">${homeMeta.abbr}</span>
+            <img class="tg-team-logo" src="${homeMeta.logo}" onerror="this.style.display='none'" alt="">
+          </div>
+          <div class="tg-badges">${tierBadge}${statusBadge}</div>
+          <span class="tg-time">${timeStr}</span>
+        </div>
+        ${detailHTML}
+      </div>`;
     }
 
+    // ── Build accordion blocks ─────────────────────────────────────────────
+    function dayBlock(blockId, title, countStr, isOpen, bodyHTML) {
+      return `<div class="tg-day-block" id="${blockId}">
+        <div class="tg-day-header ${isOpen?'open':''}" onclick="tgToggleDay('${blockId}')">
+          <span class="tg-day-title">${title}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="tg-day-count">${countStr}</span>
+            <svg class="tg-day-chevron ${isOpen?'open':''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="tg-day-body ${isOpen?'open':''}">${bodyHTML}</div>
+      </div>`;
+    }
+
+    const fmtDate = d => d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' }).toUpperCase();
+
+    // AYER
+    const yBody = yesterdayGames.length
+      ? yesterdayGames.map(g => yesterdayRowHTML(g)).join('')
+      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos ayer.</div>`;
+
+    // HOY
+    const todayTiers = scoreTiers(todayGames);
+    const todayBody = todayGames.length
+      ? todayGames.map((g,i) => futureRowHTML(g, i, 'hoy', todayTiers[i])).join('')
+      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos hoy.</div>`;
+
+    // MAÑANA
+    const tmrTiers = scoreTiers(tomorrowGames);
+    const tmrBody = tomorrowGames.length
+      ? tomorrowGames.map((g,i) => futureRowHTML(g, i, 'tmr', tmrTiers[i])).join('')
+      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos mañana.</div>`;
+
     el.innerHTML =
-      daySection('🔥 TOP GAMES — HOY', topToday, 'No hay partidos programados para hoy.') +
-      daySection('📅 TOP GAMES — MAÑANA', topTomorrow, 'No hay partidos programados para mañana.');
+      dayBlock('tg-ayer', `AYER — ${fmtDate(yesterdayD)}`, `${yesterdayGames.length} partidos`, false, yBody) +
+      dayBlock('tg-hoy',  `HOY — ${fmtDate(todayD)}`,      `${todayGames.length} partidos`,     true,  todayBody) +
+      dayBlock('tg-tmr',  `MAÑANA — ${fmtDate(tomorrowD)}`,`${tomorrowGames.length} partidos`,  false, tmrBody);
 
   } catch(e) {
     el.innerHTML = `<div class="error-box">Error loading top games: ${e.message}</div>`;
   }
 }
-
 
 // ── PLAYERS TAB ───────────────────────────────────────────────────────────────
 // Fetches league-wide individual player stats and ranks them by narrative category.
