@@ -4470,7 +4470,164 @@ async function loadTopGames() {
       }
     }
 
-    // Score a game (same formula as before)
+    // ── Get or compute MVP/CY/ROY candidate sets ──────────────────────────
+    // Reuse from global if MVP tab already loaded, otherwise fetch independently.
+    // We build a flat Set of {pid, teamId, label} for fast lookup by teamId.
+    let candidatesByTeam = {}; // teamId → [{pid, name, label}]
+
+    async function buildCandidateSets() {
+      let lists = window._mvpLists;
+      if (!lists) {
+        // MVP tab not visited yet — fetch minimal data independently
+        try {
+          await fetchLeagueTeamStats();
+          const lgMap = leagueTeamStatsCache || {};
+          const lgAvg = lgMap._leagueAvg || {};
+          const lgPitch = lgMap._leaguePitch || {};
+          const [hitData, pitchData] = await Promise.all([
+            fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=hitting&gameType=R&sportId=1&limit=800`)
+              .then(r=>r.json()).catch(()=>({stats:[]})),
+            fetchWithTimeout(`${MLB_API}/stats?stats=season&season=${CURRENT_YEAR}&group=pitching&gameType=R&sportId=1&limit=800`)
+              .then(r=>r.json()).catch(()=>({stats:[]})),
+          ]);
+          const rawH = (hitData.stats?.[0]?.splits||[]).map(sp=>({ pid:sp.player?.id, name:sp.player?.fullName||'?', teamId:sp.team?.id, leagueId:sp.team?.id?getTeamLeagueId(sp.team.id):null, s:sp.stat })).filter(p=>p.pid);
+          const rawP = (pitchData.stats?.[0]?.splits||[]).map(sp=>({ pid:sp.player?.id, name:sp.player?.fullName||'?', teamId:sp.team?.id, leagueId:sp.team?.id?getTeamLeagueId(sp.team.id):null, s:sp.stat })).filter(p=>p.pid);
+          const maxPA = Math.max(1,...rawH.map(p=>parseInt(p.s?.plateAppearances||0)));
+          const maxIP = Math.max(1,...rawP.map(p=>parseFloat(p.s?.inningsPitched||0)));
+          const minPA = Math.max(50, Math.round(maxPA*0.40));
+          const minIP = Math.max(15, Math.round(maxIP*0.40));
+          const lg = { ops:(lgAvg.obp||.315)+(lgAvg.slg||.405), obp:lgAvg.obp||.315, slg:lgAvg.slg||.405, hrPA:lgAvg.hrPA||.032, rbiPA:.055, runsPA:.055, sbEff:.72, paShare:maxPA*.75, era:lgPitch.era||4.10, whip:lgPitch.whip||1.28, k9:lgPitch.k9||8.5, bb9:lgPitch.bb9||3.2 };
+          // Simplified score functions (same as MVP tab)
+          const mvpScoreSimple = p => {
+            const s=p.s; const pa=parseInt(s?.plateAppearances||0); if(pa<minPA) return null;
+            const ops=(parseFloat(s?.obp||0)+parseFloat(s?.slg||0));
+            const idx=(v,r)=>r?Math.min(200,Math.max(0,(v/r)*100)):100;
+            return Math.min(99.9,(0.45*idx(ops,lg.ops)+0.20*idx(parseInt(s?.homeRuns||0)/Math.max(pa,1),lg.hrPA)+0.15*idx(pa,lg.paShare))*0.58);
+          };
+          const cyScoreSimple = p => {
+            const s=p.s; const gs=parseInt(s?.gamesStarted||0); const ip=parseFloat(s?.inningsPitched||0);
+            if(gs<1||ip<minIP) return null;
+            const era=parseFloat(s?.era||99),whip=parseFloat(s?.whip||99);
+            const idxInv=(v,r)=>r&&v?Math.min(200,Math.max(0,(r/v)*100)):100;
+            const idx=(v,r)=>r?Math.min(200,Math.max(0,(v/r)*100)):100;
+            const k=parseInt(s?.strikeOuts||0),k9=ip>0?(k/ip)*9:0;
+            return Math.min(99.9,(0.40*idxInv(era,lg.era)+0.25*idxInv(whip,lg.whip)+0.20*idx(k9,lg.k9)+0.15*idx(ip,maxIP))*0.56);
+          };
+          const buildList=(arr,scoreFn,leagueId,limit)=>arr.filter(p=>(!leagueId||p.leagueId===leagueId)).map(p=>({...p,sc:scoreFn(p)})).filter(p=>p.sc!==null).sort((a,b)=>b.sc-a.sc).slice(0,limit);
+          lists = {
+            alMVP: buildList(rawH,mvpScoreSimple,103,20),
+            nlMVP: buildList(rawH,mvpScoreSimple,104,20),
+            alCY:  buildList(rawP,cyScoreSimple,103,20),
+            nlCY:  buildList(rawP,cyScoreSimple,104,20),
+            alROY: [], nlROY: [],
+          };
+        } catch(e) { lists = { alMVP:[], nlMVP:[], alCY:[], nlCY:[], alROY:[], nlROY:[] }; }
+      }
+
+      // Flatten into candidatesByTeam: teamId → [{pid, name, awardLabel, rank}]
+      const addList = (arr, label, limit) => {
+        arr.slice(0, limit).forEach((p, i) => {
+          if (!p.teamId) return;
+          if (!candidatesByTeam[p.teamId]) candidatesByTeam[p.teamId] = [];
+          // Avoid duplicates (player in both MVP and ROY for example)
+          if (!candidatesByTeam[p.teamId].find(c => c.pid === p.pid)) {
+            candidatesByTeam[p.teamId].push({ pid: p.pid, name: p.name, label, rank: i+1 });
+          }
+        });
+      };
+      addList(lists.alMVP, 'MVP', 20); addList(lists.nlMVP, 'MVP', 20);
+      addList(lists.alCY,  'CY',  20); addList(lists.nlCY,  'CY',  20);
+      addList(lists.alROY||[], 'ROY', 5); addList(lists.nlROY||[], 'ROY', 5);
+    }
+
+    // Fetch rosters (hitters + key relievers/closers) for all teams playing today+tomorrow
+    // to build "Players to Watch" per game. Cache by teamId.
+    const tgRosterCache = {}; // teamId → {hitterPids: Set, pitcherPids: Set, ilPids: Set}
+    async function fetchTGRoster(teamId) {
+      if (tgRosterCache[teamId]) return tgRosterCache[teamId];
+      try {
+        const [activeData, ilData] = await Promise.all([
+          fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${CURRENT_YEAR}`)
+            .then(r=>r.json()).catch(()=>({roster:[]})),
+          fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${CURRENT_YEAR}`)
+            .then(r=>r.json()).catch(()=>({roster:[]})),
+        ]);
+        const activeIds = new Set((activeData.roster||[]).map(p=>p.person?.id));
+        const IL_STATUSES = new Set(['7-Day Injured List','10-Day Injured List','15-Day Injured List','60-Day Injured List']);
+        const ilPids = new Set((ilData.roster||[])
+          .filter(p => !activeIds.has(p.person?.id) && IL_STATUSES.has(p.status?.description||''))
+          .map(p => p.person?.id).filter(Boolean));
+        const hitterPids = new Set();
+        const pitcherPids = new Set();
+        (activeData.roster||[]).forEach(p => {
+          const pos = p.position?.abbreviation;
+          const pid = p.person?.id;
+          if (!pid) return;
+          if (pos === 'P' || pos === 'TWP') pitcherPids.add(pid);
+          else hitterPids.add(pid);
+        });
+        tgRosterCache[teamId] = { hitterPids, pitcherPids, ilPids };
+        return tgRosterCache[teamId];
+      } catch(e) { return { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() }; }
+    }
+
+    // Build "Players to Watch" for a team in a game — top 3 candidates not on IL
+    function playersToWatch(teamId, excludeIlPids) {
+      const candidates = candidatesByTeam[teamId] || [];
+      return candidates
+        .filter(c => !excludeIlPids.has(c.pid))
+        .slice(0, 3);
+    }
+
+    // Run candidate build + roster fetches in parallel (non-blocking to main render)
+    const allGameTeamIds = new Set();
+    [...todayGames, ...tomorrowGames].forEach(g => {
+      allGameTeamIds.add(g.teams.away.team.id);
+      allGameTeamIds.add(g.teams.home.team.id);
+    });
+    await Promise.all([
+      buildCandidateSets(),
+      ...[...allGameTeamIds].map(id => fetchTGRoster(id)),
+    ]);
+
+    // Fetch season stats for all PTW candidates (hitters + pitchers) — batched
+    const ptwPids = new Set();
+    [...allGameTeamIds].forEach(tid => {
+      (candidatesByTeam[tid] || []).forEach(c => ptwPids.add(c.pid));
+    });
+    // Also fetch stats for probable pitchers if not already in pitcherStats
+    [...todayGames, ...tomorrowGames].forEach(g => {
+      [g.teams.away.probablePitcher?.id, g.teams.home.probablePitcher?.id].forEach(id => { if(id) ptwPids.add(id); });
+    });
+    const ptwHitStats  = {};  // pid → hitting stat
+    const ptwPitchStats = {}; // pid → pitching stat (supplement pitcherStats)
+    const ptwCareer    = {};  // pid → { ops, formaScore }
+    const missingPtwPids = [...ptwPids];
+    if (missingPtwPids.length) {
+      for (let i = 0; i < missingPtwPids.length; i += 20) {
+        const chunk = missingPtwPids.slice(i, i+20).join(',');
+        await Promise.all([
+          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=hitting,season=${CURRENT_YEAR})`)
+            .then(r=>r.json()).then(d=>{
+              (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat; if(s) ptwHitStats[p.id]=s; });
+            }).catch(()=>{}),
+          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=season,group=pitching,season=${CURRENT_YEAR})`)
+            .then(r=>r.json()).then(d=>{
+              (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat; if(s){ ptwPitchStats[p.id]=s; if(!pitcherStats[p.id]) pitcherStats[p.id]=s; if(!(p.id in pitcherForma)) pitcherForma[p.id]=calcBaseScore(parseFloat(s.era),parseFloat(s.whip))??0; } });
+            }).catch(()=>{}),
+          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=hitting,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
+            .then(r=>r.json()).then(d=>{
+              (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat; if(s) ptwCareer[p.id]={ ops:parseFloat(s.ops)||0 }; });
+            }).catch(()=>{}),
+          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
+            .then(r=>r.json()).then(d=>{
+              (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat; if(s){ ptwCareer[p.id]=ptwCareer[p.id]||{}; ptwCareer[p.id].formaScore=calcBaseScore(parseFloat(s.era),parseFloat(s.whip)); } });
+            }).catch(()=>{})
+        ]);
+      }
+    }
+
+    // Score a game — now includes MVP/CY candidate bonus
     function scoreGame(g) {
       const away = g.teams.away, home = g.teams.home;
       const awayPct = (away.leagueRecord?.wins||0) / Math.max((away.leagueRecord?.wins||0)+(away.leagueRecord?.losses||0),1);
@@ -4481,7 +4638,18 @@ async function loadTopGames() {
       const homeF = pitcherForma[g.teams.home.probablePitcher?.id] ?? 50;
       const pitcherScore = Math.min(awayF,homeF)*0.6 + ((awayF+homeF)/2)*0.4;
       const divBonus = (away.team?.division?.id && away.team?.division?.id===home.team?.division?.id) ? 10 : 0;
-      return pitcherScore*0.40 + recordScore*0.30 + balance*0.20 + divBonus;
+      // Award candidate bonus: each candidate in game adds points, weighted by rank
+      const awardBonus = (() => {
+        const awayC = candidatesByTeam[away.team.id] || [];
+        const homeC = candidatesByTeam[home.team.id] || [];
+        const allC = [...awayC, ...homeC];
+        if (!allC.length) return 0;
+        // Top-ranked candidates score more: rank 1 = 10pts, rank 20 = 1pt
+        const pts = allC.reduce((sum, c) => sum + Math.max(1, 11 - Math.floor(c.rank / 2)), 0);
+        return Math.min(pts, 25); // cap at 25 bonus points
+      })();
+      // Weights: 35% pitchers · 25% record · 15% balance · 10% rivalry · 15% award candidates
+      return pitcherScore*0.35 + recordScore*0.25 + balance*0.15 + divBonus*0.10 + awardBonus*0.15;
     }
 
     // Assign color tier based on score percentile within the day
@@ -4573,10 +4741,10 @@ async function loadTopGames() {
       // Label: "STARTING PITCHER" if game is live or final, "PROBABLE SP" otherwise
       const spLabel = (state === 'Live' || state === 'Final') ? 'STARTING PITCHER' : 'PROBABLE SP';
 
-      function spMini(name, forma, stat, align) {
+      // Rich pitcher card — same style as ROSTER tab
+      function spMini(pid, name, forma, stat, align) {
         const isTBD = !name;
         const color = forma !== null ? getDiamondPlayerColor(forma, 'pitcher') : 'var(--muted)';
-        // Background card color based on forma score (matching TEAMS tab style)
         let bg = 'var(--surface2)', border = 'var(--border)';
         if (!isTBD && forma !== null) {
           if      (forma >= 75) { bg = 'rgba(22,163,74,.09)';   border = 'rgba(22,163,74,.28)'; }
@@ -4584,17 +4752,115 @@ async function loadTopGames() {
           else if (forma >= 40) { bg = 'rgba(148,163,184,.12)'; border = 'rgba(148,163,184,.35)'; }
           else                  { bg = 'rgba(220,38,38,.07)';   border = 'rgba(220,38,38,.22)'; }
         }
-        let statsLine = '';
-        if (stat && !isTBD) {
-          const era = stat.era||'—', whip = stat.whip||'—';
-          const w = stat.wins??'—', l = stat.losses??'—';
-          statsLine = `ERA ${era} · WHIP ${whip} · ${w}W-${l}L`;
-        }
-        return `<div style="background:${bg};border:1px solid ${border};border-radius:7px;padding:8px 10px;text-align:${align};min-width:0">
+        if (isTBD) return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px">
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
-          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:${isTBD?'var(--muted)':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isTBD?'Por confirmar':name}</div>
-          ${!isTBD ? `<div style="font-family:'Barlow Condensed';font-size:12px;margin-top:2px"><span style="color:var(--muted)">FORMA </span><span style="font-weight:800;color:${color}">${forma??'—'}</span></div>` : ''}
-          ${statsLine ? `<div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:2px">${statsLine}</div>` : ''}
+          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">Por confirmar</div>
+        </div>`;
+        const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
+        const ps = stat || ptwPitchStats[pid] || {};
+        const throws = ''; // we don't have throws here, skip
+        const era = ps.era||'—', whip = ps.whip||'—', ip = ps.inningsPitched||'—', gs = ps.gamesStarted??'—', qs = ps.qualityStarts != null ? ` · QS ${ps.qualityStarts}` : '';
+        const barW = forma !== null ? Math.min(100, Math.round((forma/100)*100)) : 0;
+        // Trend vs career
+        const career = ptwCareer[pid];
+        let trendHtml = '';
+        if (career?.formaScore != null && forma != null) trendHtml = trendFormaHTML(forma, career.formaScore);
+        const isRight = align === 'right';
+        return `<div style="background:${bg};border:1px solid ${border};border-radius:7px;padding:8px 10px;width:100%">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
+          <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
+            <div style="display:flex;align-items:center;gap:8px;flex-direction:${isRight?'row-reverse':'row'}">
+              <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <div style="min-width:0;text-align:${align}">
+                <div style="font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+                <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${qs}</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">FORMA</div>
+              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;line-height:1;color:${color}">${forma??'—'}</div>
+              <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
+              ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }
+
+      // Players to Watch — rich cards like ROSTER tab
+      const awayRoster = tgRosterCache[away.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() };
+      const homeRoster = tgRosterCache[home.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() };
+      const awayWatch = playersToWatch(away.team.id, awayRoster.ilPids);
+      const homeWatch = playersToWatch(home.team.id, homeRoster.ilPids);
+
+      function ptwPlayerCard(c, align) {
+        const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${c.pid}/headshot/67/current`;
+        // Determine if hitter or pitcher based on available stats
+        const hs = ptwHitStats[c.pid];
+        const ps = ptwPitchStats[c.pid];
+        const isPitcher = ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0));
+        const isRight = align === 'right';
+        if (isPitcher) {
+          const forma = calcBaseScore(parseFloat(ps.era), parseFloat(ps.whip));
+          const color = getDiamondPlayerColor(forma, 'pitcher');
+          const barW = forma != null ? Math.min(100, Math.round((forma/100)*100)) : 0;
+          const career = ptwCareer[c.pid];
+          const trendHtml = (career?.formaScore != null && forma != null) ? trendFormaHTML(forma, career.formaScore) : '';
+          return `<div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+            <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
+              <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <div style="min-width:0;text-align:${align}">
+                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</div>
+                <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'}</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">FORMA</div>
+              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;line-height:1;color:${color}">${forma??'—'}</div>
+              <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
+              ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
+            </div>
+          </div>`;
+        } else if (hs) {
+          const ops = parseFloat(hs.ops)||0;
+          const color = getDiamondPlayerColor(ops, 'hitter');
+          const barW = Math.min(100, Math.round((ops/1.2)*100));
+          const career = ptwCareer[c.pid];
+          const trendHtml = (career?.ops && ops) ? trendBadgeHTML(ops, career.ops, 'ops') : '';
+          return `<div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+            <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
+              <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <div style="min-width:0;text-align:${align}">
+                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</div>
+                <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'}</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">OPS</div>
+              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;line-height:1;color:${color}">${ops>0?ops.toFixed(3):'—'}</div>
+              <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
+              ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
+            </div>
+          </div>`;
+        }
+        // No stats yet — just name
+        return `<div style="padding:6px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+          <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
+            <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+            <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</div>
+          </div>
+        </div>`;
+      }
+
+      function ptwSection(players, align) {
+        if (!players.length) return '';
+        const cards = players.map(p => ptwPlayerCard(p, align)).join('');
+        return `<div style="margin-top:10px;background:#f8f9fd;border:1px solid #e4eaf5;border-radius:7px;padding:8px 10px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
+          ${cards}
         </div>`;
       }
 
@@ -4608,22 +4874,24 @@ async function loadTopGames() {
             <div style="display:flex;align-items:center;gap:8px">
               <img src="${awayMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
               <div>
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${awayMeta.abbr}</div>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${awayMeta.name||awayMeta.abbr}</div>
                 <div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">${away.leagueRecord?.wins||0}-${away.leagueRecord?.losses||0}</div>
               </div>
             </div>
-            ${spMini(awayPName, awayF, awayS, 'left')}
+            ${spMini(awayPid, awayPName, awayF, awayS, 'left')}
+            ${ptwSection(awayWatch, 'left')}
           </div>
           <div style="text-align:center;font-family:'Bebas Neue';font-size:18px;color:var(--muted);padding-top:8px">@</div>
           <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
             <div style="display:flex;align-items:center;gap:8px;flex-direction:row-reverse">
               <img src="${homeMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
               <div style="text-align:right">
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${homeMeta.abbr}</div>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${homeMeta.name||homeMeta.abbr}</div>
                 <div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">${home.leagueRecord?.wins||0}-${home.leagueRecord?.losses||0}</div>
               </div>
             </div>
-            ${spMini(homePName, homeF, homeS, 'right')}
+            ${spMini(homePid, homePName, homeF, homeS, 'right')}
+            ${ptwSection(homeWatch, 'right')}
           </div>
         </div>
       </div>`;
@@ -5755,6 +6023,8 @@ async function loadMVPTracker() {
     const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true);
     const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
     const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
+    // Save globally so Top Games can reuse without re-fetching
+    window._mvpLists = { alMVP, nlMVP, alCY, nlCY, alROY: null, nlROY: null };
 
     // Fetch career stats for ROY eligibility check.
     const royCandidateHitters  = rawHitters.filter(p => parseInt(p.s?.plateAppearances||0) >= 20);
@@ -5818,6 +6088,8 @@ async function loadMVPTracker() {
     // Build ROY lists (now that career stats are available for eligibility check)
     const alROY = buildROYList(rawHitters, rawPitchers, 103);
     const nlROY = buildROYList(rawHitters, rawPitchers, 104);
+    // Update global with ROY lists now available
+    if (window._mvpLists) { window._mvpLists.alROY = alROY; window._mvpLists.nlROY = nlROY; }
 
     // Fetch RECENT-FORM stats for all top-10 players + ROY candidates
     const allHitterPids  = [...new Set([...alMVP, ...nlMVP, ...alROY.filter(p => !p.isPitcher), ...nlROY.filter(p => !p.isPitcher)].map(p => p.pid))];
