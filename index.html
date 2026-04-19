@@ -1035,6 +1035,7 @@ function trackerHistorySet(history) {
 }
 
 
+const TEAM_META = {
   108: { name: 'Angels',      abbr: 'LAA', color: '#BA0021', logo: 'https://www.mlbstatic.com/team-logos/108.svg' },
   109: { name: 'Diamondbacks',abbr: 'ARI', color: '#A71930', logo: 'https://www.mlbstatic.com/team-logos/109.svg' },
   110: { name: 'Orioles',     abbr: 'BAL', color: '#DF4601', logo: 'https://www.mlbstatic.com/team-logos/110.svg' },
@@ -1140,14 +1141,25 @@ function fetchWithTimeout(url, ms = 12000) {
     .finally(() => clearTimeout(timer));
 }
 
+function clearAllCache() {
+  ['mlb_standings', 'mlb_tracker_history', `mvp_cache_${CURRENT_YEAR}`].forEach(k => localStorage.removeItem(k));
+  // Also clear any tracker today keys
+  Object.keys(localStorage).filter(k => k.startsWith('mlb_tracker_today_')).forEach(k => localStorage.removeItem(k));
+}
+
 async function init() {
   const el = document.getElementById('standingsContent');
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING STANDINGS...</div></div>`;
   try {
     await Promise.all([loadStandings(), detectPlayoffs()]);
-    renderStandings(); // not awaited — tabs usable immediately
+    if (!allData.standings || allData.standings.length === 0) {
+      throw new Error('No standings data received');
+    }
+    renderStandings();
   } catch(e) {
     console.error(e);
+    // If we have cached data that might be corrupt, clear it and offer retry
+    clearAllCache();
     el.innerHTML = `<div class="error-box" style="padding:24px">
       <strong>Error connecting to MLB API</strong><br><br>
       ${e.name === 'AbortError' ? 'Request timed out.' : e.message}<br><br>
@@ -1176,13 +1188,22 @@ async function detectPlayoffs() {
 }
 
 async function loadStandings() {
-  const cached = cacheGet('mlb_standings');
-  if (cached) { allData.standings = cached; return; }
+  try {
+    const cached = cacheGet('mlb_standings');
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      allData.standings = cached;
+      return;
+    }
+  } catch(e) {
+    localStorage.removeItem('mlb_standings');
+  }
   const res = await fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division`);
   if (!res.ok) throw new Error(`MLB API returned ${res.status}`);
   const data = await res.json();
   allData.standings = data.records || [];
-  cacheSet('mlb_standings', allData.standings);
+  if (allData.standings.length > 0) {
+    cacheSet('mlb_standings', allData.standings);
+  }
 }
 
 async function loadGamesRemaining(teamIds) {
@@ -1798,7 +1819,8 @@ async function initTracker() {
     }
   }, 100);
 
-  await loadTrackerData();
+  // Fire tracker load completely in background — don't block anything
+  loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
 }
 
 async function loadTrackerData() {
@@ -1817,69 +1839,37 @@ async function loadTrackerData() {
   // Load historical cache — past snapshots never change
   const history = trackerHistoryGet();
   Object.assign(trackerData, history.standings || {});
-  Object.assign(trackerSchedule, history.schedule || {});
 
   // Only fetch dates we don't have yet, plus always refresh today's data
   const todayKey = `mlb_tracker_today_${todayStr}`;
   const todayCached = cacheGet(todayKey);
   const missingDates = dates.filter(date => {
     if (date === todayStr) return !todayCached;
-    return !trackerData[date]; // historical — skip if already cached
+    return !trackerData[date];
   });
 
   if (missingDates.length > 0) {
-    const standingsFetches = missingDates.map(date =>
-      fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division&date=${date}`)
-        .then(r => r.json()).then(data => ({ date, records: data.records || [] })).catch(() => ({ date, records: [] }))
+    const results = await Promise.all(
+      missingDates.map(date =>
+        fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division&date=${date}`)
+          .then(r => r.json()).then(data => ({ date, records: data.records || [] })).catch(() => ({ date, records: [] }))
+      )
     );
 
-    const scheduleFetches = missingDates.map(date =>
-      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}&gameType=R&hydrate=team,linescore`)
-        .then(r => r.json()).then(data => ({ date, dates: data.dates || [] })).catch(() => ({ date, dates: [] }))
-    );
+    results.forEach(({date, records}) => { trackerData[date] = records; });
 
-    const [standingsResults, scheduleResults] = await Promise.all([
-      Promise.all(standingsFetches),
-      Promise.all(scheduleFetches)
-    ]);
+    // Cache today with daily expiry
+    cacheSet(todayKey, { standings: trackerData[todayStr] });
 
-    standingsResults.forEach(({date, records}) => { trackerData[date] = records; });
-
-    scheduleResults.forEach(({date, dates: dateDates}) => {
-      trackerSchedule[date] = {};
-      dateDates.forEach(d => {
-        (d.games || []).forEach(g => {
-          if (g.status.abstractGameState !== 'Final') return;
-          const away = g.teams.away, home = g.teams.home;
-          const awayId = away.team.id, homeId = home.team.id;
-          const awayScore = away.score ?? 0, homeScore = home.score ?? 0;
-          const awayWon = awayScore > homeScore;
-          const awayMeta = TEAM_META[homeId] || { abbr: '???' };
-          const homeMeta = TEAM_META[awayId] || { abbr: '???' };
-          trackerSchedule[date][awayId] = { result: awayWon ? 'W' : 'L', score: `${awayScore}-${homeScore}`, vs: `vs ${awayMeta.abbr}` };
-          trackerSchedule[date][homeId] = { result: !awayWon ? 'W' : 'L', score: `${homeScore}-${awayScore}`, vs: `vs ${homeMeta.abbr}` };
-        });
-      });
-    });
-
-    // Save today's data with daily expiry
-    if (todayCached === null) {
-      cacheSet(todayKey, { standings: trackerData[todayStr], schedule: trackerSchedule[todayStr] });
-    }
-
-    // Save all historical dates (past dates only — they never change)
+    // Save all historical dates permanently (past dates never change)
     const histStandings = {};
-    const histSchedule = {};
     dates.filter(date => date !== todayStr).forEach(date => {
       if (trackerData[date]) histStandings[date] = trackerData[date];
-      if (trackerSchedule[date]) histSchedule[date] = trackerSchedule[date];
     });
-    trackerHistorySet({ standings: histStandings, schedule: histSchedule });
+    trackerHistorySet({ standings: histStandings });
 
   } else if (todayCached) {
-    // Restore today from cache
     trackerData[todayStr] = todayCached.standings;
-    trackerSchedule[todayStr] = todayCached.schedule;
   }
 
   trackerLoaded = true;
