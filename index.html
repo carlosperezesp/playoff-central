@@ -426,8 +426,7 @@
     border: 2.5px solid rgba(255,255,255,.8);
     box-shadow: 0 4px 12px rgba(22,28,39,.15);
     transition: all .18s ease;
-  }
-  .dfield-btn.active .dfield-circle, .dfield-btn-inline.active .dfield-circle {
+  }  .dfield-btn.active .dfield-circle, .dfield-btn-inline.active .dfield-circle {
     width: 48px; height: 48px;
     border: 3px solid rgba(255,255,255,.95);
     box-shadow: 0 8px 20px rgba(0,66,117,.22);
@@ -930,7 +929,10 @@
   <div id="tab-rosters" class="tab-panel">
     <div class="teams-layout">
       <div class="team-selector-card">
-        <div class="team-selector-header">SELECT TEAM</div>
+        <div class="team-selector-header" id="teamSelectorHeader" onclick="toggleTeamSelector()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <span id="teamSelectorLabel">SELECT TEAM</span>
+          <svg id="teamSelectorChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
         <div class="team-selector-list" id="teamSelectorList">
           <div class="loading"><div class="spinner"></div><div class="loading-text">LOADING...</div></div>
         </div>
@@ -967,7 +969,72 @@
 const MLB_API = 'https://statsapi.mlb.com/api/v1';
 const CURRENT_YEAR = new Date().getFullYear();
 
-const TEAM_META = {
+const COUNTRY_FLAG = {
+  'USA': '🇺🇸', 'Dominican Republic': '🇩🇴', 'Venezuela': '🇻🇪',
+  'Cuba': '🇨🇺', 'Panama': '🇵🇦', 'Puerto Rico': '🇵🇷',
+  'Mexico': '🇲🇽', 'Japan': '🇯🇵', 'South Korea': '🇰🇷',
+  'Canada': '🇨🇦', 'Colombia': '🇨🇴', 'Nicaragua': '🇳🇮',
+  'Brazil': '🇧🇷', 'Australia': '🇦🇺', 'Curacao': '🇨🇼',
+  'Netherlands': '🇳🇱', 'Germany': '🇩🇪', 'Taiwan': '🇹🇼',
+  'Bahamas': '🇧🇸', 'Aruba': '🇦🇼', 'Honduras': '🇭🇳',
+  'Jamaica': '🇯🇲', 'Peru': '🇵🇪', 'Guatemala': '🇬🇹',
+  'Dominican Rep.': '🇩🇴', 'U.S.A.': '🇺🇸',
+};
+function countryFlag(country) {
+  if (!country) return '';
+  return COUNTRY_FLAG[country] || '';
+}
+
+// ── CACHE SYSTEM ─────────────────────────────────────────────────────────────
+// All data refreshes once daily at 1:00am LA time (09:00 UTC).
+// Tracker history is additive — past snapshots are never deleted.
+
+function getCacheExpiry() {
+  // Next 09:00 UTC (= 01:00 PT winter / 02:00 PT summer) from now
+  const now = new Date();
+  const expiry = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0));
+  if (now >= expiry) expiry.setUTCDate(expiry.getUTCDate() + 1);
+  return expiry.getTime();
+}
+
+function cacheGet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (obj.expiry && Date.now() > obj.expiry) { localStorage.removeItem(key); return null; }
+    return obj.data ?? obj; // support both {expiry,data} and raw objects
+  } catch(e) { return null; }
+}
+
+function cacheSet(key, data, useExpiry = true) {
+  try {
+    const payload = useExpiry ? { expiry: getCacheExpiry(), data } : { data };
+    localStorage.setItem(key, JSON.stringify(payload));
+  } catch(e) {
+    // Quota exceeded — clear old tracker history and retry once
+    try {
+      localStorage.removeItem('mlb_tracker_history');
+      localStorage.setItem(key, JSON.stringify({ expiry: getCacheExpiry(), data }));
+    } catch(e2) {}
+  }
+}
+
+// Tracker history: additive, no expiry — past dates never change
+function trackerHistoryGet() {
+  try {
+    const raw = localStorage.getItem('mlb_tracker_history');
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function trackerHistorySet(history) {
+  try {
+    localStorage.setItem('mlb_tracker_history', JSON.stringify(history));
+  } catch(e) {}
+}
+
+
   108: { name: 'Angels',      abbr: 'LAA', color: '#BA0021', logo: 'https://www.mlbstatic.com/team-logos/108.svg' },
   109: { name: 'Diamondbacks',abbr: 'ARI', color: '#A71930', logo: 'https://www.mlbstatic.com/team-logos/109.svg' },
   110: { name: 'Orioles',     abbr: 'BAL', color: '#DF4601', logo: 'https://www.mlbstatic.com/team-logos/110.svg' },
@@ -1109,10 +1176,13 @@ async function detectPlayoffs() {
 }
 
 async function loadStandings() {
+  const cached = cacheGet('mlb_standings');
+  if (cached) { allData.standings = cached; return; }
   const res = await fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division`);
   if (!res.ok) throw new Error(`MLB API returned ${res.status}`);
   const data = await res.json();
   allData.standings = data.records || [];
+  cacheSet('mlb_standings', allData.standings);
 }
 
 async function loadGamesRemaining(teamIds) {
@@ -1744,47 +1814,73 @@ async function loadTrackerData() {
   if (dates[dates.length-1] !== todayStr) dates.push(todayStr);
   trackerDates = dates;
 
-  const standingsFetches = dates.map(date =>
-    fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division&date=${date}`)
-      .then(r => r.json()).then(data => ({ date, records: data.records || [] })).catch(() => ({ date, records: [] }))
-  );
+  // Load historical cache — past snapshots never change
+  const history = trackerHistoryGet();
+  Object.assign(trackerData, history.standings || {});
+  Object.assign(trackerSchedule, history.schedule || {});
 
-  const scheduleFetches = dates.map(date =>
-    fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}&gameType=R&hydrate=team,linescore`)
-      .then(r => r.json()).then(data => ({ date, dates: data.dates || [] })).catch(() => ({ date, dates: [] }))
-  );
+  // Only fetch dates we don't have yet, plus always refresh today's data
+  const todayKey = `mlb_tracker_today_${todayStr}`;
+  const todayCached = cacheGet(todayKey);
+  const missingDates = dates.filter(date => {
+    if (date === todayStr) return !todayCached;
+    return !trackerData[date]; // historical — skip if already cached
+  });
 
-  const [standingsResults, scheduleResults] = await Promise.all([
-    Promise.all(standingsFetches),
-    Promise.all(scheduleFetches)
-  ]);
+  if (missingDates.length > 0) {
+    const standingsFetches = missingDates.map(date =>
+      fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${CURRENT_YEAR}&standingsTypes=regularSeason&hydrate=team,division&date=${date}`)
+        .then(r => r.json()).then(data => ({ date, records: data.records || [] })).catch(() => ({ date, records: [] }))
+    );
 
-  standingsResults.forEach(({date, records}) => { trackerData[date] = records; });
+    const scheduleFetches = missingDates.map(date =>
+      fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}&gameType=R&hydrate=team,linescore`)
+        .then(r => r.json()).then(data => ({ date, dates: data.dates || [] })).catch(() => ({ date, dates: [] }))
+    );
 
-  scheduleResults.forEach(({date, dates: dateDates}) => {
-    trackerSchedule[date] = {};
-    dateDates.forEach(d => {
-      (d.games || []).forEach(g => {
-        if (g.status.abstractGameState !== 'Final') return;
-        const away = g.teams.away, home = g.teams.home;
-        const awayId = away.team.id, homeId = home.team.id;
-        const awayScore = away.score ?? 0, homeScore = home.score ?? 0;
-        const awayWon = awayScore > homeScore;
-        const awayMeta = TEAM_META[homeId] || { abbr: '???' };
-        const homeMeta = TEAM_META[awayId] || { abbr: '???' };
-        trackerSchedule[date][awayId] = {
-          result: awayWon ? 'W' : 'L',
-          score: `${awayScore}-${homeScore}`,
-          vs: `vs ${awayMeta.abbr}`
-        };
-        trackerSchedule[date][homeId] = {
-          result: !awayWon ? 'W' : 'L',
-          score: `${homeScore}-${awayScore}`,
-          vs: `vs ${homeMeta.abbr}`
-        };
+    const [standingsResults, scheduleResults] = await Promise.all([
+      Promise.all(standingsFetches),
+      Promise.all(scheduleFetches)
+    ]);
+
+    standingsResults.forEach(({date, records}) => { trackerData[date] = records; });
+
+    scheduleResults.forEach(({date, dates: dateDates}) => {
+      trackerSchedule[date] = {};
+      dateDates.forEach(d => {
+        (d.games || []).forEach(g => {
+          if (g.status.abstractGameState !== 'Final') return;
+          const away = g.teams.away, home = g.teams.home;
+          const awayId = away.team.id, homeId = home.team.id;
+          const awayScore = away.score ?? 0, homeScore = home.score ?? 0;
+          const awayWon = awayScore > homeScore;
+          const awayMeta = TEAM_META[homeId] || { abbr: '???' };
+          const homeMeta = TEAM_META[awayId] || { abbr: '???' };
+          trackerSchedule[date][awayId] = { result: awayWon ? 'W' : 'L', score: `${awayScore}-${homeScore}`, vs: `vs ${awayMeta.abbr}` };
+          trackerSchedule[date][homeId] = { result: !awayWon ? 'W' : 'L', score: `${homeScore}-${awayScore}`, vs: `vs ${homeMeta.abbr}` };
+        });
       });
     });
-  });
+
+    // Save today's data with daily expiry
+    if (todayCached === null) {
+      cacheSet(todayKey, { standings: trackerData[todayStr], schedule: trackerSchedule[todayStr] });
+    }
+
+    // Save all historical dates (past dates only — they never change)
+    const histStandings = {};
+    const histSchedule = {};
+    dates.filter(date => date !== todayStr).forEach(date => {
+      if (trackerData[date]) histStandings[date] = trackerData[date];
+      if (trackerSchedule[date]) histSchedule[date] = trackerSchedule[date];
+    });
+    trackerHistorySet({ standings: histStandings, schedule: histSchedule });
+
+  } else if (todayCached) {
+    // Restore today from cache
+    trackerData[todayStr] = todayCached.standings;
+    trackerSchedule[todayStr] = todayCached.schedule;
+  }
 
   trackerLoaded = true;
   const loadMsg = document.getElementById('trackerLoadingMsg');
@@ -2455,10 +2551,35 @@ async function loadRosters() {
   listEl.innerHTML = html;
 }
 
+function toggleTeamSelector(forceOpen) {
+  const list = document.getElementById('teamSelectorList');
+  const chevron = document.getElementById('teamSelectorChevron');
+  if (!list) return;
+  const isCollapsed = list.style.display === 'none';
+  const shouldOpen = forceOpen !== undefined ? forceOpen : isCollapsed;
+  list.style.display = shouldOpen ? '' : 'none';
+  if (chevron) chevron.style.transform = shouldOpen ? '' : 'rotate(-90deg)';
+}
+
 async function selectTeam(teamId) {
   document.querySelectorAll('.team-selector-item').forEach(el => el.classList.remove('active'));
   const selEl = document.getElementById(`ts-${teamId}`);
   if (selEl) selEl.classList.add('active');
+
+  // Update selector label to show selected team name
+  const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1a56db' };
+  const label = document.getElementById('teamSelectorLabel');
+  if (label) label.textContent = meta.abbr || meta.name;
+
+  // On mobile: collapse the selector list and scroll to diamond panel
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    toggleTeamSelector(false);
+    setTimeout(() => {
+      const panel = document.getElementById('diamondPanel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+  }
 
   selectedTeamId = teamId;
   selectedDiamondKey = null;
@@ -2534,12 +2655,12 @@ async function fetchTeamImpact(teamId) {
 
   // Fetch roster (hydrated), schedule (for boxscores + yesterday's games), and IL list in parallel
   const [rosterData, schedData, ilData] = await Promise.all([
-    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${season}&hydrate=person(stats(group=[hitting,pitching],type=season,season=${season}))`)
+    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${season}&hydrate=person(birthCountry,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
     fetchWithTimeout(`${MLB_API}/schedule?sportId=1&teamId=${teamId}&season=${season}&gameType=R&startDate=${season}-03-01&endDate=${today}`)
       .then(r => r.json()).catch(() => ({ dates: [] })),
     // 40-man roster includes IL players with their status
-    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(stats(group=[hitting,pitching],type=season,season=${season}))`)
+    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(birthCountry,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
   ]);
 
@@ -2770,14 +2891,15 @@ async function fetchTeamImpact(teamId) {
       bats: p.person?.batSide?.code||'?',
       dhApps: dhCount[pid] || 0,
       isRookie: rookiePids.has(pid),
+      flag: countryFlag(p.person?.birthCountry),
       gamesPlayed,
       ops, stats: hs,
       rosterPos,
       isTWP,
       posCount,
       posRecent: hitterPosRecent[pid] || {},
-      bestBoxscorePos,   // most-played position in boxscores this season
-      fallbackPos,       // roster API position as fallback
+      bestBoxscorePos,
+      fallbackPos,
       photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
     });
   });
@@ -2935,6 +3057,7 @@ async function fetchTeamImpact(teamId) {
         restDays,
         qualityStarts: apps.qualityStarts || 0,
         isRookie: rookiePids.has(pid),
+        flag: countryFlag(p.person?.birthCountry),
         photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
       };
     });
@@ -3546,11 +3669,12 @@ function renderDiamondPanel(teamId, impact) {
     const nameLabel = p ? p.name : '—';
     const rookieStar = p?.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
     const pips = (p && !p.isRookie) ? awardPipsHTML(p.id) : '';
+    const flagHtml = p?.flag ? `<span style="font-size:14px;line-height:1">${p.flag}</span>` : '';
     const xy = DPOS[pos];
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
       onclick="selectDiamondKey('${key}',${teamId})">
-      <div class="dfield-circle" style="background:${color};position:relative">${pos}${rookieStar}${pips}</div>
+      <div class="dfield-circle" style="background:${color};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
       <div class="dfield-pill">${nameLabel}</div>
     </button>`;
   }
@@ -3568,11 +3692,12 @@ function renderDiamondPanel(teamId, impact) {
       const label = p.throws !== '?' ? p.throws : role;
       const rookieStar = p.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
       const pips = p.isRookie ? '' : awardPipsHTML(p.id);
+      const flagHtml = p.flag ? `<span style="font-size:14px;line-height:1">${p.flag}</span>` : '';
       const restPart   = p.restDays !== null && p.restDays !== undefined ? restDotHTML(p.restDays) : '';
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
         onclick="selectDiamondKey('${key}',${teamId})">
-        <div class="dfield-circle" style="background:${color};position:relative">${label}${rookieStar}${pips}</div>
+        <div class="dfield-circle" style="background:${color};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
         <div class="dfield-pill">${p.name}</div>
         ${extras}
       </button>`;
@@ -4977,16 +5102,8 @@ async function loadMVPTracker() {
   const el = document.getElementById('mvpContent');
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CALCULANDO SCORES...</div></div>`;
 
-  // ── Daily cache: expires at 07:59 UTC (= 23:59 PT) ──────────────────────
-  // We store the heavy fetched data and reuse it until next refresh window.
+  // ── Daily cache: expires at 09:00 UTC (= 01:00 PT) ──────────────────────
   const CACHE_KEY = `mvp_cache_${CURRENT_YEAR}`;
-  function getCacheExpiry() {
-    // Next 07:59 UTC from now
-    const now = new Date();
-    const expiry = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 59, 0));
-    if (now >= expiry) expiry.setUTCDate(expiry.getUTCDate() + 1);
-    return expiry.getTime();
-  }
   function loadCache() {
     try {
       const raw = localStorage.getItem(CACHE_KEY);
@@ -4999,7 +5116,7 @@ async function loadMVPTracker() {
   function saveCache(data) {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({ expiry: getCacheExpiry(), data }));
-    } catch(e) {} // ignore quota errors
+    } catch(e) {}
   }
 
   try {
