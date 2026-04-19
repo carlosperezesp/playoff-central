@@ -2575,7 +2575,6 @@ async function selectTeam(teamId) {
   selectedDiamondKey = null;
 
   const panel = document.getElementById('diamondPanel');
-  const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1a56db' };
 
   panel.innerHTML = `
     <div class="diamond-panel-header">
