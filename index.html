@@ -917,7 +917,8 @@
     .tg-day-title { font-size: 16px; }
     .tg-game-row { padding: 10px 14px; }
     .tg-detail { padding: 12px 14px 14px; }
-    .tg-detail-grid { grid-template-columns: 1fr 28px 1fr; gap: 6px; }
+    .tg-detail-grid { display: flex; flex-direction: column; gap: 12px; }
+    .tg-detail-at { display: none; }
   }
 </style>
 </head>
@@ -2516,7 +2517,10 @@ function calcFormaScore(eraSeason, whipSeason, eraRecent, whipRecent, ipRecent) 
 
 function calcPitcherScore(stat) {
   if (!stat) return null;
-  return calcBaseScore(parseFloat(stat.era), parseFloat(stat.whip));
+  const s = calcBaseScore(parseFloat(stat.era), parseFloat(stat.whip));
+  // If stats exist but score is 0 or negative (terrible ERA/WHIP), show 0 not null
+  if (s === null) return null;
+  return Math.max(0, s);
 }
 
 async function loadRosters() {
@@ -3425,7 +3429,7 @@ function playerDetailHTML(p, type, roleOrPos) {
   const color    = getDiamondPlayerColor(barVal, isHitter ? 'hitter' : 'pitcher');
   const s        = p.stats || {};
   const barLabel = isHitter ? 'OPS' : 'FORM';
-  const barDisp  = isHitter ? (barVal > 0 ? barVal.toFixed(3) : '—') : (barVal > 0 ? barVal : '—');
+  const barDisp  = isHitter ? (barVal > 0 ? barVal.toFixed(3) : '—') : (barVal != null ? Math.max(0, barVal) : '—');
 
   let statsLine = '';
   if (isHitter) {
@@ -4531,7 +4535,7 @@ async function loadTopGames() {
           if (!candidatesByTeam[p.teamId]) candidatesByTeam[p.teamId] = [];
           // Avoid duplicates (player in both MVP and ROY for example)
           if (!candidatesByTeam[p.teamId].find(c => c.pid === p.pid)) {
-            candidatesByTeam[p.teamId].push({ pid: p.pid, name: p.name, label, rank: i+1 });
+            candidatesByTeam[p.teamId].push({ pid: p.pid, name: p.name, label, rank: i+1, position: p.position || (label==='CY'?'P':'') });
           }
         });
       };
@@ -4566,16 +4570,23 @@ async function loadTopGames() {
           if (pos === 'P' || pos === 'TWP') pitcherPids.add(pid);
           else hitterPids.add(pid);
         });
-        tgRosterCache[teamId] = { hitterPids, pitcherPids, ilPids };
+        // Track which pitchers are starters vs relievers
+        // We use pitcherApps from the main roster fetch — here we use a simple heuristic:
+        // fetch season stats to classify SPs (GS > 0 and GS/GP > 0.4)
+        const spPids = new Set();
+        // We'll populate spPids after stat fetch — store all pitcher pids for now
+        tgRosterCache[teamId] = { hitterPids, pitcherPids, ilPids, spPids };
         return tgRosterCache[teamId];
       } catch(e) { return { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() }; }
     }
 
-    // Build "Players to Watch" for a team in a game — top 3 candidates not on IL
-    function playersToWatch(teamId, excludeIlPids) {
+    // Build "Players to Watch" for a team in a game
+    // Excludes: IL players, starting pitchers (they won't appear twice)
+    function playersToWatch(teamId, excludeIlPids, excludeSpPids) {
       const candidates = candidatesByTeam[teamId] || [];
       return candidates
         .filter(c => !excludeIlPids.has(c.pid))
+        .filter(c => !(excludeSpPids && excludeSpPids.has(c.pid)))
         .slice(0, 3);
     }
 
@@ -4626,6 +4637,19 @@ async function loadTopGames() {
         ]);
       }
     }
+
+    // Classify SPs in each team's roster cache using fetched pitch stats
+    [...allGameTeamIds].forEach(tid => {
+      const rc = tgRosterCache[tid];
+      if (!rc) return;
+      rc.pitcherPids.forEach(pid => {
+        const ps = ptwPitchStats[pid] || pitcherStats[pid];
+        if (!ps) return;
+        const gs = parseInt(ps.gamesStarted||0);
+        const gp = parseInt(ps.gamesPitched||0);
+        if (gs >= 1 && gp > 0 && (gs/gp) >= 0.4) rc.spPids.add(pid);
+      });
+    });
 
     // Score a game — now includes MVP/CY candidate bonus
     function scoreGame(g) {
@@ -4790,16 +4814,19 @@ async function loadTopGames() {
       // Players to Watch — rich cards like ROSTER tab
       const awayRoster = tgRosterCache[away.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() };
       const homeRoster = tgRosterCache[home.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() };
-      const awayWatch = playersToWatch(away.team.id, awayRoster.ilPids);
-      const homeWatch = playersToWatch(home.team.id, homeRoster.ilPids);
+      const awayWatch = playersToWatch(away.team.id, awayRoster.ilPids, awayRoster.spPids);
+      const homeWatch = playersToWatch(home.team.id, homeRoster.ilPids, homeRoster.spPids);
 
       function ptwPlayerCard(c, align) {
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${c.pid}/headshot/67/current`;
-        // Determine if hitter or pitcher based on available stats
+        // Determine if hitter or pitcher: CY candidates are pitchers, MVP/ROY use stats
         const hs = ptwHitStats[c.pid];
         const ps = ptwPitchStats[c.pid];
-        const isPitcher = ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0));
+        const isPitcher = c.label === 'CY' || (ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0)));
         const isRight = align === 'right';
+        // Position badge
+        const pos = c.position || (isPitcher ? 'P' : '');
+        const posBadge = pos ? `<span style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:rgba(107,114,128,.12);color:var(--muted);margin-left:4px">${pos}</span>` : '';
         if (isPitcher) {
           const forma = calcBaseScore(parseFloat(ps.era), parseFloat(ps.whip));
           const color = getDiamondPlayerColor(forma, 'pitcher');
@@ -4811,7 +4838,7 @@ async function loadTopGames() {
               <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
               <div style="min-width:0;text-align:${align}">
-                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</div>
+                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}${posBadge}</div>
                 <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'}</div>
               </div>
             </div>
@@ -4833,7 +4860,7 @@ async function loadTopGames() {
               <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
               <div style="min-width:0;text-align:${align}">
-                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</div>
+                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}${posBadge}</div>
                 <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'}</div>
               </div>
             </div>
@@ -4850,7 +4877,7 @@ async function loadTopGames() {
           <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
             <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
               onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-            <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</div>
+            <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}${posBadge}</div>
           </div>
         </div>`;
       }
@@ -4881,7 +4908,7 @@ async function loadTopGames() {
             ${spMini(awayPid, awayPName, awayF, awayS, 'left')}
             ${ptwSection(awayWatch, 'left')}
           </div>
-          <div style="text-align:center;font-family:'Bebas Neue';font-size:18px;color:var(--muted);padding-top:8px">@</div>
+          <div class="tg-detail-at" style="text-align:center;font-family:'Bebas Neue';font-size:18px;color:var(--muted);padding-top:8px">@</div>
           <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
             <div style="display:flex;align-items:center;gap:8px;flex-direction:row-reverse">
               <img src="${homeMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
