@@ -823,8 +823,8 @@
   .sr { color: var(--loss); font-weight: 700; }   /* red    — poor  */
   /* Next game line */
   .mvp-next {
-    font-size: 9.5px; font-weight: 600; color: var(--muted);
-    margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    margin-top: 3px; white-space: normal; line-height: 1.3;
   }
   .mvp-next.today { color: var(--accent); }
   .mvp-next.unconfirmed { opacity: .45; font-weight: 400; }
@@ -844,7 +844,7 @@
   .mvp-score-block { text-align: right; }
   .mvp-score-val {
     font-family: 'Barlow Condensed'; font-weight: 800; font-size: 20px;
-    color: var(--accent); line-height: 1;
+    color: var(--win); line-height: 1;
   }
   .mvp-score-lbl {
     font-size: 8px; font-weight: 700; color: var(--muted);
@@ -4154,11 +4154,11 @@ function nextGameHTML(p, awardType) {
     const isStarter = (parseInt(p.s?.gamesStarted||0) > 0);
     const label = isStarter ? 'Próximo inicio' : 'Próximo partido';
     if (game.probablePids.has(p.pid))
-      return `<div class="mvp-next${todayCls}">⚾ ${label}: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
+      return `<div class="mvp-next${todayCls}">${label}: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
     else
-      return `<div class="mvp-next unconfirmed">⚾ ${label}: sin confirmar</div>`;
+      return `<div class="mvp-next unconfirmed">${label}: sin confirmar</div>`;
   }
-  return `<div class="mvp-next${todayCls}">⚾ Próximo partido: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
+  return `<div class="mvp-next${todayCls}">Próximo partido: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
 }
 
 function ilBadgeHTML(p) {
@@ -5847,15 +5847,19 @@ async function loadMVPTracker() {
       }
     }
 
-    function trendArrow(trend) {
+    function trendArrow(trend, rank) {
       if (!trend) return '·';
       if (trend.kind === 'up')   return '↑';
+      // Rank 1: never show down arrow — cap at flat
+      if (trend.kind === 'down' && rank === 1) return '→';
       if (trend.kind === 'down') return '↓';
       return '→';
     }
-    function trendColor(trend) {
+    function trendColor(trend, rank) {
       if (!trend) return 'color:var(--muted);opacity:.4';
       if (trend.kind === 'up')   return 'color:var(--win)';
+      // Rank 1: down trend shows as muted (not red) — could lose lead but still #1
+      if (trend.kind === 'down' && rank === 1) return 'color:var(--muted)';
       if (trend.kind === 'down') return 'color:var(--loss)';
       return 'color:var(--muted)';
     }
@@ -6015,7 +6019,7 @@ async function loadMVPTracker() {
           <div class="mvp-score-val">${score}</div>
           <div class="mvp-score-lbl">${awardType === 'roy' ? 'SCORE' : 'SCORE'}</div>
         </div>
-        <div class="mvp-trend" style="${trendColor(trend)}" title="${trendTitle(trend)}">${trendArrow(trend)}</div>
+        <div class="mvp-trend" style="${trendColor(trend, p.rank)}" title="${trendTitle(trend)}">${trendArrow(trend, p.rank)}</div>
       </div>`;
     }
 
