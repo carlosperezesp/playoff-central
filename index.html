@@ -906,8 +906,8 @@
   .tg-teams { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
   .tg-team-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
   .tg-abbr { font-family: 'Barlow Condensed'; font-weight: 800; font-size: 16px; }
-  .tg-score { font-family: 'Bebas Neue'; font-size: 18px; color: var(--text); margin: 0 6px; }
-  .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 6px; }
+  .tg-score { font-family: 'Bebas Neue'; font-size: 18px; color: var(--text); margin: 0 2px; }
+  .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 3px; }
   .tg-time { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 10px; }
   .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; }
   .tg-detail { display: none; background: #f8f9fd; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
@@ -4704,7 +4704,6 @@ async function loadTopGames() {
       const boldA = awayWon ? 'font-weight:800;color:var(--text)' : 'color:var(--muted)';
       const boldH = homeWon ? 'font-weight:800;color:var(--text)' : 'color:var(--muted)';
       return `<div class="tg-game-row" style="cursor:default">
-        <div class="tg-score-dot" style="background:var(--border)"></div>
         <div class="tg-teams">
           <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
           <span class="tg-abbr" style="${boldA}">${awayMeta.abbr}</span>
@@ -4747,8 +4746,8 @@ async function loadTopGames() {
 
       // Tier badges on the row
       let tierBadge = '';
-      if (tier === 'green') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px">TOP</span>`;
-      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(26,86,219,.1);color:var(--accent);letter-spacing:.5px">GOOD</span>`;
+      if (tier === 'green') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px">TOP MATCH</span>`;
+      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(26,86,219,.1);color:var(--accent);letter-spacing:.5px">TOP MATCH</span>`;
 
       // Detail panel
       const awayPid = away.probablePitcher?.id;
@@ -4830,34 +4829,40 @@ async function loadTopGames() {
         const ps = ptwPitchStats[c.pid];
         const isPitcher = c.label === 'CY' || (ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0)));
         const pos = c.position || (isPitcher ? 'P' : '');
-        const posBadge = pos ? `<span style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:rgba(107,114,128,.12);color:var(--muted);margin-left:4px">${pos}</span>` : '';
-        // Team pill (logo + abbr)
+        // Team pill
         const tm = c.teamMeta;
-        const teamPill = tm ? `<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-          <img src="${tm.logo}" style="width:16px;height:16px;object-fit:contain" onerror="this.style.display='none'">
+        const teamPill = tm ? `<span style="display:inline-flex;align-items:center;gap:3px;flex-shrink:0">
+          <img src="${tm.logo}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'">
           <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;color:var(--muted)">${tm.abbr}</span>
-        </div>` : '';
+        </span>` : '';
+        // Position badge — same style as TEAMS tab sec-pos-badge
+        const posBadge = pos ? `<span class="sec-pos-badge">${pos}</span>` : '';
 
+        // Shared layout: photo | name+pos+team / stats | bar+val+trend
+        // Exactly mirrors playerDetailHTML from TEAMS tab
         if (isPitcher && ps) {
           const forma = Math.max(0, calcBaseScore(parseFloat(ps.era), parseFloat(ps.whip)) ?? 0);
           const color = getDiamondPlayerColor(forma, 'pitcher');
           const barW = Math.min(100, Math.round((forma/100)*100));
           const career = ptwCareer[c.pid];
-          const trendHtml = (career?.formaScore != null) ? trendFormaHTML(forma, career.formaScore) : '';
-          return `<div style="display:grid;grid-template-columns:36px 1fr 52px;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-            <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);background:var(--surface2)"
-              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-            <div style="min-width:0">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <span style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</span>${posBadge}${teamPill}
+          const trendHtml = career?.formaScore != null ? trendFormaHTML(forma, career.formaScore) : '';
+          const statsLine = `ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'} · GS ${ps.gamesStarted??'—'}`;
+          return `<div class="impact-row">
+            <div class="impact-row-left">
+              <img class="impact-photo" src="${photoUrl}"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <div class="impact-name-block">
+                <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
+                <div class="impact-stats-line">${statsLine}</div>
               </div>
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'}</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">FORMA</div>
-              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;line-height:1;color:${color}">${forma}</div>
-              <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
-              ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
+            <div class="impact-bar-block">
+              <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+            </div>
+            <div class="impact-bar-val-wrap">
+              <span class="impact-bar-label">FORMA</span>
+              <span class="impact-bar-val" style="color:${color}">${forma}</span>
+              ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
           </div>`;
         } else if (hs) {
@@ -4865,43 +4870,46 @@ async function loadTopGames() {
           const color = getDiamondPlayerColor(ops, 'hitter');
           const barW = Math.min(100, Math.round((ops/1.2)*100));
           const career = ptwCareer[c.pid];
-          const trendHtml = (career?.ops && ops) ? trendBadgeHTML(ops, career.ops, 'ops') : '';
-          return `<div style="display:grid;grid-template-columns:36px 1fr 52px;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-            <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);background:var(--surface2)"
-              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-            <div style="min-width:0">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <span style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</span>${posBadge}${teamPill}
+          const trendHtml = career?.ops && ops ? trendBadgeHTML(ops, career.ops, 'ops') : '';
+          const statsLine = `AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'} · SB ${hs.stolenBases??'—'}`;
+          return `<div class="impact-row">
+            <div class="impact-row-left">
+              <img class="impact-photo" src="${photoUrl}"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <div class="impact-name-block">
+                <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
+                <div class="impact-stats-line">${statsLine}</div>
               </div>
-              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'}</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">OPS</div>
-              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;line-height:1;color:${color}">${ops>0?ops.toFixed(3):'—'}</div>
-              <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
-              ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
+            <div class="impact-bar-block">
+              <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+            </div>
+            <div class="impact-bar-val-wrap">
+              <span class="impact-bar-label">OPS</span>
+              <span class="impact-bar-val" style="color:${color}">${ops>0?ops.toFixed(3):'—'}</span>
+              ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
           </div>`;
         }
-        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-          <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
-            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</span>${posBadge}${teamPill}
+        // No stats yet
+        return `<div class="impact-row">
+          <div class="impact-row-left">
+            <img class="impact-photo" src="${photoUrl}"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+            <div class="impact-name-block">
+              <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
+            </div>
           </div>
         </div>`;
       }
 
       const detailHTML = `<div class="tg-detail" id="tgd-${gameId}">
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-          ${sameDivision ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span>` : ''}
-          ${venueName ? `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">📍 ${venueName}</span>` : ''}
-        </div>
+        ${sameDivision ? `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><span style="font-size:10px;font-weight:700;padding:2px 7px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span></div>` : ''}
         <div style="display:flex;flex-direction:column;gap:10px">
           ${spMini(awayPid, awayPName, awayF, awayS, awayMeta)}
           ${spMini(homePid, homePName, homeF, homeS, homeMeta)}
-          ${allWatch.length ? `<div style="background:#f8f9fd;border:1px solid #e4eaf5;border-radius:7px;padding:10px 12px">
-            <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:4px">PLAYERS TO WATCH</div>
+          ${allWatch.length ? `<div class="impact-detail-card">
+            <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
             ${allWatch.map(p => ptwPlayerCard(p)).join('')}
           </div>` : ''}
         </div>
@@ -4909,8 +4917,7 @@ async function loadTopGames() {
 
       return `<div>
         <div class="tg-game-row" id="tgr-${gameId}" onclick="tgToggleGame('${gameId}')">
-          <div class="tg-score-dot" style="background:${dotColor}"></div>
-          <div class="tg-teams">
+            <div class="tg-teams">
             <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
             <span class="tg-abbr">${awayMeta.abbr}</span>
             ${scoreHTML}
@@ -4918,7 +4925,10 @@ async function loadTopGames() {
             <img class="tg-team-logo" src="${homeMeta.logo}" onerror="this.style.display='none'" alt="">
           </div>
           <div class="tg-badges">${tierBadge}${statusBadge}</div>
-          <span class="tg-time">${timeStr}</span>
+          <div style="text-align:right;flex-shrink:0;padding-left:10px">
+            <div class="tg-time" style="padding:0">${timeStr}</div>
+            ${venueName ? `<div style="font-family:'Barlow Condensed';font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;margin-top:1px">${venueName}</div>` : ''}
+          </div>
         </div>
         ${detailHTML}
       </div>`;
