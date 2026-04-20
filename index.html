@@ -4765,45 +4765,49 @@ async function loadTopGames() {
       // Label: "STARTING PITCHER" if game is live or final, "PROBABLE SP" otherwise
       const spLabel = (state === 'Live' || state === 'Final') ? 'STARTING PITCHER' : 'PROBABLE SP';
 
-      // Rich pitcher card — same style as ROSTER tab
-      function spMini(pid, name, forma, stat, align) {
+      // Rich pitcher card
+      function spMini(pid, name, forma, stat, teamMeta) {
         const isTBD = !name;
         const color = forma !== null ? getDiamondPlayerColor(forma, 'pitcher') : 'var(--muted)';
-        let bg = 'var(--surface2)', border = 'var(--border)';
+        let bg = 'var(--surface2)', border = 'var(--border)', labelColor = 'var(--muted)';
         if (!isTBD && forma !== null) {
-          if      (forma >= 75) { bg = 'rgba(22,163,74,.09)';   border = 'rgba(22,163,74,.28)'; }
-          else if (forma >= 60) { bg = 'rgba(26,86,219,.08)';   border = 'rgba(26,86,219,.22)'; }
-          else if (forma >= 40) { bg = 'rgba(148,163,184,.12)'; border = 'rgba(148,163,184,.35)'; }
-          else                  { bg = 'rgba(220,38,38,.07)';   border = 'rgba(220,38,38,.22)'; }
+          if      (forma >= 75) { bg='rgba(22,163,74,.09)';   border='rgba(22,163,74,.28)';   labelColor='var(--win)'; }
+          else if (forma >= 60) { bg='rgba(26,86,219,.08)';   border='rgba(26,86,219,.22)';   labelColor='var(--accent)'; }
+          else if (forma >= 40) { bg='rgba(148,163,184,.12)'; border='rgba(148,163,184,.35)'; labelColor='var(--muted)'; }
+          else                  { bg='rgba(220,38,38,.07)';   border='rgba(220,38,38,.22)';   labelColor='var(--loss)'; }
         }
-        if (isTBD) return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px">
-          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
+        // Team pill
+        const teamPill = teamMeta ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
+          <img src="${teamMeta.logo}" style="width:16px;height:16px;object-fit:contain" onerror="this.style.display='none'">
+          <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;color:var(--muted)">${teamMeta.abbr}</span>
+        </div>` : '';
+        if (isTBD) return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;width:100%">
+          ${teamPill}
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
           <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">Por confirmar</div>
         </div>`;
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
         const ps = stat || ptwPitchStats[pid] || {};
-        const throws = ''; // we don't have throws here, skip
-        const era = ps.era||'—', whip = ps.whip||'—', ip = ps.inningsPitched||'—', gs = ps.gamesStarted??'—', qs = ps.qualityStarts != null ? ` · QS ${ps.qualityStarts}` : '';
+        const era = ps.era||'—', whip = ps.whip||'—', ip = ps.inningsPitched||'—', gs = ps.gamesStarted??'—';
+        const qs = ps.qualityStarts != null ? ` · QS ${ps.qualityStarts}` : '';
         const barW = forma !== null ? Math.min(100, Math.round((forma/100)*100)) : 0;
-        // Trend vs career
         const career = ptwCareer[pid];
-        let trendHtml = '';
-        if (career?.formaScore != null && forma != null) trendHtml = trendFormaHTML(forma, career.formaScore);
-        const isRight = align === 'right';
-        return `<div style="background:${bg};border:1px solid ${border};border-radius:7px;padding:8px 10px;width:100%">
-          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
+        const trendHtml = (career?.formaScore != null && forma != null) ? trendFormaHTML(forma, career.formaScore) : '';
+        return `<div style="background:${bg};border:1px solid ${border};border-radius:7px;padding:10px 12px;width:100%">
+          ${teamPill}
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
           <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
-            <div style="display:flex;align-items:center;gap:8px;flex-direction:${isRight?'row-reverse':'row'}">
+            <div style="display:flex;align-items:center;gap:8px">
               <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-              <div style="min-width:0;text-align:${align}">
+              <div style="min-width:0">
                 <div style="font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
                 <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${qs}</div>
               </div>
             </div>
             <div style="text-align:right">
               <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">FORMA</div>
-              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;line-height:1;color:${color}">${forma??'—'}</div>
+              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;line-height:1;color:${color}">${Math.max(0,forma??0)}</div>
               <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
               ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
             </div>
@@ -4811,40 +4815,47 @@ async function loadTopGames() {
         </div>`;
       }
 
-      // Players to Watch — rich cards like ROSTER tab
-      const awayRoster = tgRosterCache[away.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() };
-      const homeRoster = tgRosterCache[home.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set() };
-      const awayWatch = playersToWatch(away.team.id, awayRoster.ilPids, awayRoster.spPids);
-      const homeWatch = playersToWatch(home.team.id, homeRoster.ilPids, homeRoster.spPids);
+      // Players to Watch — merged, sorted by score, with team badge
+      const awayRoster = tgRosterCache[away.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set(), spPids: new Set() };
+      const homeRoster = tgRosterCache[home.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set(), spPids: new Set() };
+      const awayWatch = playersToWatch(away.team.id, awayRoster.ilPids, awayRoster.spPids).map(c => ({...c, teamMeta: awayMeta}));
+      const homeWatch = playersToWatch(home.team.id, homeRoster.ilPids, homeRoster.spPids).map(c => ({...c, teamMeta: homeMeta}));
 
-      function ptwPlayerCard(c, align) {
+      // Merge and sort by mvp score (rank is 1-20, lower = better, so sort ascending)
+      const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 6);
+
+      function ptwPlayerCard(c) {
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${c.pid}/headshot/67/current`;
-        // Determine if hitter or pitcher: CY candidates are pitchers, MVP/ROY use stats
         const hs = ptwHitStats[c.pid];
         const ps = ptwPitchStats[c.pid];
         const isPitcher = c.label === 'CY' || (ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0)));
-        const isRight = align === 'right';
-        // Position badge
         const pos = c.position || (isPitcher ? 'P' : '');
         const posBadge = pos ? `<span style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:rgba(107,114,128,.12);color:var(--muted);margin-left:4px">${pos}</span>` : '';
-        if (isPitcher) {
-          const forma = calcBaseScore(parseFloat(ps.era), parseFloat(ps.whip));
+        // Team pill (logo + abbr)
+        const tm = c.teamMeta;
+        const teamPill = tm ? `<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <img src="${tm.logo}" style="width:16px;height:16px;object-fit:contain" onerror="this.style.display='none'">
+          <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;color:var(--muted)">${tm.abbr}</span>
+        </div>` : '';
+
+        if (isPitcher && ps) {
+          const forma = Math.max(0, calcBaseScore(parseFloat(ps.era), parseFloat(ps.whip)) ?? 0);
           const color = getDiamondPlayerColor(forma, 'pitcher');
-          const barW = forma != null ? Math.min(100, Math.round((forma/100)*100)) : 0;
+          const barW = Math.min(100, Math.round((forma/100)*100));
           const career = ptwCareer[c.pid];
-          const trendHtml = (career?.formaScore != null && forma != null) ? trendFormaHTML(forma, career.formaScore) : '';
-          return `<div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-            <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
-              <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
-                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-              <div style="min-width:0;text-align:${align}">
-                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}${posBadge}</div>
-                <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'}</div>
+          const trendHtml = (career?.formaScore != null) ? trendFormaHTML(forma, career.formaScore) : '';
+          return `<div style="display:grid;grid-template-columns:36px 1fr 52px;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+            <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);background:var(--surface2)"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+            <div style="min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</span>${posBadge}${teamPill}
               </div>
+              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'}</div>
             </div>
             <div style="text-align:right">
               <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">FORMA</div>
-              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;line-height:1;color:${color}">${forma??'—'}</div>
+              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;line-height:1;color:${color}">${forma}</div>
               <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
               ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
             </div>
@@ -4855,14 +4866,14 @@ async function loadTopGames() {
           const barW = Math.min(100, Math.round((ops/1.2)*100));
           const career = ptwCareer[c.pid];
           const trendHtml = (career?.ops && ops) ? trendBadgeHTML(ops, career.ops, 'ops') : '';
-          return `<div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-            <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
-              <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
-                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-              <div style="min-width:0;text-align:${align}">
-                <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}${posBadge}</div>
-                <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted)">AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'}</div>
+          return `<div style="display:grid;grid-template-columns:36px 1fr 52px;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+            <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);background:var(--surface2)"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+            <div style="min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</span>${posBadge}${teamPill}
               </div>
+              <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'}</div>
             </div>
             <div style="text-align:right">
               <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">OPS</div>
@@ -4872,54 +4883,27 @@ async function loadTopGames() {
             </div>
           </div>`;
         }
-        // No stats yet — just name
-        return `<div style="padding:6px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-          <div style="display:flex;align-items:center;gap:7px;flex-direction:${isRight?'row-reverse':'row'}">
-            <img src="${photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
-              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-            <div style="font-weight:700;font-size:13px;color:var(--text)">${c.name}${posBadge}</div>
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+          <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
+            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:13px;color:var(--text)">${c.name}</span>${posBadge}${teamPill}
           </div>
-        </div>`;
-      }
-
-      function ptwSection(players, align) {
-        if (!players.length) return '';
-        const cards = players.map(p => ptwPlayerCard(p, align)).join('');
-        return `<div style="margin-top:10px;background:#f8f9fd;border:1px solid #e4eaf5;border-radius:7px;padding:8px 10px">
-          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
-          ${cards}
         </div>`;
       }
 
       const detailHTML = `<div class="tg-detail" id="tgd-${gameId}">
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:14px;flex-wrap:wrap">
           ${sameDivision ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span>` : ''}
           ${venueName ? `<span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">📍 ${venueName}</span>` : ''}
         </div>
-        <div class="tg-detail-grid">
-          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start">
-            <div style="display:flex;align-items:center;gap:8px">
-              <img src="${awayMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
-              <div>
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${awayMeta.name||awayMeta.abbr}</div>
-                <div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">${away.leagueRecord?.wins||0}-${away.leagueRecord?.losses||0}</div>
-              </div>
-            </div>
-            ${spMini(awayPid, awayPName, awayF, awayS, 'left')}
-            ${ptwSection(awayWatch, 'left')}
-          </div>
-          <div class="tg-detail-at" style="text-align:center;font-family:'Bebas Neue';font-size:18px;color:var(--muted);padding-top:8px">@</div>
-          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-            <div style="display:flex;align-items:center;gap:8px;flex-direction:row-reverse">
-              <img src="${homeMeta.logo}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">
-              <div style="text-align:right">
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px">${homeMeta.name||homeMeta.abbr}</div>
-                <div style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted)">${home.leagueRecord?.wins||0}-${home.leagueRecord?.losses||0}</div>
-              </div>
-            </div>
-            ${spMini(homePid, homePName, homeF, homeS, 'right')}
-            ${ptwSection(homeWatch, 'right')}
-          </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${spMini(awayPid, awayPName, awayF, awayS, awayMeta)}
+          ${spMini(homePid, homePName, homeF, homeS, homeMeta)}
+          ${allWatch.length ? `<div style="background:#f8f9fd;border:1px solid #e4eaf5;border-radius:7px;padding:10px 12px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:4px">PLAYERS TO WATCH</div>
+            ${allWatch.map(p => ptwPlayerCard(p)).join('')}
+          </div>` : ''}
         </div>
       </div>`;
 
