@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLB Playoff Central</title>
+<title>Baseball Fan Den</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -11,7 +11,8 @@
     --surface: #ffffff;
     --surface2: #eef1f6;
     --border: #dde2ea;
-    --accent: #1a56db;
+    --accent: #16a34a;
+    --accent-blue: #1a56db;
     --accent2: #e05a2b;
     --text: #111827;
     --muted: #6b7280;
@@ -22,42 +23,56 @@
   body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 
   header {
-    background: linear-gradient(135deg, #ffffff 0%, #f4f6f9 100%);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 8px rgba(0,0,0,.06);
+    background: #0f1923;
+    border-bottom: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,.18);
     padding: 0 24px;
     position: sticky; top: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
-    height: 60px;
+    height: 56px;
   }
-  .logo { font-family: 'Bebas Neue'; font-size: 28px; letter-spacing: 3px; color: var(--accent); }
-  .logo span { color: var(--text); }
+  .logo {
+    font-family: 'Bebas Neue'; font-size: 26px; letter-spacing: 3px;
+    color: #ffffff; display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px; background: var(--accent);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo span { color: var(--accent); }
   .season-badge {
-    background: var(--accent); color: #fff; font-family: 'Barlow Condensed'; font-weight: 700;
-    padding: 4px 12px; font-size: 13px; letter-spacing: 2px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff; font-family: 'Barlow Condensed'; font-weight: 700;
+    padding: 4px 12px; font-size: 12px; letter-spacing: 2px;
+    border-radius: 4px;
   }
 
   .tabs {
-    display: flex; gap: 0; border-bottom: 1px solid var(--border);
-    background: var(--surface); padding: 0 24px; overflow-x: auto;
+    display: flex; gap: 0; border-bottom: 2px solid var(--border);
+    background: var(--surface); padding: 0 20px; overflow-x: auto;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
   }
   .tab-btn {
-    background: none; border: none; color: var(--muted); font-family: 'Inter';
-    font-weight: 600; font-size: 13px; letter-spacing: .5px; padding: 16px 20px;
-    cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap;
+    background: none; border: none; color: var(--muted); font-family: 'Barlow Condensed';
+    font-weight: 700; font-size: 14px; letter-spacing: 1.5px; padding: 14px 18px;
+    cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
+    transition: all .2s; white-space: nowrap; text-transform: uppercase;
   }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn.active { color: #1a56db; border-bottom-color: #1a56db; }
   .tab-btn:hover:not(.active) { color: var(--text); }
 
-  main { padding: 28px 24px; max-width: 1400px; margin: 0 auto; }
+  main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
   .section-title {
-    font-family: 'Bebas Neue'; font-size: 22px; letter-spacing: 3px;
-    color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+    font-family: 'Bebas Neue'; font-size: 26px; letter-spacing: 3px;
+    color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
   }
-  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .section-title::after { content: ''; flex: 1; height: 2px; background: var(--border); }
+  .section-title::before { content: ''; width: 4px; height: 24px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
 
   .standings-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .standings-table th {
@@ -103,15 +118,15 @@
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   .legend-dot { width: 10px; height: 10px; }
   .legend-dot.div { background: var(--win); }
-  .legend-dot.wc { background: var(--accent); }
+  .legend-dot.wc { background: #1a56db; }
   .legend-dot.out { background: var(--loss); opacity: .6; }
 
   .divisions-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 32px; }
   .divisions-grid .division-card { flex: 1 1 calc(50% - 10px); min-width: 280px; }
   @media (max-width: 768px) { .divisions-grid .division-card { flex: 1 1 100%; min-width: 0; } }
-  .division-card { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.05); overflow: hidden; }
-  .division-header { background: var(--surface2); padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
-  .division-name { font-family: 'Bebas Neue'; font-size: 18px; letter-spacing: 2px; color: var(--text); }
+  .division-card { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden; border-radius: 8px; }
+  .division-header { background: var(--surface2); padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); border-left: 3px solid var(--accent); }
+  .division-name { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--text); }
   .division-league { font-family: 'Barlow Condensed'; font-size: 12px; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
   .div-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .div-table th { font-family: 'Barlow Condensed'; font-weight: 600; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--border); background: var(--surface); }
@@ -129,7 +144,7 @@
   .gb-val { font-family: 'Barlow Condensed'; font-weight: 600; }
   .gb-leader { color: var(--win); font-weight: 700; }
 
-  .tracker-section { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.05); padding: 20px; margin-bottom: 28px; }
+  .tracker-section { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid #1a56db; box-shadow: 0 2px 8px rgba(0,0,0,.06); padding: 20px; margin-bottom: 28px; border-radius: 0 8px 8px 0; }
   .tracker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
   .tracker-title { font-family: 'Bebas Neue'; font-size: 18px; letter-spacing: 2px; color: var(--text); }
   .tracker-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -140,7 +155,7 @@
   .tracker-div-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .tracker-div-btn { font-family: 'Barlow Condensed'; font-weight: 700; font-size: 12px; letter-spacing: 1px; padding: 5px 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap; }
   .tracker-div-btn:hover:not(.active) { color: var(--text); border-color: #aaa; }
-  .tracker-div-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tracker-div-btn.active { background: #1a56db; color: #fff; border-color: #1a56db; }
   .tracker-date-label { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--accent); }
   #trackerMaxGR { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--muted); font-weight: normal; }
   .hist-tip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 600; letter-spacing: .5px; padding: 3px 8px; white-space: nowrap; pointer-events: none; z-index: 20; margin-bottom: 4px; }
@@ -159,36 +174,52 @@
   @media (max-width: 768px) {
     .bottom-nav {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--surface); border-top: 1px solid var(--border);
-      box-shadow: 0 -2px 12px rgba(0,0,0,.08);
-      z-index: 200; height: 60px;
+      background: #0f1923;
+      border-top: none;
+      box-shadow: 0 -2px 16px rgba(0,0,0,.2);
+      z-index: 200; height: 58px;
       padding-bottom: env(safe-area-inset-bottom);
     }
     .bnav-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center;
       justify-content: center; gap: 3px; background: none; border: none;
-      color: var(--muted); cursor: pointer; padding: 6px 4px; transition: color .15s;
+      color: rgba(255,255,255,.4); cursor: pointer; padding: 6px 4px; transition: color .15s;
       font-family: 'Barlow Condensed'; font-size: 10px; font-weight: 700;
       letter-spacing: .8px; text-transform: uppercase;
     }
     .bnav-btn svg { width: 20px; height: 20px; }
     .bnav-btn.active { color: var(--accent); }
     #desktopTabs { display: none; }
-    main { padding-bottom: 72px; }
+    main { padding-bottom: 88px; }
   }
 
   /* ── STANDINGS VIEW TOGGLE ── */
   .standings-toggle {
-    display: flex; margin-bottom: 20px;
+    display: flex; margin-bottom: 0;
     border: 1px solid var(--border); overflow: hidden; width: fit-content;
+    border-radius: 6px;
   }
   .standings-toggle-btn {
     font-family: 'Barlow Condensed'; font-weight: 700; font-size: 13px;
-    letter-spacing: 1.5px; padding: 8px 20px; border: none; background: var(--surface2);
+    letter-spacing: 1.5px; padding: 8px 20px; border: none; background: var(--surface);
     color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap;
   }
   .standings-toggle-btn.active { background: var(--accent); color: #fff; }
-  .standings-toggle-btn:hover:not(.active) { color: var(--text); background: var(--border); }
+  .standings-toggle-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
+  /* Division card — clickable header */
+  .division-header { cursor: pointer; transition: background .12s; }
+  .division-header:hover { background: #e4e8f0; }
+  .division-header.selected { background: var(--accent); }
+  .division-header.selected .division-name,
+  .division-header.selected .division-league { color: #fff; }
+  .div-chevron { transition: transform .2s; color: var(--muted); flex-shrink: 0; }
+  .division-header.selected .div-chevron { color: rgba(255,255,255,.7); transform: rotate(180deg); }
+  /* Desktop: disable collapse, show all divisions, hide chevron */
+  @media (min-width: 769px) {
+    .division-header { cursor: default; pointer-events: none; }
+    .division-header:hover { background: var(--surface2); }
+    .div-chevron { display: none; }
+  }
 
   /* ── WILD CARD TABLE ── */
   .wc-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 8px; }
@@ -259,19 +290,19 @@
     .standings-table th, .standings-table td { padding: 7px 8px; }
     .team-cell { gap: 6px; }
     .team-logo-sm { width: 22px; height: 22px; }
-    /* Hide secondary columns on mobile — keep TEAM W L PCT GB L10 MN HIST */
-    .div-col-strk { display: none; }
+    /* Hide secondary columns on mobile — keep TEAM W L PCT L10 STRK HIST */
+    .div-col-strk { display: table-cell; }
     .div-col-l10, .div-col-mn, .div-col-hist { display: table-cell; }
     /* Show abbr instead of full name on mobile */
     .team-name-full { display: none; }
     .team-name-abbr { display: inline; }
     /* Hide DIV/WC badges on mobile, use row background color instead */
     .badge-div, .badge-wc { display: none; }
-    .div-table tr.div-leader td { background: rgba(22,163,74,.18); border-left: none; }
-    .div-table tr.div-leader:hover td { background: rgba(22,163,74,.26); }
-    .div-table tr.wc-spot td { background: rgba(26,86,219,.13); border-left: none; }
-    .div-table tr.wc-spot:hover td { background: rgba(26,86,219,.2); }
-    .div-table tr.elim-row td { background: rgba(107,114,128,.07); opacity: 1; color: var(--muted); }
+    .div-table tr.div-leader td { background: none; border-left: 3px solid var(--win); }
+    .div-table tr.div-leader:hover td { background: var(--surface2); }
+    .div-table tr.wc-spot td { background: none; border-left: 3px solid var(--accent); }
+    .div-table tr.wc-spot:hover td { background: var(--surface2); }
+    .div-table tr.elim-row td { background: none; opacity: .4; }
 
     /* Schedule rows — stack into 2-line layout */
     .game-row {
@@ -342,7 +373,7 @@
     cursor: pointer; border-bottom: 1px solid var(--border); transition: background .12s;
   }
   .team-selector-item:hover { background: var(--surface2); }
-  .team-selector-item.active { background: rgba(26,86,219,.07); border-left: 3px solid var(--accent); }
+  .team-selector-item.active { background: rgba(26,86,219,.07); border-left: 3px solid #1a56db; }
   .team-selector-item img { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; }
   .team-selector-name { font-weight: 600; font-size: 14px; color: var(--text); }
   .team-selector-abbr { font-size: 11px; color: var(--muted); margin-left: auto; letter-spacing: .5px; }
@@ -552,7 +583,7 @@
     padding: 2px 6px; border-radius: 3px; white-space: nowrap;
   }
   .team-stat-rank.top      { background: rgba(22,163,74,.12);  color: var(--win); }
-  .team-stat-rank.mid-blue { background: rgba(26,86,219,.10);  color: var(--accent); }
+  .team-stat-rank.mid-blue { background: rgba(26,86,219,.10);  color: #1a56db; }
   .team-stat-rank.mid      { background: rgba(107,114,128,.1); color: var(--muted); }
   .team-stat-rank.bot      { background: rgba(220,38,38,.10);  color: var(--loss); }
   .team-stat-bar-wrap { position: relative; height: 5px; background: var(--border); border-radius: 999px; overflow: visible; }
@@ -571,7 +602,7 @@
     border: 1px solid var(--border);
   }
   .innings-bar-sp {
-    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    background: #1a56db; display: flex; align-items: center; justify-content: center;
     font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; color: #fff;
     letter-spacing: .5px; transition: width .4s ease; white-space: nowrap; overflow: hidden;
     min-width: 0;
@@ -609,7 +640,7 @@
     margin-top: 3px; line-height: 1.2;
   }
   .trend-up-strong { background: rgba(22,163,74,.15);  color: var(--win); }
-  .trend-up        { background: rgba(26,86,219,.12);  color: var(--accent); }
+  .trend-up        { background: rgba(26,86,219,.12);  color: #1a56db; }
   .trend-flat      { background: rgba(107,114,128,.1); color: var(--muted); }
   .trend-down      { background: rgba(220,38,38,.10);  color: var(--loss); }
   .trend-down-strong { background: rgba(220,38,38,.18); color: var(--loss); }
@@ -743,7 +774,7 @@
     border-radius: 4px; transition: all .15s; white-space: nowrap;
   }
   .mvp-tab-btn.active {
-    background: var(--accent); color: #fff; border-color: var(--accent);
+    background: #1a56db; color: #fff; border-color: #1a56db;
   }
   .mvp-tab-btn:hover:not(.active) { color: var(--text); border-color: #aaa; }
 
@@ -752,7 +783,7 @@
 
   .mvp-tracker-card {
     background: var(--surface); border: 1px solid var(--border);
-    box-shadow: 0 1px 6px rgba(0,0,0,.06); overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07); overflow: hidden; border-radius: 8px;
   }
   .mvp-card-header {
     background: var(--surface2); padding: 12px 16px;
@@ -818,7 +849,7 @@
   }
   /* Colored stat chips inside mvp-why */
   .sw { color: var(--win);  font-weight: 700; }   /* green  — elite */
-  .sb { color: var(--accent); font-weight: 700; } /* blue   — good  */
+  .sb { color: #1a56db; font-weight: 700; } /* blue   — good  */
   .sg { color: var(--muted); }                    /* grey   — average */
   .sr { color: var(--loss); font-weight: 700; }   /* red    — poor  */
   /* Next game line */
@@ -889,13 +920,13 @@
     letter-spacing: 1px; margin-top: 12px; text-align: right;
   }
   /* ── TOP GAMES ACCORDION ── */
-  .tg-day-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-  .tg-day-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; user-select: none; background: var(--surface2); border-bottom: 1px solid transparent; transition: background .12s; }
+  .tg-day-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .tg-day-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; cursor: pointer; user-select: none; background: #0f1923; border-bottom: 1px solid transparent; transition: background .12s; }
   .tg-day-header:hover { background: #e8ecf4; }
   .tg-day-header.open { border-bottom-color: var(--border); }
-  .tg-day-title { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--text); }
-  .tg-day-count { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
-  .tg-day-chevron { transition: transform .2s; color: var(--muted); flex-shrink: 0; }
+  .tg-day-title { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: #ffffff; }
+  .tg-day-count { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.5); letter-spacing: .5px; }
+  .tg-day-chevron { transition: transform .2s; color: rgba(255,255,255,.5); flex-shrink: 0; }
   .tg-day-chevron.open { transform: rotate(180deg); }
   .tg-day-body { display: none; }
   .tg-day-body.open { display: block; }
@@ -913,19 +944,28 @@
   .tg-detail { display: none; background: #f8f9fd; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
   .tg-detail.open { display: block; }
   .tg-detail-grid { display: grid; grid-template-columns: 1fr 36px 1fr; gap: 10px; align-items: start; }
+  /* Detail inner: 2 cols on desktop, 1 col on mobile */
+  .tg-detail-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0; }
+  .tg-detail-col { display: flex; flex-direction: column; gap: 8px; }
   @media (max-width: 768px) {
     .tg-day-title { font-size: 16px; }
     .tg-game-row { padding: 10px 14px; }
     .tg-detail { padding: 12px 14px 14px; }
     .tg-detail-grid { display: flex; flex-direction: column; gap: 12px; }
     .tg-detail-at { display: none; }
+    .tg-detail-inner { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">MLB <span>PLAYOFF</span> CENTRAL</div>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.5" fill="none"/><path d="M7 12 C8 8 10 6 12 6 C14 6 16 8 17 12 C16 16 14 18 12 18 C10 18 8 16 7 12Z" stroke="white" stroke-width="1.5" fill="none"/><line x1="5" y1="9" x2="9" y2="10.5" stroke="white" stroke-width="1"/><line x1="5" y1="15" x2="9" y2="13.5" stroke="white" stroke-width="1"/><line x1="19" y1="9" x2="15" y2="10.5" stroke="white" stroke-width="1"/><line x1="19" y1="15" x2="15" y2="13.5" stroke="white" stroke-width="1"/></svg>
+    </div>
+    BASEBALL <span>FAN</span> DEN
+  </div>
   <div class="season-badge" id="seasonBadge">2026 SEASON</div>
 </header>
 
@@ -955,6 +995,10 @@
 
 
   <div id="tab-mvp" class="tab-panel">
+    <div id="mvpBreadcrumb" style="display:none;align-items:center;gap:8px;padding:0 0 12px;cursor:pointer;color:#1a56db" onclick="switchTab('topgames')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;letter-spacing:.5px">TOP GAMES</span>
+    </div>
     <div id="mvpContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING MVP TRACKER...</div></div></div>
   </div>
 
@@ -969,9 +1013,15 @@
           <div class="loading"><div class="spinner"></div><div class="loading-text">LOADING...</div></div>
         </div>
       </div>
-      <div class="diamond-panel" id="diamondPanel">
-        <div style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--muted);font-family:'Barlow Condensed';letter-spacing:2px;font-size:14px">
-          ← SELECT A TEAM TO VIEW DIAMOND
+      <div style="flex:1;min-width:0">
+        <div id="rosterBreadcrumb" style="display:none;align-items:center;gap:8px;padding:8px 0 12px;cursor:pointer;color:#1a56db" onclick="switchTab('standings')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;letter-spacing:.5px">CLASIFICACIONES</span>
+        </div>
+        <div class="diamond-panel" id="diamondPanel">
+          <div style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--muted);font-family:'Barlow Condensed';letter-spacing:2px;font-size:14px">
+            ← SELECT A TEAM TO VIEW DIAMOND
+          </div>
         </div>
       </div>
     </div>
@@ -1304,13 +1354,15 @@ async function renderStandings() {
   };
 
   let html = `
-    <div class="standings-toggle">
-      <button class="standings-toggle-btn active" onclick="setStandingsView('division')">DIVISION</button>
-      <button class="standings-toggle-btn" onclick="setStandingsView('wildcard')">WILD CARD</button>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap">
+      <div class="standings-toggle">
+        <button class="standings-toggle-btn active" onclick="setStandingsView('division')">DIVISION STANDINGS</button>
+        <button class="standings-toggle-btn" onclick="setStandingsView('wildcard')">WILD CARD RACE</button>
+      </div>
+      <span id="standingsDateInfo" style="font-family:'Bebas Neue';font-size:16px;letter-spacing:1.5px;color:#1a56db"></span>
     </div>
     <div id="view-division">
-      <div id="trackerWidget"></div>
-      <div class="legend" style="margin-bottom:20px;margin-top:16px">
+      <div class="legend" style="margin-bottom:16px">
         <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
         <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
         <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
@@ -1388,8 +1440,8 @@ async function renderStandings() {
           <div class="team-cell" style="gap:7px">
             ${badge}
             <img class="team-logo-sm" style="width:22px;height:22px" src="https://www.mlbstatic.com/team-logos/${tid}.svg" onerror="this.style.display='none'" alt="">
-            <span class="team-name-full" style="font-weight:500;font-size:14px">${displayName}</span>
-            <span class="team-name-abbr" style="font-weight:600;font-size:14px">${meta.abbr}</span>
+            <span class="team-name-full" style="font-weight:500;font-size:14px;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:2px" onmouseover="this.style.textDecorationColor='var(--accent)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="goToTeam(${tid})">${displayName}</span>
+            <span class="team-name-abbr" style="font-weight:600;font-size:14px;cursor:pointer" onclick="goToTeam(${tid})">${meta.abbr}</span>
           </div>
         </td>
         <td class="r">${tr.wins}</td>
@@ -1413,27 +1465,115 @@ async function renderStandings() {
     // On desktop: AL (league 103) goes in left column, NL in right. On mobile: AL first (natural order).
     const isAL = leagueId === 103;
     const cardOrder = isAL ? (alIdx++) : (3 + nlIdx++); // AL: order 0,1,2 → left col; NL: order 3,4,5 → right col
-    html += `<div class="division-card" style="order:${cardOrder}">
-      <div class="division-header">
-        <span class="division-name">${dm.name}</span>
-        <span class="division-league">${isAL ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
+    html += `<div class="division-card" id="divcard-${divId}" style="order:${cardOrder}">
+      <div class="division-header" id="divhdr-${divId}" onclick="toggleDivision(${divId})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="division-name">${dm.name}</span>
+          <span class="division-league">${isAL ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
+        </div>
+        <svg class="div-chevron" id="divchev-${divId}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <table class="div-table">
-        <thead><tr>
-          <th>TEAM</th><th class="r">W</th><th class="r">L</th>
-          <th class="r">PCT</th><th class="r div-col-l10" style="white-space:nowrap">L10</th><th class="r div-col-strk">STRK</th><th class="r div-col-mn" style="${mnColStyle}">MN</th><th class="r div-col-hist" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
-        </tr></thead>
-        <tbody>${rows.replace(/class="r div-col-mn"/g, `class="r div-col-mn" style="${mnColStyle}"`)}</tbody>
-      </table>
+      <div id="divbody-${divId}">
+        <table class="div-table">
+          <thead><tr>
+            <th>TEAM</th><th class="r">W</th><th class="r">L</th>
+            <th class="r">PCT</th><th class="r div-col-l10" style="white-space:nowrap">L10</th><th class="r div-col-strk">STRK</th><th class="r div-col-mn" style="${mnColStyle}">MN</th><th class="r div-col-hist" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
+          </tr></thead>
+          <tbody>${rows.replace(/class="r div-col-mn"/g, `class="r div-col-mn" style="${mnColStyle}"`)}</tbody>
+        </table>
+      </div>
     </div>`;
   });
 
   html += `</div>`;
   el.innerHTML = html;
-  // Load tracker in background — don't block standings render
-  setTimeout(() => initTracker(), 0);
+
+  // Update date info label
+  const dateInfo = document.getElementById('standingsDateInfo');
+  if (dateInfo) {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
+    dateInfo.textContent = dateStr;
+    // GR will be updated when loadGamesRemaining resolves
+  }
+
+  // Pre-load tracker data in background (no UI yet)
+  loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
+
   // Render wild card tables
   renderWildCardTables();
+}
+
+// ── DIVISION TOGGLE ───────────────────────────────────────────────────────
+let activeDivisionId = null; // null = show all
+
+function toggleDivision(divId) {
+  // Desktop: no collapse, all divisions always visible
+  if (window.innerWidth > 768) return;
+  const wasActive = activeDivisionId === divId;
+
+  // Collapse all divisions
+  document.querySelectorAll('.division-card').forEach(card => {
+    card.style.display = '';
+  });
+  document.querySelectorAll('[id^="divhdr-"]').forEach(hdr => hdr.classList.remove('selected'));
+
+  // Hide tracker and remove from DOM
+  const trackerContainer = document.getElementById('divTrackerContainer');
+  if (trackerContainer) trackerContainer.remove();
+
+  if (wasActive) {
+    // Toggle off — show all, hide tracker
+    activeDivisionId = null;
+    return;
+  }
+
+  // Activate this division
+  activeDivisionId = divId;
+  document.getElementById(`divhdr-${divId}`)?.classList.add('selected');
+
+  // Hide all OTHER division cards
+  document.querySelectorAll('.division-card').forEach(card => {
+    if (card.id !== `divcard-${divId}`) card.style.display = 'none';
+  });
+
+  // Inject tracker container ABOVE the active division card
+  const divCard = document.getElementById(`divcard-${divId}`);
+  const grid = document.getElementById('divisionsGrid');
+  if (!divCard || !grid) return;
+
+  // Find the TRACKER_DIVISIONS entry to match divId → tracker division
+  const trackerDiv = TRACKER_DIVISIONS[divId];
+  if (!trackerDiv) return;
+
+  // Insert tracker container after the divisionsGrid (outside flex layout)
+  const container = document.createElement('div');
+  container.id = 'divTrackerContainer';
+  container.style.marginTop = '12px';
+  container.style.marginBottom = '16px';
+  container.innerHTML = `<div id="trackerWidget"></div>`;
+  grid.parentNode.insertBefore(container, grid.nextSibling);
+
+  // Set tracker to this division and draw
+  trackerCurrentDiv = parseInt(divId);
+  initTracker();
+
+  // Update GR label after tracker loads
+  loadGamesRemaining(
+    Array.from(document.querySelectorAll(`#divcard-${divId} [onclick*="goToTeam"]`))
+      .map(el => { const m = el.getAttribute('onclick').match(/\d+/); return m ? parseInt(m[0]) : null; })
+      .filter(Boolean)
+  ).then(rem => {
+    const maxGR = Math.max(0, ...Object.values(rem));
+    const dateInfo = document.getElementById('standingsDateInfo');
+    const trackerGR = document.getElementById('trackerMaxGR');
+    if (dateInfo && maxGR > 0) {
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
+      dateInfo.textContent = `${dateStr} · ${maxGR} GR`;
+    }
+    if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
+  }).catch(()=>{});
 }
 
 // ── STANDINGS VIEW TOGGLE ─────────────────────────────────────────────────
@@ -1446,6 +1586,17 @@ function setStandingsView(view) {
   });
   document.getElementById('view-division').style.display = view === 'division' ? '' : 'none';
   document.getElementById('view-wildcard').style.display = view === 'wildcard' ? '' : 'none';
+  const divGrid = document.getElementById('divisionsGrid');
+  if (divGrid) divGrid.style.display = view === 'wildcard' ? 'none' : '';
+
+  // When switching to wild card, collapse any open division
+  if (view === 'wildcard' && activeDivisionId !== null) {
+    toggleDivision(activeDivisionId); // toggle off
+  }
+  // When switching back to division, show all cards
+  if (view === 'division') {
+    document.querySelectorAll('.division-card').forEach(c => c.style.display = '');
+  }
 }
 
 function renderWildCardTables() {
@@ -1463,7 +1614,7 @@ function renderWildCardTables() {
     const rest = all.filter(t => !divLeaderIds.has(t.team.id)).sort((a,b) => parseFloat(b.winningPercentage)-parseFloat(a.winningPercentage));
     const ordered = [...divLeaders, ...rest];
     const wcIds = new Set(ordered.filter(t => !divLeaderIds.has(t.team.id)).slice(0,3).map(t => t.team.id));
-    const cutoffIdx = 5; // after 3 div leaders + 3 wc = 6 spots
+    const cutoffIdx = 6; // border-top on 7th row (after 6 playoff spots)
 
     let rows = ordered.map((t, i) => {
       const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr:'???' };
@@ -1473,7 +1624,8 @@ function renderWildCardTables() {
       const rowCls = isElim ? 'wc-elim' : isDivW ? 'wc-div' : isWC ? 'wc-wc' : '';
       const pct = parseFloat(t.winningPercentage||0).toFixed(3).replace(/^0/,'');
       const wcgb = parseFloat(t.wildCardGamesBack);
-      const wcgbStr = isNaN(wcgb) || wcgb <= 0 ? '—' : `+${wcgb}`;
+      // Format: in-playoff teams show '—', others show plain number (no +)
+      const wcgbStr = (isNaN(wcgb) || wcgb <= 0 || isDivW || isWC) ? '—' : `${wcgb}`;
       const l10 = t.records?.splitRecords?.find(s=>s.type==='lastTen');
       const l10w = l10?.wins ?? 0, l10l = l10?.losses ?? 0;
       const l10color = l10w > l10l ? 'var(--win)' : l10w < l10l ? 'var(--loss)' : 'var(--text)';
@@ -1494,7 +1646,7 @@ function renderWildCardTables() {
         <td class="r">${t.wins}</td>
         <td class="r">${t.losses}</td>
         <td class="r">${pct}</td>
-        <td class="r" style="color:${isWC||isDivW?'var(--win)':'var(--muted)'}">${wcgbStr}</td>
+        <td class="r" style="color:${isDivW?'var(--win)':isWC?'var(--accent)':'var(--muted)'}">${wcgbStr}</td>
         <td class="r wc-col-l10"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10w}-${l10l}</span></td>
         <td>${badge}</td>
       </tr>`;
@@ -1821,23 +1973,21 @@ async function initTracker() {
   const wrap = document.getElementById('trackerWidget');
   if (!wrap) return;
 
-  const divBtns = Object.entries(TRACKER_DIVISIONS).map(([id,d])=>
-    `<button class="tracker-div-btn ${parseInt(id)===trackerCurrentDiv?'active':''}" data-divid="${id}" onclick="changeTrackerDiv(${id})">${d.name}</button>`
-  ).join('');
+  // Division name for the header
+  const divName = TRACKER_DIVISIONS[trackerCurrentDiv]?.name || '';
 
   wrap.innerHTML = `<div class="tracker-section">
     <div class="tracker-header">
-      <span class="tracker-title">WIN% TRACKER</span>
+      <span class="tracker-title">WIN% · ${divName}</span>
       <span style="display:flex;align-items:baseline;gap:6px">
         <span class="tracker-date-label" id="trackerDateLabel">—</span>
         <span id="trackerMaxGR"></span>
       </span>
     </div>
-    <div class="tracker-div-pills" id="trackerDivPills">${divBtns}</div>
     <div style="position:relative;user-select:none">
-      <canvas id="trackerCanvas" height="240" style="cursor:crosshair"></canvas>
+      <canvas id="trackerCanvas" height="200" style="cursor:crosshair"></canvas>
       <div id="trackerOverlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none">
-        <span class="tracker-loading" id="trackerLoadingMsg">CARGANDO DATOS HISTÓRICOS…</span>
+        <span class="tracker-loading" id="trackerLoadingMsg">CARGANDO…</span>
       </div>
       <div id="trackerTooltip" style="display:none;position:absolute;background:#fff;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.12);padding:10px 14px;pointer-events:none;min-width:160px;z-index:10;font-size:12px"></div>
     </div>
@@ -1851,8 +2001,14 @@ async function initTracker() {
     }
   }, 100);
 
-  // Fire tracker load completely in background — don't block anything
-  loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
+  // If data already loaded, draw immediately; otherwise load
+  if (trackerLoaded) {
+    const loadMsg = document.getElementById('trackerLoadingMsg');
+    if (loadMsg) loadMsg.style.display = 'none';
+    drawTracker(trackerDates.length - 1);
+  } else {
+    loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
+  }
 }
 
 async function loadTrackerData() {
@@ -2595,6 +2751,37 @@ function toggleTeamSelector(forceOpen) {
   if (chevron) chevron.style.transform = shouldOpen ? '' : 'rotate(-90deg)';
 }
 
+// Navigate from Top Games to MVP tracker — shows breadcrumb back to Top Games
+function goToMVPFromTopGames(awardType) {
+  window._fromTopGames = true;
+  window._fromTopGamesAwardType = awardType;
+  // Map award type to filter
+  const filterMap = { MVP: 'mvp', CY: 'cy', ROY: 'roy' };
+  const filter = filterMap[awardType] || 'all';
+  switchTab('mvp');
+  // Apply filter once MVP loads
+  setTimeout(() => {
+    if (window._renderMVPView) {
+      setMVPFilter(filter);
+    }
+  }, 300);
+}
+
+// Navigate from standings to a team — shows breadcrumb back to standings
+function goToTeam(teamId) {
+  window._fromStandings = true;
+  switchTab('rosters');
+  // Wait for rosters to load then select the team
+  const trySelect = () => {
+    if (document.getElementById(`ts-${teamId}`)) {
+      selectTeam(teamId);
+    } else {
+      setTimeout(trySelect, 150);
+    }
+  };
+  setTimeout(trySelect, 100);
+}
+
 async function selectTeam(teamId) {
   document.querySelectorAll('.team-selector-item').forEach(el => el.classList.remove('active'));
   const selEl = document.getElementById(`ts-${teamId}`);
@@ -2617,6 +2804,16 @@ async function selectTeam(teamId) {
 
   selectedTeamId = teamId;
   selectedDiamondKey = null;
+
+  // Breadcrumb: show "← Clasificaciones" if arrived from standings
+  const breadcrumbEl = document.getElementById('rosterBreadcrumb');
+  if (breadcrumbEl) {
+    if (window._fromStandings) {
+      breadcrumbEl.style.display = 'flex';
+    } else {
+      breadcrumbEl.style.display = 'none';
+    }
+  }
 
   const panel = document.getElementById('diamondPanel');
 
@@ -2815,15 +3012,24 @@ async function fetchTeamImpact(teamId) {
         const pos = pl.position?.abbreviation;
         if (!pid) return;
 
+        // Use allPositions if available — it lists every position played in this game
+        // e.g. a catcher who also pinch ran will have ['C','PR'] in allPositions
+        // The FIRST entry in allPositions is the primary position for this game
+        const allPos = pl.allPositions || [];
+        // Primary game position: first in allPositions if available, else position
+        const gamePrimaryPos = allPos.length > 0 ? allPos[0].abbreviation : pos;
+
         // Track hitter positions across ALL games this season (not just last 15)
-        if (pos && pos !== 'P' && pos !== 'TWP' && pos !== 'N/A') {
+        // Use gamePrimaryPos so we track where they actually played, not their roster slot
+        const trackPos = gamePrimaryPos;
+        if (trackPos && trackPos !== 'P' && trackPos !== 'TWP' && trackPos !== 'N/A') {
           if (!hitterPosCount[pid]) hitterPosCount[pid] = {};
-          hitterPosCount[pid][pos] = (hitterPosCount[pid][pos] || 0) + 1;
-          if (pos === 'DH') dhCount[pid] = (dhCount[pid] || 0) + 1;
+          hitterPosCount[pid][trackPos] = (hitterPosCount[pid][trackPos] || 0) + 1;
+          if (trackPos === 'DH') dhCount[pid] = (dhCount[pid] || 0) + 1;
           if (gameDate) {
             if (!hitterPosRecent[pid]) hitterPosRecent[pid] = {};
-            if (!hitterPosRecent[pid][pos] || gameDate > hitterPosRecent[pid][pos]) {
-              hitterPosRecent[pid][pos] = gameDate;
+            if (!hitterPosRecent[pid][trackPos] || gameDate > hitterPosRecent[pid][trackPos]) {
+              hitterPosRecent[pid][trackPos] = gameDate;
             }
           }
         }
@@ -2957,13 +3163,15 @@ async function fetchTeamImpact(teamId) {
     const bestFieldCount = bestFieldPos ? bestFieldPos[1] : 0;
 
     if (p.rosterPos === 'DH') {
+      // Roster API says DH → always DH (e.g. Yordan Alvarez)
       p.claimPos = 'DH';
-    } else if (dhApps > 0 && dhApps > bestFieldCount) {
-      p.claimPos = 'DH';
-    } else if (dhApps > 0 && totalApps > 0 && (dhApps / totalApps) >= 0.40) {
-      // Primary DH even if occasionally plays in the field
+    } else if (dhApps > 0 && totalApps > 0 && (dhApps / totalApps) >= 0.60) {
+      // Clear majority DH (≥60% of appearances) → primary DH regardless of listed position
+      // 3 DH out of 20 games = 15% → stays at field pos
+      // 12 DH out of 18 games = 67% → becomes DH
       p.claimPos = 'DH';
     } else {
+      // Use best boxscore pos or roster API position as fallback
       p.claimPos = p.bestBoxscorePos || p.fallbackPos;
     }
     p.claimCount = p.posCount[p.claimPos] || 0;
@@ -2983,8 +3191,12 @@ async function fetchTeamImpact(teamId) {
         const aCount = a.posCount[pos] || 0;
         const bCount = b.posCount[pos] || 0;
         if (bCount !== aCount) return bCount - aCount;
-        // Tiebreaker: total games played this season (favors the true starter
-        // who may have returned from IL with fewer recent boxscore appearances)
+        // Tiebreaker 1: prefer player whose roster API position matches this pos
+        // (catches Langeliers case: listed as C on roster but fewer recent boxscore C apps)
+        const aIsNative = a.rosterPos === pos ? 1 : 0;
+        const bIsNative = b.rosterPos === pos ? 1 : 0;
+        if (bIsNative !== aIsNative) return bIsNative - aIsNative;
+        // Tiebreaker 2: total games played this season
         if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
         return b.ops - a.ops;
       });
@@ -4326,6 +4538,11 @@ function switchTab(tab) {
     const panel = document.getElementById(`tab-${tab}`);
     if (panel) panel.classList.add('active');
     history.replaceState(null, '', `#${tab}`);
+    if (tab !== 'rosters') window._fromStandings = false;
+    if (tab !== 'mvp') window._fromTopGames = false;
+    // Show/hide MVP breadcrumb
+    const mvpBC = document.getElementById('mvpBreadcrumb');
+    if (mvpBC) mvpBC.style.display = (tab === 'mvp' && window._fromTopGames) ? 'flex' : 'none';
     if (!loaded[tab]) {
       loaded[tab] = true;
       if (tab === 'bracket') loadBracket();
@@ -4801,7 +5018,7 @@ async function loadTopGames() {
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
               <div style="min-width:0">
                 <div style="font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-                <div style="font-family:'Barlow Condensed';font-size:11px;color:var(--muted);margin-top:1px">ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${qs}</div>
+                <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted);margin-top:2px">ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${qs}</div>
               </div>
             </div>
             <div style="text-align:right">
@@ -4823,7 +5040,7 @@ async function loadTopGames() {
       // Merge and sort by mvp score (rank is 1-20, lower = better, so sort ascending)
       const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 6);
 
-      function ptwPlayerCard(c) {
+      function ptwPlayerCard(c, badgeFn) {
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${c.pid}/headshot/67/current`;
         const hs = ptwHitStats[c.pid];
         const ps = ptwPitchStats[c.pid];
@@ -4871,7 +5088,8 @@ async function loadTopGames() {
           const barW = Math.min(100, Math.round((ops/1.2)*100));
           const career = ptwCareer[c.pid];
           const trendHtml = career?.ops && ops ? trendBadgeHTML(ops, career.ops, 'ops') : '';
-          const statsLine = `AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'} · RBI ${hs.rbi??'—'} · SB ${hs.stolenBases??'—'}`;
+          const statsLine  = `AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'}`;
+          const statsLine2 = `RBI ${hs.rbi??'—'} · SB ${hs.stolenBases??'—'}`;
           return `<div class="impact-row">
             <div class="impact-row-left">
               <img class="impact-photo" src="${photoUrl}"
@@ -4879,6 +5097,8 @@ async function loadTopGames() {
               <div class="impact-name-block">
                 <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
                 <div class="impact-stats-line">${statsLine}</div>
+                <div class="impact-stats-line">${statsLine2}</div>
+                ${badgeFn ? badgeFn(c) : ''}
               </div>
             </div>
             <div class="impact-bar-block">
@@ -4903,16 +5123,29 @@ async function loadTopGames() {
         </div>`;
       }
 
+      // Award candidacy badges for PTW players
+      function awardCandidacyBadge(c) {
+        if (!c.label) return '';
+        const labelMap = { MVP: 'MVP RACE', CY: 'CY RACE', ROY: 'ROY RACE' };
+        const colorMap = { MVP: 'rgba(245,158,11,.15)', CY: 'rgba(245,158,11,.15)', ROY: 'rgba(245,158,11,.15)' };
+        const label = labelMap[c.label] || c.label;
+        return `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${c.label}')">${label} #${c.rank}</span>`;
+      }
+
       const detailHTML = `<div class="tg-detail" id="tgd-${gameId}">
         ${sameDivision ? `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><span style="font-size:10px;font-weight:700;padding:2px 7px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span></div>` : ''}
-        <div style="display:flex;flex-direction:column;gap:10px">
-          ${spMini(awayPid, awayPName, awayF, awayS, awayMeta)}
-          ${spMini(homePid, homePName, homeF, homeS, homeMeta)}
-          ${allWatch.length ? `<div class="impact-detail-card">
-            <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
-            ${allWatch.map(p => ptwPlayerCard(p)).join('')}
-          </div>` : ''}
+        <div class="tg-detail-inner">
+          <div class="tg-detail-col">
+            ${spMini(awayPid, awayPName, awayF, awayS, awayMeta)}
+          </div>
+          <div class="tg-detail-col">
+            ${spMini(homePid, homePName, homeF, homeS, homeMeta)}
+          </div>
         </div>
+        ${allWatch.length ? `<div class="impact-detail-card" style="margin-top:10px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
+          ${allWatch.map(p => ptwPlayerCard(p, awardCandidacyBadge)).join('')}
+        </div>` : ''}
       </div>`;
 
       return `<div>
