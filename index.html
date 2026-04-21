@@ -200,12 +200,12 @@
   .div-table td.r { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Barlow Condensed'; font-size: 14px; }
   .div-table tr:last-child td { border-bottom: none; }
   .div-table tr:hover td { background: var(--surface2); }
-  .div-table tr.div-leader td { border-left: 3px solid var(--win); }
-  .div-table tr.wc-spot td { border-left: 3px solid var(--accent); }
+  .div-table tr.div-leader td:first-child { border-left: 3px solid var(--win); }
+  .div-table tr.wc-spot td:first-child { border-left: 3px solid var(--accent-blue); }
   .div-table tr.elim-row td { opacity: .4; }
   .games-rem { font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface2); padding: 1px 6px; border: 1px solid var(--border); }
   .badge-div { background: rgba(22,163,74,.1); color: var(--win); border: 1px solid rgba(22,163,74,.3); font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1px; font-weight: 700; padding: 2px 7px; }
-  .badge-wc { background: rgba(26,86,219,.08); color: var(--accent); border: 1px solid rgba(26,86,219,.25); font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1px; font-weight: 700; padding: 2px 7px; }
+  .badge-wc { background: rgba(26,86,219,.08); color: var(--accent-blue); border: 1px solid rgba(26,86,219,.25); font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1px; font-weight: 700; padding: 2px 7px; }
   .gb-val { font-family: 'Barlow Condensed'; font-weight: 600; }
   .gb-leader { color: var(--win); font-weight: 700; }
 
@@ -370,9 +370,9 @@
     .team-name-abbr { display: inline; }
     /* Hide DIV/WC badges on mobile, use row background color instead */
     .badge-div, .badge-wc { display: none; }
-    .div-table tr.div-leader td { background: none; border-left: 3px solid var(--win); }
+    .div-table tr.div-leader td:first-child { background: none; border-left: 3px solid var(--win); }
     .div-table tr.div-leader:hover td { background: var(--surface2); }
-    .div-table tr.wc-spot td { background: none; border-left: 3px solid #1a56db; }
+    .div-table tr.wc-spot td:first-child { background: none; border-left: 3px solid #1a56db; }
     .div-table tr.wc-spot:hover td { background: var(--surface2); }
     .div-table tr.elim-row td { background: none; opacity: .4; }
 
@@ -1752,7 +1752,7 @@ function renderWildCardTables() {
         <td class="r">${t.wins}</td>
         <td class="r">${t.losses}</td>
         <td class="r">${pct}</td>
-        <td class="r" style="color:${isDivW?'var(--win)':isWC?'var(--accent)':'var(--muted)'}">${wcgbStr}</td>
+        <td class="r" style="color:${isDivW?'var(--win)':isWC?'var(--accent-blue)':'var(--muted)'}">${wcgbStr}</td>
         <td class="r wc-col-l10"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10w}-${l10l}</span></td>
         <td>${badge}</td>
       </tr>`;
