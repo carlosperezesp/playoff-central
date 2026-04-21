@@ -74,6 +74,48 @@
   .section-title::after { content: ''; flex: 1; height: 2px; background: var(--border); }
   .section-title::before { content: ''; width: 4px; height: 24px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
 
+  /* ── HERO CARD ── */
+  .hero-card {
+    background: linear-gradient(135deg, #0f1923 0%, #1a2e1f 60%, #0f1923 100%);
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; overflow: hidden; position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  }
+  .hero-card::before {
+    content: '⚾'; position: absolute; right: -10px; top: -10px;
+    font-size: 100px; opacity: .04; transform: rotate(15deg);
+    pointer-events: none;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue'; font-size: 32px; letter-spacing: 3px;
+    color: #fff; line-height: 1;
+  }
+  .hero-subtitle {
+    font-family: 'Barlow Condensed'; font-size: 12px; letter-spacing: 2px;
+    color: rgba(255,255,255,.5); margin-top: 4px; text-transform: uppercase;
+  }
+  .hero-stat {
+    text-align: right; flex-shrink: 0;
+  }
+  .hero-stat-val {
+    font-family: 'Bebas Neue'; font-size: 48px; line-height: 1;
+    color: var(--accent); letter-spacing: 2px;
+  }
+  .hero-stat-label {
+    font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 2px;
+    color: rgba(255,255,255,.5); text-transform: uppercase;
+  }
+  .hero-pills { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .hero-pill {
+    font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.7);
+    background: rgba(255,255,255,.07);
+  }
+  .hero-pill.green { border-color: rgba(22,163,74,.5); color: #4ade80; background: rgba(22,163,74,.12); }
+  .hero-pill.blue { border-color: rgba(26,86,219,.5); color: #93c5fd; background: rgba(26,86,219,.12); }
+
   .standings-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .standings-table th {
     font-family: 'Barlow Condensed'; font-weight: 600; font-size: 11px; letter-spacing: 1.5px;
@@ -126,7 +168,7 @@
   @media (max-width: 768px) { .divisions-grid .division-card { flex: 1 1 100%; min-width: 0; } }
   .division-card { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden; border-radius: 8px; }
   .division-header { background: var(--surface2); padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); border-left: 3px solid var(--accent); }
-  .division-name { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: var(--text); }
+  .division-name { font-family: 'Bebas Neue'; font-size: 22px; letter-spacing: 2px; color: var(--text); }
   .division-league { font-family: 'Barlow Condensed'; font-size: 12px; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
   .div-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .div-table th { font-family: 'Barlow Condensed'; font-weight: 600; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--border); background: var(--surface); }
@@ -190,7 +232,7 @@
     .bnav-btn svg { width: 20px; height: 20px; }
     .bnav-btn.active { color: var(--accent); }
     #desktopTabs { display: none; }
-    main { padding-bottom: 88px; }
+    main { padding-bottom: 100px; }
   }
 
   /* ── STANDINGS VIEW TOGGLE ── */
@@ -204,14 +246,16 @@
     letter-spacing: 1.5px; padding: 8px 20px; border: none; background: var(--surface);
     color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap;
   }
+  .standings-toggle-btn.active.division-btn { background: var(--accent); color: #fff; }
+  .standings-toggle-btn.active.wildcard-btn { background: #1a56db; color: #fff; }
   .standings-toggle-btn.active { background: var(--accent); color: #fff; }
   .standings-toggle-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
   /* Division card — clickable header */
   .division-header { cursor: pointer; transition: background .12s; }
   .division-header:hover { background: #e4e8f0; }
-  .division-header.selected { background: var(--accent); }
-  .division-header.selected .division-name,
-  .division-header.selected .division-league { color: #fff; }
+  .division-header.selected { background: #0f3320; border-left-color: var(--accent); }
+  .division-header.selected .division-name { color: #4ade80; }
+  .division-header.selected .division-league { color: rgba(255,255,255,.5); }
   .div-chevron { transition: transform .2s; color: var(--muted); flex-shrink: 0; }
   .division-header.selected .div-chevron { color: rgba(255,255,255,.7); transform: rotate(180deg); }
   /* Desktop: disable collapse, show all divisions, hide chevron */
@@ -230,11 +274,11 @@
   .wc-table tr:last-child td { border-bottom: none; }
   .wc-table tr:hover td { background: var(--surface2); }
   .wc-table tr.wc-div td { border-left: 3px solid var(--win); }
-  .wc-table tr.wc-wc td { border-left: 3px solid var(--accent); }
+  .wc-table tr.wc-wc td { border-left: 3px solid #1a56db; }
   .wc-table tr.wc-elim td { opacity: .45; }
   @media (max-width: 768px) {
-    .wc-table tr.wc-div td { background: rgba(22,163,74,.18); border-left: none; }
-    .wc-table tr.wc-wc td { background: rgba(26,86,219,.13); border-left: none; }
+    .wc-table tr.wc-div td { background: none; border-left: 3px solid var(--win); }
+    .wc-table tr.wc-wc td { background: none; border-left: 3px solid #1a56db; }
     .wc-col-l10 { display: none; }
   }
 
@@ -300,7 +344,7 @@
     .badge-div, .badge-wc { display: none; }
     .div-table tr.div-leader td { background: none; border-left: 3px solid var(--win); }
     .div-table tr.div-leader:hover td { background: var(--surface2); }
-    .div-table tr.wc-spot td { background: none; border-left: 3px solid var(--accent); }
+    .div-table tr.wc-spot td { background: none; border-left: 3px solid #1a56db; }
     .div-table tr.wc-spot:hover td { background: var(--surface2); }
     .div-table tr.elim-row td { background: none; opacity: .4; }
 
@@ -583,7 +627,7 @@
     padding: 2px 6px; border-radius: 3px; white-space: nowrap;
   }
   .team-stat-rank.top      { background: rgba(22,163,74,.12);  color: var(--win); }
-  .team-stat-rank.mid-blue { background: rgba(26,86,219,.10);  color: #1a56db; }
+  .team-stat-rank.mid-blue { background: rgba(26,86,219,.10);  color: #1a56db; font-weight: 700; }
   .team-stat-rank.mid      { background: rgba(107,114,128,.1); color: var(--muted); }
   .team-stat-rank.bot      { background: rgba(220,38,38,.10);  color: var(--loss); }
   .team-stat-bar-wrap { position: relative; height: 5px; background: var(--border); border-radius: 999px; overflow: visible; }
@@ -640,7 +684,7 @@
     margin-top: 3px; line-height: 1.2;
   }
   .trend-up-strong { background: rgba(22,163,74,.15);  color: var(--win); }
-  .trend-up        { background: rgba(26,86,219,.12);  color: #1a56db; }
+  .trend-up        { background: rgba(26,86,219,.12);  color: #1a56db; font-weight: 700; }
   .trend-flat      { background: rgba(107,114,128,.1); color: var(--muted); }
   .trend-down      { background: rgba(220,38,38,.10);  color: var(--loss); }
   .trend-down-strong { background: rgba(220,38,38,.18); color: var(--loss); }
@@ -786,16 +830,16 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.07); overflow: hidden; border-radius: 8px;
   }
   .mvp-card-header {
-    background: var(--surface2); padding: 12px 16px;
+    background: #0f1923; padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
   }
   .mvp-card-title {
-    font-family: 'Bebas Neue'; font-size: 19px; letter-spacing: 2px; color: var(--text);
+    font-family: 'Bebas Neue'; font-size: 19px; letter-spacing: 2px; color: #fff;
   }
   .mvp-card-league {
     font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1.5px;
-    color: var(--muted); font-weight: 700;
+    color: rgba(255,255,255,.4); font-weight: 700;
   }
   .mvp-card-body { padding: 0; }
 
@@ -941,8 +985,13 @@
   .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 3px; }
   .tg-time { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 10px; }
   .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; }
-  .tg-detail { display: none; background: #f8f9fd; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
+  .tg-detail { display: none; background: #0f1923; border-top: 1px solid rgba(255,255,255,.08); padding: 14px 18px 16px; }
   .tg-detail.open { display: block; }
+  .tg-detail .impact-detail-card { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.08); }
+  .tg-detail .impact-row { border-bottom-color: rgba(255,255,255,.06); }
+  .tg-detail .impact-name, .tg-detail .impact-stats-line { color: rgba(255,255,255,.85); }
+  .tg-detail .impact-bar-bg { background: rgba(255,255,255,.1); }
+  .tg-detail .impact-bar-label { color: rgba(255,255,255,.4); }
   .tg-detail-grid { display: grid; grid-template-columns: 1fr 36px 1fr; gap: 10px; align-items: start; }
   /* Detail inner: 2 cols on desktop, 1 col on mobile */
   .tg-detail-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0; }
@@ -990,7 +1039,7 @@
   </div>
 
   <div id="tab-topgames" class="tab-panel">
-    <div id="topGamesContent"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
+    <div id="topGamesContent" style="padding-bottom:8px"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
   </div>
 
 
@@ -1323,7 +1372,6 @@ async function renderStandings() {
   allData.standings.forEach(div => div.teamRecords.forEach(tr => allTeamIds.push(tr.team.id)));
   const gamesRem = {}; // render first with empty, then refresh
   loadGamesRemaining(allTeamIds).then(rem => {
-    // Update tracker max-GR label
     const maxGR = Math.max(0, ...Object.values(rem));
     const trackerGR = document.getElementById('trackerMaxGR');
     if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
@@ -1353,11 +1401,19 @@ async function renderStandings() {
     205: { name: 'NL Central', league: 104 },
   };
 
+  // Count teams per status for hero card
+  let heroLeaders = 0, heroWC = 0, heroTotal = 0;
+  allData.standings.forEach(div => div.teamRecords.forEach(tr => {
+    heroTotal++;
+    if (tr.divisionRank === '1') heroLeaders++;
+  }));
+
   let html = `
+
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap">
       <div class="standings-toggle">
-        <button class="standings-toggle-btn active" onclick="setStandingsView('division')">DIVISION STANDINGS</button>
-        <button class="standings-toggle-btn" onclick="setStandingsView('wildcard')">WILD CARD RACE</button>
+        <button class="standings-toggle-btn active division-btn" id="btn-division" onclick="setStandingsView('division')">DIVISION STANDINGS</button>
+        <button class="standings-toggle-btn wildcard-btn" id="btn-wildcard" onclick="setStandingsView('wildcard')">WILD CARD RACE</button>
       </div>
       <span id="standingsDateInfo" style="font-family:'Bebas Neue';font-size:16px;letter-spacing:1.5px;color:#1a56db"></span>
     </div>
@@ -1570,7 +1626,7 @@ function toggleDivision(divId) {
     if (dateInfo && maxGR > 0) {
       const today = new Date();
       const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
-      dateInfo.textContent = `${dateStr} · ${maxGR} GR`;
+      dateInfo.textContent = `${dateStr} · ${maxGR} GAMES REMAINING`;
     }
     if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
   }).catch(()=>{});
@@ -1581,9 +1637,9 @@ let standingsView = 'division';
 
 function setStandingsView(view) {
   standingsView = view;
-  document.querySelectorAll('.standings-toggle-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.toLowerCase().includes(view === 'division' ? 'division' : 'wild'));
-  });
+  document.querySelectorAll('.standings-toggle-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(view === 'division' ? 'btn-division' : 'btn-wildcard');
+  if (activeBtn) activeBtn.classList.add('active');
   document.getElementById('view-division').style.display = view === 'division' ? '' : 'none';
   document.getElementById('view-wildcard').style.display = view === 'wildcard' ? '' : 'none';
   const divGrid = document.getElementById('divisionsGrid');
@@ -1984,8 +2040,8 @@ async function initTracker() {
         <span id="trackerMaxGR"></span>
       </span>
     </div>
-    <div style="position:relative;user-select:none">
-      <canvas id="trackerCanvas" height="200" style="cursor:crosshair"></canvas>
+    <div style="position:relative;user-select:none;padding:12px">
+      <canvas id="trackerCanvas" height="200" style="cursor:crosshair;display:block"></canvas>
       <div id="trackerOverlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none">
         <span class="tracker-loading" id="trackerLoadingMsg">CARGANDO…</span>
       </div>
@@ -3786,9 +3842,9 @@ function renderTeamStatsPanel(teamId, impact) {
     const rightLabel = lowerBetter ? minVal.toFixed(decimals) : maxVal.toFixed(decimals).replace(/^0/,'');
     return `<div class="team-stat-bar-wrap" style="margin-top:2px">
       <div class="team-stat-bar-fill" style="width:${fillPct}%;background:${color}"></div>
-      <div style="display:flex;justify-content:space-between;margin-top:3px;margin-bottom:6px">
-        <span style="font-size:12px;color:var(--muted);font-family:'Barlow Condensed';font-weight:600">${leftLabel}</span>
-        <span style="font-size:12px;color:var(--muted);font-family:'Barlow Condensed';font-weight:600">${rightLabel}</span>
+      <div style="display:flex;justify-content:space-between;margin-top:3px;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed';opacity:.6">${leftLabel}</span>
+        <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed';opacity:.6">${rightLabel}</span>
       </div>
     </div>`;
   }
@@ -3799,7 +3855,7 @@ function renderTeamStatsPanel(teamId, impact) {
     if (r.rank === '—') return '#94a3b8';
     const rk = r.rank;
     if (rk <= 6) return 'var(--win)';         // green
-    if (rk <= 12) return 'var(--accent)';      // blue
+    if (rk <= 12) return '#1a56db';             // blue
     if (rk <= 22) return '#94a3b8';            // grey
     return 'var(--loss)';                      // red
   }
@@ -4963,8 +5019,8 @@ async function loadTopGames() {
 
       // Tier badges on the row
       let tierBadge = '';
-      if (tier === 'green') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px">TOP MATCH</span>`;
-      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:rgba(26,86,219,.1);color:var(--accent);letter-spacing:.5px">TOP MATCH</span>`;
+      if (tier === 'green') tierBadge = `<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(22,163,74,.15);color:#16a34a;border:1px solid rgba(22,163,74,.3);letter-spacing:.5px">TOP MATCH</span>`;
+      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(26,86,219,.15);color:#1a56db;border:1px solid rgba(26,86,219,.3);letter-spacing:.5px">TOP MATCH</span>`;
 
       // Detail panel
       const awayPid = away.probablePitcher?.id;
@@ -5034,8 +5090,14 @@ async function loadTopGames() {
       // Players to Watch — merged, sorted by score, with team badge
       const awayRoster = tgRosterCache[away.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set(), spPids: new Set() };
       const homeRoster = tgRosterCache[home.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set(), spPids: new Set() };
-      const awayWatch = playersToWatch(away.team.id, awayRoster.ilPids, awayRoster.spPids).map(c => ({...c, teamMeta: awayMeta}));
-      const homeWatch = playersToWatch(home.team.id, homeRoster.ilPids, homeRoster.spPids).map(c => ({...c, teamMeta: homeMeta}));
+      // Exclude only this game's probable pitchers (not all SPs) so CY candidates still show
+      const gameExcludeAway = new Set([awayPid].filter(Boolean));
+      const gameExcludeHome = new Set([homePid].filter(Boolean));
+      // Also exclude IL
+      const awayExclude = new Set([...awayRoster.ilPids, ...gameExcludeAway]);
+      const homeExclude = new Set([...homeRoster.ilPids, ...gameExcludeHome]);
+      const awayWatch = playersToWatch(away.team.id, awayExclude, new Set()).map(c => ({...c, teamMeta: awayMeta}));
+      const homeWatch = playersToWatch(home.team.id, homeExclude, new Set()).map(c => ({...c, teamMeta: homeMeta}));
 
       // Merge and sort by mvp score (rank is 1-20, lower = better, so sort ascending)
       const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 6);
@@ -5127,9 +5189,8 @@ async function loadTopGames() {
       function awardCandidacyBadge(c) {
         if (!c.label) return '';
         const labelMap = { MVP: 'MVP RACE', CY: 'CY RACE', ROY: 'ROY RACE' };
-        const colorMap = { MVP: 'rgba(245,158,11,.15)', CY: 'rgba(245,158,11,.15)', ROY: 'rgba(245,158,11,.15)' };
         const label = labelMap[c.label] || c.label;
-        return `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${c.label}')">${label} #${c.rank}</span>`;
+        return `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${c.label}')">${label}</span>`;
       }
 
       const detailHTML = `<div class="tg-detail" id="tgd-${gameId}">
