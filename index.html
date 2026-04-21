@@ -29,21 +29,36 @@
     padding: 0 24px;
     position: sticky; top: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
-    height: 56px;
+    height: 62px;
   }
   .logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-lockup {
+    display: flex; flex-direction: column; justify-content: center; gap: 0;
+  }
+  .logo-wordmark {
     font-family: 'Bebas Neue'; font-size: 26px; letter-spacing: 3px;
-    color: #ffffff; display: flex; align-items: center; gap: 10px;
+    color: #ffffff; display: flex; align-items: baseline; gap: 4px;
+  }
+  .logo-claim {
+    font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700;
+    letter-spacing: .7px; text-transform: uppercase;
+    color: #ffffff; line-height: 1;
+    background: #1a56db; border: 1px solid rgba(255,255,255,.16);
+    border-radius: 4px; padding: 3px 7px; width: fit-content;
+    white-space: nowrap;
   }
   .logo-icon {
     width: 28px; height: 28px; background: var(--accent);
-    border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; border: 1px solid rgba(255,255,255,.55);
+    box-shadow: inset 0 0 0 2px rgba(15,25,35,.18);
   }
-  .logo span { color: var(--accent); }
+  .logo-wordmark span { color: var(--accent); }
   .season-badge {
-    background: rgba(255,255,255,.12);
-    border: 1px solid rgba(255,255,255,.2);
+    background: #1a56db;
+    border: 1px solid rgba(255,255,255,.16);
     color: #fff; font-family: 'Barlow Condensed'; font-weight: 700;
     padding: 4px 12px; font-size: 12px; letter-spacing: 2px;
     border-radius: 4px;
@@ -162,6 +177,14 @@
   .legend-dot.div { background: var(--win); }
   .legend-dot.wc { background: #1a56db; }
   .legend-dot.out { background: var(--loss); opacity: .6; }
+  .standings-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin: 0 0 14px; flex-wrap: wrap;
+  }
+  .standings-date-info {
+    font-family: 'Bebas Neue'; font-size: 16px; letter-spacing: 1.5px;
+    color: #1a56db;
+  }
 
   .divisions-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 32px; }
   .divisions-grid .division-card { flex: 1 1 calc(50% - 10px); min-width: 280px; }
@@ -315,8 +338,13 @@
 
   @media (max-width: 768px) {
     /* Header */
-    header { padding: 0 12px; height: 52px; }
-    .logo { font-size: 22px; letter-spacing: 2px; }
+    header { padding: 0 12px; height: 58px; }
+    .logo-wordmark { font-size: 22px; letter-spacing: 2px; gap: 3px; }
+    .logo-lockup { gap: 0; }
+    .logo-claim {
+      font-size: 10px; letter-spacing: .45px; line-height: 1;
+      white-space: nowrap; padding: 2px 6px;
+    }
     .season-badge { font-size: 11px; padding: 3px 8px; letter-spacing: 1px; }
 
     /* Tabs */
@@ -378,6 +406,8 @@
     .tracker-title { font-size: 15px; white-space: nowrap; }
     .tracker-date-label { font-size: 17px; }
     #trackerMaxGR { font-size: 17px; }
+    .standings-meta { margin-bottom: 12px; }
+    .standings-date-info { font-size: 15px; }
 
     /* Teams / roster panel */
     .team-selector-list { max-height: 220px; }
@@ -901,7 +931,8 @@
     font-size: 10px; font-weight: 600; color: var(--muted);
     margin-top: 3px; white-space: normal; line-height: 1.3;
   }
-  .mvp-next.today { color: var(--accent); }
+  .mvp-next.confirmed,
+  .mvp-next.today { color: var(--accent-blue); }
   .mvp-next.unconfirmed { opacity: .45; font-weight: 400; }
   /* IL badge */
   .mvp-il {
@@ -965,12 +996,16 @@
   }
   /* ── TOP GAMES ACCORDION ── */
   .tg-day-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-  .tg-day-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; cursor: pointer; user-select: none; background: #0f1923; border-bottom: 1px solid transparent; transition: background .12s; }
-  .tg-day-header:hover { background: #e8ecf4; }
-  .tg-day-header.open { border-bottom-color: var(--border); }
+  .tg-day-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; cursor: pointer; user-select: none; background: #0f1923; border-bottom: 1px solid transparent; transition: background .12s; -webkit-tap-highlight-color: transparent; }
+  .tg-day-header:hover,
+  .tg-day-header:active { background: #1a56db; }
+  .tg-day-header.open { background: #1a56db; border-bottom-color: rgba(255,255,255,.14); }
+  .tg-day-header.open:hover { background: #1e4fc9; }
   .tg-day-title { font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 2px; color: #ffffff; }
   .tg-day-count { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.5); letter-spacing: .5px; }
+  .tg-day-header.open .tg-day-count { color: rgba(255,255,255,.82); }
   .tg-day-chevron { transition: transform .2s; color: rgba(255,255,255,.5); flex-shrink: 0; }
+  .tg-day-header.open .tg-day-chevron { color: rgba(255,255,255,.82); }
   .tg-day-chevron.open { transform: rotate(180deg); }
   .tg-day-body { display: none; }
   .tg-day-body.open { display: block; }
@@ -985,13 +1020,13 @@
   .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 3px; }
   .tg-time { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 10px; }
   .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; }
-  .tg-detail { display: none; background: #0f1923; border-top: 1px solid rgba(255,255,255,.08); padding: 14px 18px 16px; }
+  .tg-detail { display: none; background: #f7f9fd; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
   .tg-detail.open { display: block; }
-  .tg-detail .impact-detail-card { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.08); }
-  .tg-detail .impact-row { border-bottom-color: rgba(255,255,255,.06); }
-  .tg-detail .impact-name, .tg-detail .impact-stats-line { color: rgba(255,255,255,.85); }
-  .tg-detail .impact-bar-bg { background: rgba(255,255,255,.1); }
-  .tg-detail .impact-bar-label { color: rgba(255,255,255,.4); }
+  .tg-detail .impact-detail-card { background: #ffffff; border-color: #dfe6f2; box-shadow: 0 1px 4px rgba(15,25,35,.04); }
+  .tg-detail .impact-row { border-bottom-color: rgba(15,25,35,.08); }
+  .tg-detail .impact-name, .tg-detail .impact-stats-line { color: inherit; }
+  .tg-detail .impact-bar-bg { background: var(--border); }
+  .tg-detail .impact-bar-label { color: var(--muted); }
   .tg-detail-grid { display: grid; grid-template-columns: 1fr 36px 1fr; gap: 10px; align-items: start; }
   /* Detail inner: 2 cols on desktop, 1 col on mobile */
   .tg-detail-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0; }
@@ -1013,8 +1048,10 @@
     <div class="logo-icon">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.5" fill="none"/><path d="M7 12 C8 8 10 6 12 6 C14 6 16 8 17 12 C16 16 14 18 12 18 C10 18 8 16 7 12Z" stroke="white" stroke-width="1.5" fill="none"/><line x1="5" y1="9" x2="9" y2="10.5" stroke="white" stroke-width="1"/><line x1="5" y1="15" x2="9" y2="13.5" stroke="white" stroke-width="1"/><line x1="19" y1="9" x2="15" y2="10.5" stroke="white" stroke-width="1"/><line x1="19" y1="15" x2="15" y2="13.5" stroke="white" stroke-width="1"/></svg>
     </div>
-    BASEBALL <span>LENS</span>
-        <div class="logo-claim">See the game clearly</div> 
+    <div class="logo-lockup">
+      <div class="logo-wordmark">BASEBALL <span>LENS</span></div>
+      <div class="logo-claim">See the game clearly</div>
+    </div>
   </div>
   <div class="season-badge" id="seasonBadge">2026 SEASON</div>
 </header>
@@ -1374,7 +1411,13 @@ async function renderStandings() {
   const gamesRem = {}; // render first with empty, then refresh
   loadGamesRemaining(allTeamIds).then(rem => {
     const maxGR = Math.max(0, ...Object.values(rem));
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
+    const dateInfo = document.getElementById('standingsDateInfo');
+    const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
     const trackerGR = document.getElementById('trackerMaxGR');
+    if (dateInfo && maxGR > 0) dateInfo.textContent = `${dateStr} · ${maxGR} Games Until Playoff`;
+    if (wcDateInfo && maxGR > 0) wcDateInfo.textContent = `${dateStr} · ${maxGR} Games Until Playoff`;
     if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
   }).catch(()=>{});
 
@@ -1416,9 +1459,11 @@ async function renderStandings() {
         <button class="standings-toggle-btn active division-btn" id="btn-division" onclick="setStandingsView('division')">DIVISION STANDINGS</button>
         <button class="standings-toggle-btn wildcard-btn" id="btn-wildcard" onclick="setStandingsView('wildcard')">WILD CARD RACE</button>
       </div>
-      <span id="standingsDateInfo" style="font-family:'Bebas Neue';font-size:16px;letter-spacing:1.5px;color:#1a56db"></span>
     </div>
     <div id="view-division">
+      <div class="standings-meta">
+        <span id="standingsDateInfo" class="standings-date-info"></span>
+      </div>
       <div class="legend" style="margin-bottom:16px">
         <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
         <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
@@ -1426,6 +1471,9 @@ async function renderStandings() {
       </div>
     </div>
     <div id="view-wildcard" style="display:none">
+      <div class="standings-meta">
+        <span id="standingsDateInfoWildcard" class="standings-date-info"></span>
+      </div>
       <div class="legend" style="margin-bottom:20px">
         <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
         <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
@@ -1546,13 +1594,12 @@ async function renderStandings() {
   el.innerHTML = html;
 
   // Update date info label
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
   const dateInfo = document.getElementById('standingsDateInfo');
-  if (dateInfo) {
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
-    dateInfo.textContent = dateStr;
-    // GR will be updated when loadGamesRemaining resolves
-  }
+  const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
+  if (dateInfo) dateInfo.textContent = dateStr;
+  if (wcDateInfo) wcDateInfo.textContent = dateStr;
 
   // Pre-load tracker data in background (no UI yet)
   loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
@@ -1623,12 +1670,14 @@ function toggleDivision(divId) {
   ).then(rem => {
     const maxGR = Math.max(0, ...Object.values(rem));
     const dateInfo = document.getElementById('standingsDateInfo');
+    const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
     const trackerGR = document.getElementById('trackerMaxGR');
     if (dateInfo && maxGR > 0) {
       const today = new Date();
       const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
-      dateInfo.textContent = `${dateStr} · ${maxGR} GAMES REMAINING`;
+      dateInfo.textContent = `${dateStr} · ${maxGR} Games Until Playoff`;
     }
+    if (wcDateInfo && maxGR > 0) wcDateInfo.textContent = `${new Date().toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase()} · ${maxGR} Games Until Playoff`;
     if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
   }).catch(()=>{});
 }
@@ -4410,6 +4459,7 @@ function nextGameHTML(p, awardType) {
   const todayStr    = new Date().toISOString().split('T')[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const isToday = game.date === todayStr;
+  const matchup = `${game.homeAway === 'vs' ? 'VS' : '@'} ${game.opponent}`;
   let dateLabel;
   if (isToday) dateLabel = 'Hoy';
   else if (game.date === tomorrowStr) dateLabel = 'Mañana';
@@ -4418,16 +4468,16 @@ function nextGameHTML(p, awardType) {
     dateLabel = d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
   }
   const timeLabel = game.time ? ` · ${game.time}` : '';
-  const todayCls  = isToday ? ' today' : '';
+  const stateCls  = ` confirmed${isToday ? ' today' : ''}`;
   if (awardType === 'cy') {
     const isStarter = (parseInt(p.s?.gamesStarted||0) > 0);
     const label = isStarter ? 'Próximo inicio' : 'Próximo partido';
     if (game.probablePids.has(p.pid))
-      return `<div class="mvp-next${todayCls}">${label}: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
+      return `<div class="mvp-next${stateCls}">${label}: ${matchup} · ${dateLabel}${timeLabel}</div>`;
     else
       return `<div class="mvp-next unconfirmed">${label}: sin confirmar</div>`;
   }
-  return `<div class="mvp-next${todayCls}">Próximo partido: ${p.teamAbbr} ${game.homeAway} ${game.opponent} — ${dateLabel}${timeLabel}</div>`;
+  return `<div class="mvp-next${stateCls}">Próximo partido: ${matchup} · ${dateLabel}${timeLabel}</div>`;
 }
 
 function ilBadgeHTML(p) {
@@ -5062,7 +5112,8 @@ async function loadTopGames() {
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
         const ps = stat || ptwPitchStats[pid] || {};
         const era = ps.era||'—', whip = ps.whip||'—', ip = ps.inningsPitched||'—', gs = ps.gamesStarted??'—';
-        const qs = ps.qualityStarts != null ? ` · QS ${ps.qualityStarts}` : '';
+        const statsLine1 = `ERA ${era} · WHIP ${whip}`;
+        const statsLine2 = `IP ${ip} · GS ${gs}`;
         const barW = forma !== null ? Math.min(100, Math.round((forma/100)*100)) : 0;
         const career = ptwCareer[pid];
         const trendHtml = (career?.formaScore != null && forma != null) ? trendFormaHTML(forma, career.formaScore) : '';
@@ -5070,19 +5121,20 @@ async function loadTopGames() {
           ${teamPill}
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
           <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
-            <div style="display:flex;align-items:center;gap:8px">
-              <img src="${photoUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)"
+            <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
+              <img class="impact-photo" src="${photoUrl}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-              <div style="min-width:0">
-                <div style="font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-                <div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted);margin-top:2px">ERA ${era} · WHIP ${whip} · IP ${ip} · GS ${gs}${qs}</div>
+              <div class="impact-name-block">
+                <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+                <div class="impact-stats-line">${statsLine1}</div>
+                <div class="impact-stats-line">${statsLine2}</div>
               </div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">FORMA</div>
-              <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;line-height:1;color:${color}">${Math.max(0,forma??0)}</div>
-              <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${barW}%;background:${color};border-radius:999px"></div></div>
-              ${trendHtml ? `<div style="margin-top:3px">${trendHtml}</div>` : ''}
+            <div class="impact-bar-val-wrap">
+              <span class="impact-bar-label">FORMA</span>
+              <span class="impact-bar-val" style="color:${color};font-size:20px">${Math.max(0,forma??0)}</span>
+              <div class="impact-bar-block" style="grid-column:auto;grid-row:auto;height:4px;width:100%;margin:3px 0 0 auto"><div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div></div>
+              ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
           </div>
         </div>`;
