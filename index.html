@@ -200,6 +200,39 @@
   .div-table td.r { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Barlow Condensed'; font-size: 14px; }
   .div-table tr:last-child td { border-bottom: none; }
   .div-table tr:hover td { background: var(--surface2); }
+  .standings-team-row { cursor: pointer; }
+  .standings-team-row.open td { background: #f8fbff; }
+  .standings-team-detail { display: none; }
+  .standings-team-detail.open { display: table-row; }
+  .standings-team-detail td {
+    padding: 0; background: #f8fbff; border-bottom: 1px solid var(--border);
+  }
+  .standings-next-wrap {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px 12px 18px;
+    font-family: 'Barlow Condensed'; font-size: 13px; color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .standings-next-link { cursor: pointer; }
+  .standings-next-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-blue);
+  }
+  .standings-next-matchup {
+    display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text);
+  }
+  .standings-next-meta { color: var(--muted); font-weight: 600; }
+  .standings-next-logo { width: 16px; height: 16px; object-fit: contain; flex-shrink: 0; }
+  .standings-next-compare {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
+    padding-left: 68px; font-size: 12px;
+  }
+  .standings-next-comp { display: inline-flex; align-items: baseline; gap: 4px; }
+  .standings-next-comp-label {
+    font-size: 10px; letter-spacing: .8px; color: var(--muted); font-weight: 700; text-transform: uppercase;
+  }
+  .standings-next-comp-val { font-weight: 700; color: var(--text); }
+  .standings-better { color: var(--win); }
+  .standings-worse { color: var(--loss); }
+  .standings-equal { color: var(--text); }
   .div-table tr.div-leader td:first-child { border-left: 3px solid var(--win); }
   .div-table tr.wc-spot td:first-child { border-left: 3px solid var(--accent-blue); }
   .div-table tr.elim-row td { opacity: .4; }
@@ -276,11 +309,11 @@
   /* Division card — clickable header */
   .division-header { cursor: pointer; transition: background .12s; }
   .division-header:hover { background: #e4e8f0; }
-  .division-header.selected { background: #0f3320; border-left-color: var(--accent); }
-  .division-header.selected .division-name { color: #4ade80; }
-  .division-header.selected .division-league { color: rgba(255,255,255,.5); }
+  .division-header.selected { background: var(--surface2); border-left-color: var(--accent); }
+  .division-header.selected .division-name { color: var(--text); }
+  .division-header.selected .division-league { color: var(--muted); }
   .div-chevron { transition: transform .2s; color: var(--muted); flex-shrink: 0; }
-  .division-header.selected .div-chevron { color: rgba(255,255,255,.7); transform: rotate(180deg); }
+  .division-header.selected .div-chevron { color: var(--muted); transform: rotate(180deg); }
   /* Desktop: disable collapse, show all divisions, hide chevron */
   @media (min-width: 769px) {
     .division-header { cursor: default; pointer-events: none; }
@@ -1077,6 +1110,10 @@
   </div>
 
   <div id="tab-topgames" class="tab-panel">
+    <div id="topGamesBreadcrumb" style="display:none;align-items:center;gap:8px;padding:0 0 12px;cursor:pointer;color:#1a56db" onclick="switchTab('standings')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      <span style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;letter-spacing:.5px">PLAYOFF RACE</span>
+    </div>
     <div id="topGamesContent" style="padding-bottom:8px"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
   </div>
 
@@ -1302,6 +1339,15 @@ function showHistTip(el) {
 let allData = { standings: null, playoffs: null, schedule: null };
 let playoffTeamIds = new Set();
 let isPlayoffSeason = false;
+let standingsNextGameCache = null;
+const STANDINGS_REFRESH_MS = 15 * 60 * 1000;
+let standingsRefreshTimer = null;
+let standingsRefreshState = {
+  dateKey: null,
+  lastFinalCount: null,
+  allFinished: false,
+  inFlight: false,
+};
 
 function fetchWithTimeout(url, ms = 12000) {
   const controller = new AbortController();
@@ -1325,6 +1371,7 @@ async function init() {
       throw new Error('No standings data received');
     }
     renderStandings();
+    startStandingsAutoRefresh(true);
   } catch(e) {
     console.error(e);
     // If we have cached data that might be corrupt, clear it and offer retry
@@ -1357,9 +1404,14 @@ async function detectPlayoffs() {
 }
 
 async function loadStandings() {
+  return loadStandingsWithOptions();
+}
+
+async function loadStandingsWithOptions(options = {}) {
+  const { force = false } = options;
   try {
-    const cached = cacheGet('mlb_standings');
-    if (cached && Array.isArray(cached) && cached.length > 0) {
+    const cached = force ? null : cacheGet('mlb_standings');
+    if (!force && cached && Array.isArray(cached) && cached.length > 0) {
       allData.standings = cached;
       return;
     }
@@ -1372,6 +1424,97 @@ async function loadStandings() {
   allData.standings = data.records || [];
   if (allData.standings.length > 0) {
     cacheSet('mlb_standings', allData.standings);
+  }
+}
+
+function standingsTodayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function isStandingsTabActive() {
+  return !!document.getElementById('tab-standings')?.classList.contains('active');
+}
+
+async function fetchTodayScheduleStatus() {
+  const today = standingsTodayKey();
+  const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${today}&gameType=R&hydrate=linescore`);
+  if (!res.ok) throw new Error(`MLB API returned ${res.status}`);
+  const data = await res.json();
+  const games = data.dates?.[0]?.games || [];
+  const finals = games.filter(g => g.status?.abstractGameState === 'Final').length;
+  const active = games.filter(g => ['Live', 'Preview'].includes(g.status?.abstractGameState)).length;
+  return {
+    dateKey: today,
+    totalGames: games.length,
+    finalCount: finals,
+    allFinished: games.length > 0 && finals === games.length,
+    activeGames: active,
+  };
+}
+
+function stopStandingsAutoRefresh() {
+  if (standingsRefreshTimer) clearTimeout(standingsRefreshTimer);
+  standingsRefreshTimer = null;
+}
+
+function scheduleNextStandingsRefresh() {
+  stopStandingsAutoRefresh();
+  if (!isStandingsTabActive() || standingsRefreshState.allFinished) return;
+  standingsRefreshTimer = setTimeout(checkStandingsAutoRefresh, STANDINGS_REFRESH_MS);
+}
+
+function startStandingsAutoRefresh(reset = false) {
+  const todayKey = standingsTodayKey();
+  if (reset) {
+    standingsRefreshState = {
+      dateKey: null,
+      lastFinalCount: null,
+      allFinished: false,
+      inFlight: false,
+    };
+  } else if (standingsRefreshState.dateKey && standingsRefreshState.dateKey !== todayKey) {
+    standingsRefreshState = {
+      dateKey: null,
+      lastFinalCount: null,
+      allFinished: false,
+      inFlight: false,
+    };
+  }
+  if (!isStandingsTabActive()) {
+    stopStandingsAutoRefresh();
+    return;
+  }
+  if (standingsRefreshState.inFlight) return;
+  scheduleNextStandingsRefresh();
+}
+
+async function checkStandingsAutoRefresh() {
+  if (!isStandingsTabActive() || standingsRefreshState.inFlight) return;
+  standingsRefreshState.inFlight = true;
+  try {
+    const status = await fetchTodayScheduleStatus();
+    if (standingsRefreshState.dateKey !== status.dateKey) {
+      standingsRefreshState.dateKey = status.dateKey;
+      standingsRefreshState.lastFinalCount = null;
+      standingsRefreshState.allFinished = false;
+    }
+
+    const firstObservation = standingsRefreshState.lastFinalCount === null;
+    const finalsIncreased = !firstObservation && status.finalCount > standingsRefreshState.lastFinalCount;
+    const dayJustFinished = status.allFinished && !standingsRefreshState.allFinished;
+
+    standingsRefreshState.lastFinalCount = status.finalCount;
+    standingsRefreshState.allFinished = status.allFinished;
+
+    if (finalsIncreased || dayJustFinished) {
+      await loadStandingsWithOptions({ force: true });
+      if (isStandingsTabActive()) renderStandings();
+    }
+  } catch (e) {
+    console.warn('Standings auto-refresh skipped:', e);
+  } finally {
+    standingsRefreshState.inFlight = false;
+    scheduleNextStandingsRefresh();
   }
 }
 
@@ -1392,6 +1535,191 @@ async function loadGamesRemaining(teamIds) {
     });
     return counts;
   } catch(e) { return {}; }
+}
+
+async function ensureStandingsNextGames(teamIds) {
+  const needed = teamIds.filter(id => !(standingsNextGameCache && standingsNextGameCache[id]));
+  if (!needed.length && standingsNextGameCache) return standingsNextGameCache;
+
+  const today = new Date();
+  const future = new Date(today);
+  future.setDate(today.getDate() + 7);
+  const fmt = d => d.toISOString().split('T')[0];
+  try {
+    const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&startDate=${fmt(today)}&endDate=${fmt(future)}&gameType=R&hydrate=team`);
+    const data = await res.json();
+    standingsNextGameCache = standingsNextGameCache || {};
+    (data.dates || []).forEach(dateObj => {
+      (dateObj.games || []).forEach(game => {
+        const gameTime = game.gameDate ? new Date(game.gameDate) : null;
+        const timeStr = gameTime
+          ? gameTime.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' })
+          : null;
+        const away = game.teams?.away;
+        const home = game.teams?.home;
+        if (!away?.team?.id || !home?.team?.id) return;
+        const homeMeta = TEAM_META[home.team.id] || { abbr: home.team.abbreviation || '?', logo: `https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
+        const awayMeta = TEAM_META[away.team.id] || { abbr: away.team.abbreviation || '?', logo: `https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
+        if (!standingsNextGameCache[home.team.id]) {
+          standingsNextGameCache[home.team.id] = {
+            gamePk: game.gamePk,
+            date: dateObj.date,
+            opponent: awayMeta.abbr,
+            opponentId: away.team.id,
+            opponentLogo: awayMeta.logo,
+            homeAway: 'vs',
+            time: timeStr,
+          };
+        }
+        if (!standingsNextGameCache[away.team.id]) {
+          standingsNextGameCache[away.team.id] = {
+            gamePk: game.gamePk,
+            date: dateObj.date,
+            opponent: homeMeta.abbr,
+            opponentId: home.team.id,
+            opponentLogo: homeMeta.logo,
+            homeAway: '@',
+            time: timeStr,
+          };
+        }
+      });
+    });
+  } catch(e) {
+    standingsNextGameCache = standingsNextGameCache || {};
+  }
+  return standingsNextGameCache;
+}
+
+function standingsNextGameLabel(game) {
+  if (!game) return 'Sin próximo partido confirmado.';
+  const todayStr = new Date().toISOString().split('T')[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  let dateLabel;
+  if (game.date === todayStr) dateLabel = 'Hoy';
+  else if (game.date === tomorrowStr) dateLabel = 'Mañana';
+  else {
+    const d = new Date(game.date + 'T12:00:00');
+    dateLabel = d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+  }
+  const timeLabel = game.time ? ` · ${game.time}` : '';
+  return `${dateLabel}${timeLabel}`;
+}
+
+function isGameInTopGamesWindow(dateStr) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  return dateStr === todayStr || dateStr === tomorrowStr;
+}
+
+function findStandingsTeamRecord(teamId) {
+  if (!allData.standings?.length) return null;
+  for (const div of allData.standings) {
+    const rec = (div.teamRecords || []).find(tr => tr.team?.id === teamId);
+    if (rec) return rec;
+  }
+  return null;
+}
+
+function compareStandingsMetric(ownVal, oppVal, betterWhenHigher = true) {
+  if (ownVal === oppVal) return 'standings-equal';
+  const oppBetter = betterWhenHigher ? oppVal > ownVal : oppVal < ownVal;
+  return oppBetter ? 'standings-better' : 'standings-worse';
+}
+
+function standingsCompareItem(label, ownVal, oppVal, displayVal, betterWhenHigher = true) {
+  const cls = compareStandingsMetric(ownVal, oppVal, betterWhenHigher);
+  return `<span class="standings-next-comp"><span class="standings-next-comp-label">${label}</span><span class="standings-next-comp-val ${cls}">${displayVal}</span></span>`;
+}
+
+function standingsL10Wins(tr) {
+  const l10 = tr.records?.splitRecords?.find(s => s.type === 'lastTen');
+  return l10 ? parseInt(l10.wins, 10) || 0 : 0;
+}
+
+function standingsStreakValue(tr) {
+  const code = tr.streak?.streakCode || '';
+  const num = parseInt(code.slice(1), 10) || 0;
+  if (code.startsWith('W')) return num;
+  if (code.startsWith('L')) return -num;
+  return 0;
+}
+
+function standingsOpponentComparisonHTML(own, opp, game) {
+  const ownPct = parseFloat(own.winningPercentage || 0);
+  const oppPct = parseFloat(opp.winningPercentage || 0);
+  const ownL10 = standingsL10Wins(own);
+  const oppL10 = standingsL10Wins(opp);
+  const ownStrk = standingsStreakValue(own);
+  const oppStrk = standingsStreakValue(opp);
+  const oppL10Rec = opp.records?.splitRecords?.find(s => s.type === 'lastTen');
+  const timeMeta = standingsNextGameLabel(game);
+  return `<div class="standings-next-compare">
+    ${standingsCompareItem('W', parseInt(own.wins, 10) || 0, parseInt(opp.wins, 10) || 0, opp.wins, true)}
+    ${standingsCompareItem('L', parseInt(own.losses, 10) || 0, parseInt(opp.losses, 10) || 0, opp.losses, false)}
+    ${standingsCompareItem('PCT', ownPct, oppPct, parseFloat(opp.winningPercentage || 0).toFixed(3).replace(/^0/, ''), true)}
+    ${standingsCompareItem('L10', ownL10, oppL10, oppL10Rec ? `${oppL10Rec.wins}-${oppL10Rec.losses}` : '—', true)}
+    ${standingsCompareItem('STRK', ownStrk, oppStrk, opp.streak?.streakCode || '—', true)}
+    <span class="standings-next-comp"><span class="standings-next-comp-val standings-equal">${timeMeta}</span></span>
+  </div>`;
+}
+
+function focusTopGameTarget() {
+  const tryOpen = () => {
+    const targetInfo = window._topGamesTarget;
+    if (!targetInfo) return;
+    const target = document.querySelector(`.tg-game-row[data-gamepk="${targetInfo.gamePk}"]`);
+    if (target) {
+      const block = target.closest('.tg-day-block');
+      const body = target.closest('.tg-day-body');
+      const header = block?.querySelector('.tg-day-header');
+      const chev = block?.querySelector('.tg-day-chevron');
+      if (body && !body.classList.contains('open')) {
+        body.classList.add('open');
+        header?.classList.add('open');
+        chev?.classList.add('open');
+      }
+      const gameId = target.id.replace(/^tgr-/, '');
+      const detail = document.getElementById(`tgd-${gameId}`);
+      if (detail && !detail.classList.contains('open')) tgToggleGame(gameId);
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      window._topGamesTarget = null;
+    } else {
+      setTimeout(tryOpen, 150);
+    }
+  };
+  setTimeout(tryOpen, 120);
+}
+
+function goToTopGameFromStandings(gamePk, dateStr) {
+  window._fromStandingsTopGames = true;
+  window._topGamesTarget = { gamePk: String(gamePk), date: dateStr };
+  switchTab('topgames');
+  focusTopGameTarget();
+}
+
+function renderStandingsNextGames(teamIds) {
+  teamIds.forEach(teamId => {
+    const wrap = document.getElementById(`stnext-content-${teamId}`);
+    if (!wrap) return;
+    const game = standingsNextGameCache?.[teamId];
+    if (!game) {
+      wrap.innerHTML = `<div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Sin próximo partido confirmado.</span></div>`;
+      return;
+    }
+    const own = findStandingsTeamRecord(teamId);
+    const opp = findStandingsTeamRecord(game.opponentId);
+    const comparisonHtml = own && opp ? standingsOpponentComparisonHTML(own, opp, game) : '';
+    const isTopGamesTarget = isGameInTopGamesWindow(game.date);
+    wrap.innerHTML = `<div class="standings-next-wrap${isTopGamesTarget ? ' standings-next-link' : ''}" ${isTopGamesTarget ? `onclick="goToTopGameFromStandings('${game.gamePk}','${game.date}')"` : ''}>
+      <span class="standings-next-label">NEXT GAME</span>
+      <span class="standings-next-matchup">
+        <span>${game.homeAway === 'vs' ? 'VS' : '@'}</span>
+        <img class="standings-next-logo" src="${game.opponentLogo}" onerror="this.style.display='none'" alt="">
+        <span>${game.opponent}</span>
+      </span>
+      ${comparisonHtml}
+    </div>`;
+  });
 }
 
 async function renderStandings() {
@@ -1540,13 +1868,13 @@ async function renderStandings() {
       if (isDivLeader) badge = `<span class="badge-div">DIV</span>`;
       else if (isWC) badge = `<span class="badge-wc">WC</span>`;
 
-      rows += `<tr class="${rowCls}">
+      rows += `<tr class="${rowCls} standings-team-row" id="strow-${divId}-${tid}" onclick="toggleStandingsTeamRow('${divId}','${tid}')">
         <td>
           <div class="team-cell" style="gap:7px">
             ${badge}
             <img class="team-logo-sm" style="width:22px;height:22px" src="https://www.mlbstatic.com/team-logos/${tid}.svg" onerror="this.style.display='none'" alt="">
-            <span class="team-name-full" style="font-weight:500;font-size:14px;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:2px" onmouseover="this.style.textDecorationColor='var(--accent)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="goToTeam(${tid})">${displayName}</span>
-            <span class="team-name-abbr" style="font-weight:600;font-size:14px;cursor:pointer" onclick="goToTeam(${tid})">${meta.abbr}</span>
+            <span class="team-name-full" style="font-weight:500;font-size:14px;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:2px" onmouseover="this.style.textDecorationColor='var(--accent)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="event.stopPropagation();goToTeam(${tid})">${displayName}</span>
+            <span class="team-name-abbr" style="font-weight:600;font-size:14px;cursor:pointer" onclick="event.stopPropagation();goToTeam(${tid})">${meta.abbr}</span>
           </div>
         </td>
         <td class="r">${tr.wins}</td>
@@ -1556,6 +1884,9 @@ async function renderStandings() {
         <td class="r div-col-strk">${streakHtml}</td>
         <td class="r div-col-mn">${mnHtml}</td>
         <td class="r div-col-hist">${histDotsHTML(tid)}</td>
+      </tr>
+      <tr class="standings-team-detail" id="stnext-${divId}-${tid}">
+        <td colspan="8"><div id="stnext-content-${tid}"><div class="standings-next-wrap"><span class="standings-next-label">Próximo</span><span class="standings-next-meta">Cargando...</span></div></div></td>
       </tr>`;
     });
 
@@ -1601,6 +1932,8 @@ async function renderStandings() {
   if (dateInfo) dateInfo.textContent = dateStr;
   if (wcDateInfo) wcDateInfo.textContent = dateStr;
 
+  ensureStandingsNextGames(allTeamIds).then(() => renderStandingsNextGames(allTeamIds)).catch(()=>{});
+
   // Pre-load tracker data in background (no UI yet)
   loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
 
@@ -1610,6 +1943,15 @@ async function renderStandings() {
 
 // ── DIVISION TOGGLE ───────────────────────────────────────────────────────
 let activeDivisionId = null; // null = show all
+
+function toggleStandingsTeamRow(divId, teamId) {
+  const row = document.getElementById(`strow-${divId}-${teamId}`);
+  const detail = document.getElementById(`stnext-${divId}-${teamId}`);
+  if (!row || !detail) return;
+  const isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  row.classList.toggle('open', !isOpen);
+}
 
 function toggleDivision(divId) {
   // Desktop: no collapse, all divisions always visible
@@ -4644,12 +4986,17 @@ function switchTab(tab) {
     if (bnavBtn) bnavBtn.classList.add('active');
     const panel = document.getElementById(`tab-${tab}`);
     if (panel) panel.classList.add('active');
+    if (tab === 'standings') startStandingsAutoRefresh();
+    else stopStandingsAutoRefresh();
     history.replaceState(null, '', `#${tab}`);
     if (tab !== 'rosters') window._fromStandings = false;
+    if (tab !== 'topgames') window._fromStandingsTopGames = false;
     if (tab !== 'mvp') window._fromTopGames = false;
     // Show/hide MVP breadcrumb
     const mvpBC = document.getElementById('mvpBreadcrumb');
     if (mvpBC) mvpBC.style.display = (tab === 'mvp' && window._fromTopGames) ? 'flex' : 'none';
+    const tgBC = document.getElementById('topGamesBreadcrumb');
+    if (tgBC) tgBC.style.display = (tab === 'topgames' && window._fromStandingsTopGames) ? 'flex' : 'none';
     if (!loaded[tab]) {
       loaded[tab] = true;
       if (tab === 'bracket') loadBracket();
@@ -4662,6 +5009,8 @@ function switchTab(tab) {
       // Re-render team list if it's empty (standings may have loaded after first visit)
       const listEl = document.getElementById('teamSelectorList');
       if (listEl && !listEl.querySelector('.team-selector-item')) loadRosters();
+    } else if (tab === 'topgames' && window._topGamesTarget) {
+      setTimeout(() => focusTopGameTarget(), 50);
     }
   } catch(e) { console.error('switchTab:', e); }
 }
@@ -5344,7 +5693,7 @@ async function loadTopGames() {
       const venueName = g.venue?.name || '';
       const detailHTML = yesterdayKeyPlayersHTML(yesterdayBoxscores[idx]);
       return `<div>
-        <div class="tg-game-row" id="tgr-${gameId}" onclick="tgToggleGame('${gameId}')">
+        <div class="tg-game-row" id="tgr-${gameId}" data-gamepk="${g.gamePk}" onclick="tgToggleGame('${gameId}')">
           <div class="tg-teams">
             <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
             <span class="tg-abbr" style="${boldA}">${awayMeta.abbr}</span>
@@ -5587,7 +5936,7 @@ async function loadTopGames() {
       </div>`;
 
       return `<div>
-        <div class="tg-game-row" id="tgr-${gameId}" onclick="tgToggleGame('${gameId}')">
+        <div class="tg-game-row" id="tgr-${gameId}" data-gamepk="${g.gamePk}" onclick="tgToggleGame('${gameId}')">
             <div class="tg-teams">
             <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
             <span class="tg-abbr">${awayMeta.abbr}</span>
@@ -6864,6 +7213,10 @@ const VALID_TABS = new Set(['standings','topgames','rosters','mvp']);
 const hashTab = window.location.hash.replace('#', '');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (isStandingsTabActive()) startStandingsAutoRefresh();
+});
 init();
 </script>
 </body>
