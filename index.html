@@ -4773,6 +4773,21 @@ async function loadTopGames() {
     const yesterdayGames = (yData.dates?.[0]?.games || []);
     const todayGames     = (todayData.dates?.[0]?.games || []).slice().sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
     const tomorrowGames  = (tmrData.dates?.[0]?.games  || []).slice().sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
+    const yesterdayBoxscores = await Promise.all(
+      yesterdayGames.map(g =>
+        fetchWithTimeout(`${MLB_API}/game/${g.gamePk}/boxscore`)
+          .then(r => r.json())
+          .catch(() => null)
+      )
+    );
+    const yesterdayPlayerIds = new Set();
+    yesterdayBoxscores.forEach(box => {
+      ['away', 'home'].forEach(side => {
+        Object.values(box?.teams?.[side]?.players || {}).forEach(player => {
+          if (player?.person?.id) yesterdayPlayerIds.add(player.person.id);
+        });
+      });
+    });
 
     // Fetch pitcher stats for probable pitchers (today + tomorrow only)
     const pitcherIds = new Set();
@@ -4930,6 +4945,7 @@ async function loadTopGames() {
     [...allGameTeamIds].forEach(tid => {
       (candidatesByTeam[tid] || []).forEach(c => ptwPids.add(c.pid));
     });
+    [...yesterdayPlayerIds].forEach(pid => ptwPids.add(pid));
     // Also fetch stats for probable pitchers if not already in pitcherStats
     [...todayGames, ...tomorrowGames].forEach(g => {
       [g.teams.away.probablePitcher?.id, g.teams.home.probablePitcher?.id].forEach(id => { if(id) ptwPids.add(id); });
@@ -4952,11 +4968,29 @@ async function loadTopGames() {
             }).catch(()=>{}),
           fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=hitting,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
             .then(r=>r.json()).then(d=>{
-              (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat; if(s) ptwCareer[p.id]={ ops:parseFloat(s.ops)||0 }; });
+              (d.people||[]).forEach(p=>{
+                const s=p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat;
+                ptwCareer[p.id]=ptwCareer[p.id]||{};
+                if(s){
+                  ptwCareer[p.id].ops=parseFloat(s.ops)||0;
+                  ptwCareer[p.id].careerAB=parseInt(s.atBats)||0;
+                } else {
+                  ptwCareer[p.id].careerAB=0;
+                }
+              });
             }).catch(()=>{}),
           fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
             .then(r=>r.json()).then(d=>{
-              (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat; if(s){ ptwCareer[p.id]=ptwCareer[p.id]||{}; ptwCareer[p.id].formaScore=calcBaseScore(parseFloat(s.era),parseFloat(s.whip)); } });
+              (d.people||[]).forEach(p=>{
+                const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat;
+                ptwCareer[p.id]=ptwCareer[p.id]||{};
+                if(s){
+                  ptwCareer[p.id].formaScore=calcBaseScore(parseFloat(s.era),parseFloat(s.whip));
+                  ptwCareer[p.id].careerIP=parseFloat(s.inningsPitched)||0;
+                } else {
+                  ptwCareer[p.id].careerIP=0;
+                }
+              });
             }).catch(()=>{})
         ]);
       }
@@ -5016,8 +5050,287 @@ async function loadTopGames() {
     }
     const DOT_COLOR = { green: 'var(--win)', blue: 'var(--accent)', grey: 'var(--border)' };
 
-    // ── YESTERDAY: simple result line ────────────────────────────────────────
-    function yesterdayRowHTML(g) {
+    function parseIpToOuts(ip) {
+      if (!ip && ip !== 0) return 0;
+      const [whole, frac = '0'] = String(ip).split('.');
+      return (parseInt(whole, 10) || 0) * 3 + (parseInt(frac, 10) || 0);
+    }
+
+    function intStat(v) {
+      return parseInt(v, 10) || 0;
+    }
+
+    function ratioIdx(val, ref) {
+      if (!ref || ref <= 0) return 0;
+      return Math.min(200, Math.max(0, (val / ref) * 100));
+    }
+
+    function ratioIdxInv(val, ref) {
+      if (!val || val <= 0) return 200;
+      if (!ref || ref <= 0) return 0;
+      return Math.min(200, Math.max(0, (ref / val) * 100));
+    }
+
+    function hitterGameScore(s) {
+      const ab = intStat(s.atBats);
+      const h = intStat(s.hits);
+      const doubles = intStat(s.doubles);
+      const triples = intStat(s.triples);
+      const hr = intStat(s.homeRuns);
+      const bb = intStat(s.baseOnBalls);
+      const hbp = intStat(s.hitByPitch);
+      const sf = intStat(s.sacFlies);
+      const rbi = intStat(s.rbi);
+      const runs = intStat(s.runs);
+      const sb = intStat(s.stolenBases);
+      const cs = intStat(s.caughtStealing);
+      const so = intStat(s.strikeOuts);
+      const singles = Math.max(0, h - doubles - triples - hr);
+      const tb = singles + doubles * 2 + triples * 3 + hr * 4;
+      const pa = ab + bb + hbp + sf;
+      const timesOnBase = h + bb + hbp;
+      const obp = pa > 0 ? timesOnBase / pa : 0;
+      const slg = ab > 0 ? tb / ab : 0;
+      const ops = obp + slg;
+      const production = rbi + runs;
+      const speed = sb + (cs === 0 && sb > 0 ? 0.5 : 0);
+
+      const raw =
+        0.35 * ratioIdx(ops, 1.400) +
+        0.25 * ratioIdx(tb, 4) +
+        0.20 * ratioIdx(production, 4) +
+        0.10 * ratioIdx(timesOnBase, 3) +
+        0.10 * ratioIdx(speed, 2) -
+        Math.min(12, so * 2);
+
+      return Math.max(0, Math.min(99.9, raw * 0.52));
+    }
+
+    function pitcherGameScore(s) {
+      const outs = parseIpToOuts(s.inningsPitched);
+      const ip = outs / 3;
+      const gs = intStat(s.gamesStarted);
+      const er = intStat(s.earnedRuns);
+      const hits = intStat(s.hits);
+      const bb = intStat(s.baseOnBalls);
+      const so = intStat(s.strikeOuts);
+      const qs = gs > 0 && outs >= 18 && er <= 3 ? 1 : 0;
+      if (ip <= 0) return 0;
+      const gameEra = (er * 9) / ip;
+      const gameWhip = (hits + bb) / ip;
+      const k9 = (so * 9) / ip;
+      const strikeoutImpact = 0.65 * ratioIdx(so, 6) + 0.35 * ratioIdx(k9, 10.5);
+      const workloadFactor = Math.min(1, 0.40 + 0.60 * (ip / 5));
+
+      const raw =
+        0.34 * ratioIdxInv(Math.max(gameEra, 0.1), 4.00) +
+        0.24 * ratioIdxInv(Math.max(gameWhip, 0.1), 1.20) +
+        0.14 * strikeoutImpact +
+        0.28 * ratioIdx(ip, 6.0) +
+        (qs ? 8 : 0);
+
+      return Math.max(0, Math.min(99.9, raw * 0.50 * workloadFactor));
+    }
+
+    function hitterTopStats(s) {
+      const stats = [];
+      const hr = intStat(s.homeRuns);
+      const rbi = intStat(s.rbi);
+      const hits = intStat(s.hits);
+      const sb = intStat(s.stolenBases);
+      const bb = intStat(s.baseOnBalls);
+      const runs = intStat(s.runs);
+      const doubles = intStat(s.doubles);
+      const triples = intStat(s.triples);
+
+      if (hr > 0) stats.push(`${hr} HR`);
+      if (rbi > 0) stats.push(`${rbi} RBI`);
+      if (hits > 0) stats.push(`${hits} H`);
+      if (doubles > 0) stats.push(`${doubles} 2B`);
+      if (triples > 0) stats.push(`${triples} 3B`);
+      if (sb > 0) stats.push(`${sb} SB`);
+      if (bb > 0) stats.push(`${bb} BB`);
+      if (runs > 0) stats.push(`${runs} R`);
+
+      const unique = [];
+      stats.forEach(stat => {
+        if (!unique.includes(stat)) unique.push(stat);
+      });
+
+      return unique.slice(0, 3);
+    }
+
+    function pitcherTopStats(s) {
+      const stats = [];
+      if (s.inningsPitched) stats.push(`${s.inningsPitched} IP`);
+      stats.push(`${intStat(s.earnedRuns)} ER`);
+      if (intStat(s.strikeOuts) > 0) stats.push(`${intStat(s.strikeOuts)} K`);
+      else if (intStat(s.baseOnBalls) === 0) stats.push('0 BB');
+      return stats.slice(0, 3);
+    }
+
+    function yesterdayStarColor(p) {
+      if (p.type === 'pitcher') {
+        if (p.score >= 70) return 'var(--win)';
+        if (p.score >= 54) return 'var(--accent-blue)';
+        return 'var(--muted)';
+      }
+      if (p.score >= 62) return 'var(--accent-blue)';
+      if (p.score >= 48) return '#2563eb';
+      return 'var(--muted)';
+    }
+
+    function selectYesterdayStarsFromBox(box) {
+      const hitters = [];
+      const pitchers = [];
+      const CAREER_AB_LIMIT = 130;
+      const CAREER_IP_LIMIT = 130;
+      if (!box?.teams) return [];
+
+      ['away', 'home'].forEach(side => {
+        const teamBox = box.teams?.[side];
+        const teamId = teamBox?.team?.id;
+        if (!teamId) return;
+        const teamMeta = TEAM_META[teamId] || {
+          abbr: teamBox.team?.abbreviation || '?',
+          logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`
+        };
+
+        Object.values(teamBox.players || {}).forEach(player => {
+          const pid = player.person?.id;
+          const name = player.person?.fullName || '?';
+          if (!pid) return;
+          const gamePos = (player.allPositions && player.allPositions[0]?.abbreviation) || player.position?.abbreviation || '';
+
+          const bat = player.stats?.batting || {};
+          const pit = player.stats?.pitching || {};
+          const pa =
+            intStat(bat.atBats) +
+            intStat(bat.baseOnBalls) +
+            intStat(bat.hitByPitch) +
+            intStat(bat.sacFlies) +
+            intStat(bat.sacBunts);
+          const hasBattingLine = pa > 0 || intStat(bat.hits) > 0 || intStat(bat.rbi) > 0 || intStat(bat.runs) > 0;
+          const outs = parseIpToOuts(pit.inningsPitched);
+          const hasPitchingLine = outs > 0 || intStat(pit.battersFaced) > 0 || intStat(pit.strikeOuts) > 0;
+
+          if (hasBattingLine) {
+            const seasonHit = ptwHitStats[pid] || {};
+            const career = ptwCareer[pid];
+            const seasonOps = parseFloat(seasonHit.ops) || 0;
+            const isRookie = !career || (career.careerAB ?? 0) < CAREER_AB_LIMIT;
+            hitters.push({
+              pid,
+              name,
+              teamId,
+              teamMeta,
+              type: 'hitter',
+              displayRole: gamePos && gamePos !== 'P' && gamePos !== 'TWP' ? gamePos : '',
+              score: hitterGameScore(bat),
+              stats: bat,
+              topStats: hitterTopStats(bat),
+              isRookie,
+              photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+            });
+          }
+
+          if (hasPitchingLine) {
+            const seasonPitch = ptwPitchStats[pid] || pitcherStats[pid] || {};
+            const career = ptwCareer[pid];
+            const seasonForma = calcBaseScore(parseFloat(seasonPitch.era), parseFloat(seasonPitch.whip));
+            const isRookie = !career || ((career.careerIP ?? 0) < CAREER_IP_LIMIT && (career.careerAB ?? 0) < CAREER_AB_LIMIT);
+            pitchers.push({
+              pid,
+              name,
+              teamId,
+              teamMeta,
+              type: 'pitcher',
+              displayRole: 'PITCHER',
+              score: pitcherGameScore(pit),
+              stats: pit,
+              topStats: pitcherTopStats(pit),
+              isRookie,
+              photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+            });
+          }
+        });
+      });
+
+      hitters.sort((a, b) => b.score - a.score);
+      pitchers.sort((a, b) => b.score - a.score);
+
+      const MIN_HITTER_SCORE = 28;
+      const nextDistinct = (arr, used) => arr.find(p => !used.has(p.pid)) || null;
+      const used = new Set();
+      const bestH = nextDistinct(hitters, used);
+      const bestP = nextDistinct(pitchers, used);
+
+      const MIN_PITCHER_SCORE = 32;
+      const ELITE_PITCHER_SCORE = 72;
+      const STRONG_SECOND_PITCHER = 64;
+
+      let selected = [];
+
+      if (!bestP || (bestP.score < MIN_PITCHER_SCORE && bestH)) {
+        if (bestH && bestH.score >= MIN_HITTER_SCORE) { selected.push(bestH); used.add(bestH.pid); }
+        const secondH = nextDistinct(hitters, used);
+        if (secondH && secondH.score >= MIN_HITTER_SCORE) { selected.push(secondH); used.add(secondH.pid); }
+        if (selected.length < 2 && bestP && bestP.score >= MIN_PITCHER_SCORE && !used.has(bestP.pid)) selected.push(bestP);
+      } else {
+        const secondP = nextDistinct(pitchers, new Set(bestP ? [bestP.pid] : []));
+        if (bestP && secondP && bestP.score >= ELITE_PITCHER_SCORE && secondP.score >= STRONG_SECOND_PITCHER) {
+          selected = [bestP, secondP];
+        } else {
+          if (bestH && bestH.score >= MIN_HITTER_SCORE) { selected.push(bestH); used.add(bestH.pid); }
+          if (bestP && bestP.score >= MIN_PITCHER_SCORE && !used.has(bestP.pid)) { selected.push(bestP); used.add(bestP.pid); }
+          if (selected.length < 2) {
+            const fallback = nextDistinct(bestH ? pitchers : hitters, used);
+            if (fallback) {
+              const meetsFloor = fallback.type === 'pitcher'
+                ? fallback.score >= MIN_PITCHER_SCORE
+                : fallback.score >= MIN_HITTER_SCORE;
+              if (meetsFloor) selected.push(fallback);
+            }
+          }
+        }
+      }
+
+      return selected
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+    }
+
+    function yesterdayStarRowHTML(p) {
+      const teamPill = `<span style="display:inline-flex;align-items:center;gap:3px;flex-shrink:0">
+        <img src="${p.teamMeta.logo}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'">
+        <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;color:var(--muted)">${p.teamMeta.abbr}</span>
+      </span>`;
+      const rookieBadge = p.isRookie ? `<span class="rookie-badge">R</span>` : '';
+      const roleBadge = p.displayRole ? `<span class="sec-pos-badge">${p.displayRole}</span>` : '';
+      const statsLine = p.topStats.join(' · ') || (p.type === 'pitcher' ? '0 ER' : '1 H');
+      return `<div class="impact-row">
+        <div class="impact-row-left">
+          <img class="impact-photo" src="${p.photoUrl}"
+            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+          <div class="impact-name-block">
+            <div class="impact-name">${p.name} ${roleBadge} ${rookieBadge} ${teamPill}</div>
+            <div class="impact-stats-line">${statsLine}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function yesterdayKeyPlayersHTML(box) {
+      const selected = selectYesterdayStarsFromBox(box);
+      if (!selected.length) return '';
+      return `<div class="impact-detail-card" style="background:#fff;border-color:#dfe6f2;box-shadow:0 1px 4px rgba(15,25,35,.04)">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">Key Performances</div>
+        ${selected.map(p => yesterdayStarRowHTML(p)).join('')}
+      </div>`;
+    }
+
+    function yesterdayRowHTML(g, idx) {
       const away = g.teams.away, home = g.teams.home;
       const awayMeta = TEAM_META[away.team.id] || { abbr: away.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
       const homeMeta = TEAM_META[home.team.id] || { abbr: home.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
@@ -5027,17 +5340,28 @@ async function loadTopGames() {
       const homeWon = typeof homeScore === 'number' && typeof awayScore === 'number' && homeScore > awayScore;
       const boldA = awayWon ? 'font-weight:800;color:var(--text)' : 'color:var(--muted)';
       const boldH = homeWon ? 'font-weight:800;color:var(--text)' : 'color:var(--muted)';
-      return `<div class="tg-game-row" style="cursor:default">
-        <div class="tg-teams">
-          <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
-          <span class="tg-abbr" style="${boldA}">${awayMeta.abbr}</span>
-          <span class="tg-score" style="${boldA}">${awayScore}</span>
-          <span class="tg-sep">-</span>
-          <span class="tg-score" style="${boldH}">${homeScore}</span>
-          <span class="tg-abbr" style="${boldH}">${homeMeta.abbr}</span>
-          <img class="tg-team-logo" src="${homeMeta.logo}" onerror="this.style.display='none'" alt="">
+      const gameId = `ayer-${idx}`;
+      const venueName = g.venue?.name || '';
+      const detailHTML = yesterdayKeyPlayersHTML(yesterdayBoxscores[idx]);
+      return `<div>
+        <div class="tg-game-row" id="tgr-${gameId}" onclick="tgToggleGame('${gameId}')">
+          <div class="tg-teams">
+            <img class="tg-team-logo" src="${awayMeta.logo}" onerror="this.style.display='none'" alt="">
+            <span class="tg-abbr" style="${boldA}">${awayMeta.abbr}</span>
+            <span class="tg-score" style="${boldA}">${awayScore}</span>
+            <span class="tg-sep">-</span>
+            <span class="tg-score" style="${boldH}">${homeScore}</span>
+            <span class="tg-abbr" style="${boldH}">${homeMeta.abbr}</span>
+            <img class="tg-team-logo" src="${homeMeta.logo}" onerror="this.style.display='none'" alt="">
+          </div>
+          <div style="text-align:right;flex-shrink:0;padding-left:10px">
+            <div class="tg-time" style="padding:0;font-size:11px;letter-spacing:.5px;color:var(--muted)">${g.status?.detailedState==='Final'?'FINAL':g.status?.detailedState||''}</div>
+            ${venueName ? `<div style="font-family:'Barlow Condensed';font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;margin-top:1px">${venueName}</div>` : ''}
+          </div>
         </div>
-        <span class="tg-time" style="font-size:11px;letter-spacing:.5px;color:var(--muted)">${g.status?.detailedState==='Final'?'FINAL':g.status?.detailedState||''}</span>
+        <div class="tg-detail" id="tgd-${gameId}">
+          ${detailHTML || `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No key players found for this game.</div>`}
+        </div>
       </div>`;
     }
 
@@ -5299,7 +5623,7 @@ async function loadTopGames() {
 
     // AYER
     const yBody = yesterdayGames.length
-      ? yesterdayGames.map(g => yesterdayRowHTML(g)).join('')
+      ? yesterdayGames.map((g, i) => yesterdayRowHTML(g, i)).join('')
       : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos ayer.</div>`;
 
     // HOY
