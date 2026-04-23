@@ -5367,6 +5367,10 @@ async function loadTopGames() {
         .slice(0, 3);
     }
 
+    function candidateEntry(pid, teamId) {
+      return (candidatesByTeam[teamId] || []).find(c => c.pid === pid) || null;
+    }
+
     // Run candidate build + roster fetches in parallel (non-blocking to main render)
     const allGameTeamIds = new Set();
     [...todayGames, ...tomorrowGames].forEach(g => {
@@ -5447,6 +5451,15 @@ async function loadTopGames() {
         if (gs >= 1 && gp > 0 && (gs/gp) >= 0.4) rc.spPids.add(pid);
       });
     });
+
+    function isTopGamesRookie(pid, type) {
+      const career = ptwCareer[pid];
+      if (!career) return true;
+      if (type === 'pitcher') {
+        return (career.careerIP ?? 0) < 130 && (career.careerAB ?? 0) < 130;
+      }
+      return (career.careerAB ?? 0) < 130;
+    }
 
     // Score a game — now includes MVP/CY candidate bonus
     function scoreGame(g) {
@@ -5856,8 +5869,21 @@ async function loadTopGames() {
       const spLabel = (state === 'Live' || state === 'Final') ? 'STARTING PITCHER' : 'PROBABLE SP';
 
       // Rich pitcher card
-      function spMini(pid, name, forma, stat, teamMeta) {
+      function spMini(pid, name, forma, stat, teamMeta, teamId) {
         const isTBD = !name;
+        const awardEntry = pid && teamId ? candidateEntry(pid, teamId) : null;
+        const isRookie = pid ? isTopGamesRookie(pid, 'pitcher') : false;
+        const rookieBadge = isRookie ? `<span class="rookie-badge">R</span>` : '';
+        const spAwardBadges = awardEntry?.labels?.length
+          ? awardEntry.labels
+              .filter(entry => entry.key === 'CY' || entry.key === 'ROY')
+              .sort((a, b) => (a.key === 'CY' ? 0 : 1) - (b.key === 'CY' ? 0 : 1) || a.rank - b.rank)
+              .map(entry => {
+                const label = entry.key === 'CY' ? 'CY RACE' : 'ROY RACE';
+                return `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${entry.key}')">${label}</span>`;
+              })
+              .join(' ')
+          : '';
         const color = forma !== null ? getDiamondPlayerColor(forma, 'pitcher') : 'var(--muted)';
         let bg = 'var(--surface2)', border = 'var(--border)', labelColor = 'var(--muted)';
         if (!isTBD && forma !== null) {
@@ -5883,7 +5909,7 @@ async function loadTopGames() {
         const statsLine2 = `IP ${ip} · GS ${gs}`;
         const barW = forma !== null ? Math.min(100, Math.round((forma/100)*100)) : 0;
         const career = ptwCareer[pid];
-        const trendHtml = (career?.formaScore != null && forma != null) ? trendFormaHTML(forma, career.formaScore) : '';
+        const trendHtml = (!isRookie && career?.formaScore != null && forma != null) ? trendFormaHTML(forma, career.formaScore) : '';
         return `<div style="background:${bg};border:1px solid ${border};border-radius:7px;padding:10px 12px;width:100%">
           ${teamPill}
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
@@ -5892,9 +5918,10 @@ async function loadTopGames() {
               <img class="impact-photo" src="${photoUrl}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
               <div class="impact-name-block">
-                <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+                <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name} ${rookieBadge}</div>
                 <div class="impact-stats-line">${statsLine1}</div>
                 <div class="impact-stats-line">${statsLine2}</div>
+                ${spAwardBadges ? `<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${spAwardBadges}</div>` : ''}
               </div>
             </div>
             <div class="impact-bar-val-wrap">
@@ -5928,6 +5955,8 @@ async function loadTopGames() {
         const ps = ptwPitchStats[c.pid];
         const awardKeys = (c.labels || []).map(l => l.key);
         const isPitcher = awardKeys.includes('CY') || (ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0)));
+        const isRookie = isTopGamesRookie(c.pid, isPitcher ? 'pitcher' : 'hitter');
+        const rookieBadge = isRookie ? `<span class="rookie-badge">R</span>` : '';
         const pos = c.position || (isPitcher ? 'P' : '');
         // Team pill
         const tm = c.teamMeta;
@@ -5945,15 +5974,16 @@ async function loadTopGames() {
           const color = getDiamondPlayerColor(forma, 'pitcher');
           const barW = Math.min(100, Math.round((forma/100)*100));
           const career = ptwCareer[c.pid];
-          const trendHtml = career?.formaScore != null ? trendFormaHTML(forma, career.formaScore) : '';
+          const trendHtml = !isRookie && career?.formaScore != null ? trendFormaHTML(forma, career.formaScore) : '';
           const statsLine = `ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'} · GS ${ps.gamesStarted??'—'}`;
           return `<div class="impact-row">
             <div class="impact-row-left">
               <img class="impact-photo" src="${photoUrl}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
               <div class="impact-name-block">
-                <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
+                <div class="impact-name">${c.name} ${posBadge} ${rookieBadge} ${teamPill}</div>
                 <div class="impact-stats-line">${statsLine}</div>
+                ${badgeFn ? badgeFn(c) : ''}
               </div>
             </div>
             <div class="impact-bar-block">
@@ -5970,7 +6000,7 @@ async function loadTopGames() {
           const color = getDiamondPlayerColor(ops, 'hitter');
           const barW = Math.min(100, Math.round((ops/1.2)*100));
           const career = ptwCareer[c.pid];
-          const trendHtml = career?.ops && ops ? trendBadgeHTML(ops, career.ops, 'ops') : '';
+          const trendHtml = !isRookie && career?.ops && ops ? trendBadgeHTML(ops, career.ops, 'ops') : '';
           const statsLine  = `AVG ${hs.avg||'.---'} · HR ${hs.homeRuns??'—'}`;
           const statsLine2 = `RBI ${hs.rbi??'—'} · SB ${hs.stolenBases??'—'}`;
           return `<div class="impact-row">
@@ -5978,7 +6008,7 @@ async function loadTopGames() {
               <img class="impact-photo" src="${photoUrl}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
               <div class="impact-name-block">
-                <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
+                <div class="impact-name">${c.name} ${posBadge} ${rookieBadge} ${teamPill}</div>
                 <div class="impact-stats-line">${statsLine}</div>
                 <div class="impact-stats-line">${statsLine2}</div>
                 ${badgeFn ? badgeFn(c) : ''}
@@ -6030,10 +6060,10 @@ async function loadTopGames() {
           ? (finalKeyPerformances || `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No key performances found for this game.</div>`)
           : `<div class="tg-detail-inner">
               <div class="tg-detail-col">
-                ${spMini(awayPid, awayPName, awayF, awayS, awayMeta)}
+                ${spMini(awayPid, awayPName, awayF, awayS, awayMeta, away.team.id)}
               </div>
               <div class="tg-detail-col">
-                ${spMini(homePid, homePName, homeF, homeS, homeMeta)}
+                ${spMini(homePid, homePName, homeF, homeS, homeMeta, home.team.id)}
               </div>
             </div>
             ${allWatch.length ? `<div class="impact-detail-card" style="margin-top:10px">
