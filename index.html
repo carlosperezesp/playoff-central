@@ -265,7 +265,46 @@
 
   /* ── BOTTOM NAV (mobile only) ── */
   .bottom-nav { display: none; }
+  .app-footer {
+    margin-top: 32px;
+    margin-bottom: 8px;
+    padding: 14px 16px 4px;
+    text-align: center;
+    color: var(--muted);
+    font-family: 'Barlow Condensed';
+    font-size: 13px;
+    letter-spacing: .8px;
+  }
+  .contact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    padding: 8px 14px;
+    border: 1px solid rgba(26,86,219,.2);
+    border-radius: 999px;
+    background: rgba(26,86,219,.06);
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-family: 'Barlow Condensed';
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .contact-btn:hover {
+    background: rgba(26,86,219,.1);
+    border-color: rgba(26,86,219,.32);
+    color: #1749b5;
+  }
   @media (max-width: 768px) {
+    .app-footer {
+      margin-top: 36px;
+      margin-bottom: 0;
+      padding: 18px 12px 10px;
+      font-size: 12px;
+    }
     .bottom-nav {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0;
       background: #0f1923;
@@ -1194,6 +1233,12 @@
       </div>
     </div>
   </div>
+  <div class="app-footer">
+  <div>Feedback? Bugs? Email me.</div>
+  <a href="mailto:perezzamoracarlos.20@gmail.com?subject=BaseballLens%20feedback" class="contact-btn">
+    Contact
+  </a>
+</div>
 </main>
 
 <nav class="bottom-nav" id="bottomNav">
