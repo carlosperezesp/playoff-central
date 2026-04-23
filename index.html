@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Baseball Lens</title>
+<link rel="icon" type="image/png" href="./icon.png">
+<link rel="apple-touch-icon" href="./icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -50,10 +52,12 @@
     white-space: nowrap;
   }
   .logo-icon {
-    width: 28px; height: 28px; background: var(--accent);
+    width: 30px; height: 30px;
     border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; border: 1px solid rgba(255,255,255,.55);
-    box-shadow: inset 0 0 0 2px rgba(15,25,35,.18);
+    flex-shrink: 0; overflow: hidden;
+  }
+  .logo-icon img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
   }
   .logo-wordmark span { color: var(--accent); }
   .season-badge {
@@ -1162,7 +1166,7 @@
 <header>
   <div class="logo">
     <div class="logo-icon">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.5" fill="none"/><path d="M7 12 C8 8 10 6 12 6 C14 6 16 8 17 12 C16 16 14 18 12 18 C10 18 8 16 7 12Z" stroke="white" stroke-width="1.5" fill="none"/><line x1="5" y1="9" x2="9" y2="10.5" stroke="white" stroke-width="1"/><line x1="5" y1="15" x2="9" y2="13.5" stroke="white" stroke-width="1"/><line x1="19" y1="9" x2="15" y2="10.5" stroke="white" stroke-width="1"/><line x1="19" y1="15" x2="15" y2="13.5" stroke="white" stroke-width="1"/></svg>
+      <img src="./icon.png" alt="Baseball Lens logo">
     </div>
     <div class="logo-lockup">
       <div class="logo-wordmark">BASEBALL <span>LENS</span></div>
