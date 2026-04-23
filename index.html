@@ -208,28 +208,24 @@
     padding: 0; background: #f8fbff; border-bottom: 1px solid var(--border);
   }
   .standings-next-wrap {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px 12px 18px;
-    font-family: 'Barlow Condensed'; font-size: 13px; color: var(--muted);
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px 12px 14px;
+    font-family: 'Barlow Condensed'; font-size: 14px; color: var(--muted); flex-wrap: wrap;
   }
   .standings-next-link { cursor: pointer; }
   .standings-next-label {
-    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-blue);
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--accent-blue);
   }
   .standings-next-matchup {
-    display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text);
+    display: inline-flex; align-items: center; gap: 6px; min-width: 0;
+    font-weight: 800; color: var(--text); font-size: 15px;
   }
-  .standings-next-meta { color: var(--muted); font-weight: 600; }
-  .standings-next-logo { width: 16px; height: 16px; object-fit: contain; flex-shrink: 0; }
-  .standings-next-compare {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
-    padding-left: 68px; font-size: 12px;
+  .standings-next-meta {
+    color: var(--text); font-weight: 800; font-size: 12px; white-space: nowrap;
   }
-  .standings-next-comp { display: inline-flex; align-items: baseline; gap: 4px; }
-  .standings-next-comp-label {
-    font-size: 10px; letter-spacing: .8px; color: var(--muted); font-weight: 700; text-transform: uppercase;
-  }
-  .standings-next-comp-val { font-weight: 700; color: var(--text); }
+  .standings-next-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .standings-next-record { font-weight: 800; font-size: 15px; }
   .standings-better { color: var(--win); }
   .standings-worse { color: var(--loss); }
   .standings-equal { color: var(--text); }
@@ -329,6 +325,11 @@
   .wc-table td.r { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Barlow Condensed'; font-size: 14px; }
   .wc-table tr:last-child td { border-bottom: none; }
   .wc-table tr:hover td { background: var(--surface2); }
+  .wc-team-row { cursor: pointer; }
+  .wc-team-row.open td { background: #f8fbff; }
+  .wc-team-detail { display: none; }
+  .wc-team-detail.open { display: table-row; }
+  .wc-team-detail td { padding: 0; background: #f8fbff; border-bottom: 1px solid var(--border); }
   .wc-table tr.wc-div td { border-left: 3px solid var(--win); }
   .wc-table tr.wc-wc td { border-left: 3px solid #1a56db; }
   .wc-table tr.wc-elim td { opacity: .45; }
@@ -385,7 +386,7 @@
     .tab-btn { padding: 12px 12px; font-size: 12px; }
 
     /* Main */
-    main { padding: 16px 12px; }
+    main { padding: 16px 12px calc(110px + env(safe-area-inset-bottom)); }
     .section-title { font-size: 18px; }
 
     /* Standings / division tables */
@@ -408,6 +409,11 @@
     .div-table tr.wc-spot td:first-child { background: none; border-left: 3px solid #1a56db; }
     .div-table tr.wc-spot:hover td { background: var(--surface2); }
     .div-table tr.elim-row td { background: none; opacity: .4; }
+    .standings-next-wrap { gap: 8px; padding: 10px 8px 12px 14px; }
+    .standings-next-label { font-size: 10px; }
+    .standings-next-matchup { font-size: 14px; }
+    .standings-next-meta { font-size: 11px; }
+    .standings-next-record { font-size: 14px; }
 
     /* Schedule rows — stack into 2-line layout */
     .game-row {
@@ -675,7 +681,7 @@
   .team-stats-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px;
   }
-  .team-stat-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+  .team-stat-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
   .team-stat-header {
     display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
   }
@@ -699,7 +705,7 @@
     position: absolute; top: 50%; transform: translateY(-50%);
     display: flex; justify-content: space-between; width: 100%; pointer-events: none;
   }
-  .innings-split-row { grid-column: 1 / -1; }
+  .innings-split-row { grid-column: 1 / -1; margin-top: 8px; }
   .innings-split-title {
     font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
     color: var(--muted); margin-bottom: 6px;
@@ -759,11 +765,42 @@
     font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
     color: var(--loss); margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
   }
+  .il-accordion,
+  .il-group-accordion {
+    border: 0;
+  }
+  .il-accordion > summary,
+  .il-group-accordion > summary {
+    list-style: none; cursor: pointer; user-select: none;
+  }
+  .il-accordion > summary::-webkit-details-marker,
+  .il-group-accordion > summary::-webkit-details-marker {
+    display: none;
+  }
+  .il-summary-row,
+  .il-group-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .il-summary-chevron,
+  .il-group-chevron {
+    width: 14px; height: 14px; color: var(--muted); flex-shrink: 0;
+    transition: transform .2s ease;
+  }
+  .il-accordion[open] .il-summary-chevron,
+  .il-group-accordion[open] .il-group-chevron {
+    transform: rotate(180deg);
+  }
   .il-group { margin-bottom: 14px; }
   .il-group-label {
     font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
     color: var(--muted); margin-bottom: 6px; padding-bottom: 5px;
     border-bottom: 1px solid var(--border);
+  }
+  .il-group-accordion { margin-bottom: 10px; }
+  .il-group-summary {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); padding-bottom: 5px; border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
   }
   .il-players-grid { display: flex; flex-direction: column; }
   .il-row {
@@ -1644,23 +1681,11 @@ function standingsStreakValue(tr) {
   return 0;
 }
 
-function standingsOpponentComparisonHTML(own, opp, game) {
+function standingsOpponentComparisonHTML(own, opp) {
   const ownPct = parseFloat(own.winningPercentage || 0);
   const oppPct = parseFloat(opp.winningPercentage || 0);
-  const ownL10 = standingsL10Wins(own);
-  const oppL10 = standingsL10Wins(opp);
-  const ownStrk = standingsStreakValue(own);
-  const oppStrk = standingsStreakValue(opp);
-  const oppL10Rec = opp.records?.splitRecords?.find(s => s.type === 'lastTen');
-  const timeMeta = standingsNextGameLabel(game);
-  return `<div class="standings-next-compare">
-    ${standingsCompareItem('W', parseInt(own.wins, 10) || 0, parseInt(opp.wins, 10) || 0, opp.wins, true)}
-    ${standingsCompareItem('L', parseInt(own.losses, 10) || 0, parseInt(opp.losses, 10) || 0, opp.losses, false)}
-    ${standingsCompareItem('PCT', ownPct, oppPct, parseFloat(opp.winningPercentage || 0).toFixed(3).replace(/^0/, ''), true)}
-    ${standingsCompareItem('L10', ownL10, oppL10, oppL10Rec ? `${oppL10Rec.wins}-${oppL10Rec.losses}` : '—', true)}
-    ${standingsCompareItem('STRK', ownStrk, oppStrk, opp.streak?.streakCode || '—', true)}
-    <span class="standings-next-comp"><span class="standings-next-comp-val standings-equal">${timeMeta}</span></span>
-  </div>`;
+  const cls = compareStandingsMetric(ownPct, oppPct, true);
+  return `<span class="standings-next-record ${cls}">${opp.wins}-${opp.losses}</span>`;
 }
 
 function focusTopGameTarget() {
@@ -1708,8 +1733,9 @@ function renderStandingsNextGames(teamIds) {
     }
     const own = findStandingsTeamRecord(teamId);
     const opp = findStandingsTeamRecord(game.opponentId);
-    const comparisonHtml = own && opp ? standingsOpponentComparisonHTML(own, opp, game) : '';
+    const comparisonHtml = own && opp ? standingsOpponentComparisonHTML(own, opp) : '';
     const isTopGamesTarget = isGameInTopGamesWindow(game.date);
+    const timeMeta = standingsNextGameLabel(game);
     wrap.innerHTML = `<div class="standings-next-wrap${isTopGamesTarget ? ' standings-next-link' : ''}" ${isTopGamesTarget ? `onclick="goToTopGameFromStandings('${game.gamePk}','${game.date}')"` : ''}>
       <span class="standings-next-label">NEXT GAME</span>
       <span class="standings-next-matchup">
@@ -1717,7 +1743,35 @@ function renderStandingsNextGames(teamIds) {
         <img class="standings-next-logo" src="${game.opponentLogo}" onerror="this.style.display='none'" alt="">
         <span>${game.opponent}</span>
       </span>
-      ${comparisonHtml}
+      ${comparisonHtml || `<span class="standings-next-record standings-equal">—</span>`}
+      <span class="standings-next-meta">${timeMeta}</span>
+    </div>`;
+  });
+}
+
+function renderWildcardNextGames(teamIds) {
+  teamIds.forEach(teamId => {
+    const wrap = document.getElementById(`wcnext-content-${teamId}`);
+    if (!wrap) return;
+    const game = standingsNextGameCache?.[teamId];
+    if (!game) {
+      wrap.innerHTML = `<div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Sin próximo partido confirmado.</span></div>`;
+      return;
+    }
+    const own = findStandingsTeamRecord(teamId);
+    const opp = findStandingsTeamRecord(game.opponentId);
+    const comparisonHtml = own && opp ? standingsOpponentComparisonHTML(own, opp) : '';
+    const isTopGamesTarget = isGameInTopGamesWindow(game.date);
+    const timeMeta = standingsNextGameLabel(game);
+    wrap.innerHTML = `<div class="standings-next-wrap${isTopGamesTarget ? ' standings-next-link' : ''}" ${isTopGamesTarget ? `onclick="goToTopGameFromStandings('${game.gamePk}','${game.date}')"` : ''}>
+      <span class="standings-next-label">NEXT GAME</span>
+      <span class="standings-next-matchup">
+        <span>${game.homeAway === 'vs' ? 'VS' : '@'}</span>
+        <img class="standings-next-logo" src="${game.opponentLogo}" onerror="this.style.display='none'" alt="">
+        <span>${game.opponent}</span>
+      </span>
+      ${comparisonHtml || `<span class="standings-next-record standings-equal">—</span>`}
+      <span class="standings-next-meta">${timeMeta}</span>
     </div>`;
   });
 }
@@ -1953,6 +2007,15 @@ function toggleStandingsTeamRow(divId, teamId) {
   row.classList.toggle('open', !isOpen);
 }
 
+function toggleWildcardTeamRow(leagueKey, teamId) {
+  const row = document.getElementById(`wcrow-${leagueKey}-${teamId}`);
+  const detail = document.getElementById(`wcnext-${leagueKey}-${teamId}`);
+  if (!row || !detail) return;
+  const isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  row.classList.toggle('open', !isOpen);
+}
+
 function toggleDivision(divId) {
   // Desktop: no collapse, all divisions always visible
   if (window.innerWidth > 768) return;
@@ -2052,6 +2115,7 @@ function renderWildCardTables() {
   if (!el || !allData.standings) return;
 
   const renderLeague = (records, label) => {
+    const leagueKey = label === 'AMERICAN LEAGUE' ? 'al' : 'nl';
     let all = []; const divLeaderIds = new Set();
     records.forEach(div => {
       const sorted = div.teamRecords.slice().sort((a,b) => parseFloat(b.winningPercentage) - parseFloat(a.winningPercentage));
@@ -2066,6 +2130,7 @@ function renderWildCardTables() {
 
     let rows = ordered.map((t, i) => {
       const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr:'???' };
+      const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;
       const isDivW = divLeaderIds.has(t.team.id);
       const isWC = wcIds.has(t.team.id);
       const isElim = t.eliminationNumber === 'E' || t.wildCardEliminationNumber === 'E';
@@ -2082,13 +2147,13 @@ function renderWildCardTables() {
         : isWC ? `<span class="badge-wc">WC</span>` : '';
       // Dashed cutline after 6th team
       const cutlineStyle = i === cutoffIdx ? 'border-top: 2px dashed var(--border);' : '';
-      return `<tr class="${rowCls}" style="${cutlineStyle}">
+      return `<tr class="${rowCls} wc-team-row" id="wcrow-${leagueKey}-${t.team.id}" style="${cutlineStyle}" onclick="toggleWildcardTeamRow('${leagueKey}','${t.team.id}')">
         <td style="width:20px;font-family:'Barlow Condensed';font-weight:700;color:var(--muted);font-size:12px">${i+1}</td>
         <td>
           <div class="team-cell" style="gap:7px">
             <img style="width:22px;height:22px;object-fit:contain" src="https://www.mlbstatic.com/team-logos/${t.team.id}.svg" onerror="this.style.display='none'" alt="">
-            <span class="team-name-full" style="font-weight:500;font-size:14px">${meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name}</span>
-            <span class="team-name-abbr" style="font-weight:600;font-size:14px">${meta.abbr}</span>
+            <span class="team-name-full" style="font-weight:500;font-size:14px;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:2px" onmouseover="this.style.textDecorationColor='var(--accent)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="event.stopPropagation();goToTeam(${t.team.id})">${displayName}</span>
+            <span class="team-name-abbr" style="font-weight:600;font-size:14px;cursor:pointer" onclick="event.stopPropagation();goToTeam(${t.team.id})">${meta.abbr}</span>
           </div>
         </td>
         <td class="r">${t.wins}</td>
@@ -2097,6 +2162,9 @@ function renderWildCardTables() {
         <td class="r" style="color:${isDivW?'var(--win)':isWC?'var(--accent-blue)':'var(--muted)'}">${wcgbStr}</td>
         <td class="r wc-col-l10"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10w}-${l10l}</span></td>
         <td>${badge}</td>
+      </tr>
+      <tr class="wc-team-detail" id="wcnext-${leagueKey}-${t.team.id}">
+        <td colspan="8"><div id="wcnext-content-${t.team.id}"><div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Cargando...</span></div></div></td>
       </tr>`;
     }).join('');
 
@@ -2123,6 +2191,8 @@ function renderWildCardTables() {
   const al = allData.standings.filter(r => r.league?.id === 103);
   const nl = allData.standings.filter(r => r.league?.id === 104);
   el.innerHTML = renderLeague(al, 'AMERICAN LEAGUE') + renderLeague(nl, 'NATIONAL LEAGUE');
+  const wcTeamIds = [...new Set([...al, ...nl].flatMap(div => (div.teamRecords || []).map(tr => tr.team.id)))];
+  ensureStandingsNextGames(wcTeamIds).then(() => renderWildcardNextGames(wcTeamIds)).catch(()=>{});
 }
 
 // ── WILD CARD TRACKER (AL vs NL league-wide PCT) ──────────────────────────
@@ -3788,15 +3858,16 @@ async function fetchTeamImpact(teamId) {
     else               rpList.push(p);
   });
 
-  // SP: sort by days of rest desc (most rested = next up to pitch), then GS
-  // null restDays (no recent data) go to the end
-  spList.sort((a,b) => {
+  // Sort pitcher groups by days of rest desc (most rested first).
+  // null restDays (no recent data) go to the end.
+  function sortPitchersByRest(a, b, secondary) {
     const aRest = a.restDays ?? -1;
     const bRest = b.restDays ?? -1;
-    return (bRest - aRest) || (b.gs - a.gs) || (b.ip - a.ip);
-  });
-  clList.sort((a,b) => (b.sv-a.sv) || (b.svo-a.svo) || (b.score-a.score));
-  rpList.sort((a,b) => (b.score-a.score) || (b.hld-a.hld) || (b.ip-a.ip));
+    return (bRest - aRest) || secondary(a, b);
+  }
+  spList.sort((a,b) => sortPitchersByRest(a, b, (x, y) => (y.gs - x.gs) || (y.ip - x.ip)));
+  clList.sort((a,b) => sortPitchersByRest(a, b, (x, y) => (y.sv - x.sv) || (y.svo - x.svo) || (y.score - x.score)));
+  rpList.sort((a,b) => sortPitchersByRest(a, b, (x, y) => (y.score - x.score) || (y.hld - x.hld) || (y.ip - x.ip)));
 
   // ── IL PLAYERS ───────────────────────────────────────────────────────────
   const IL_DURATION = { '7': 7, '10': 10, '15': 15, '60': 60 };
@@ -3830,13 +3901,18 @@ async function fetchTeamImpact(teamId) {
       daysRemaining, placedDate,
       isPitcher: pos === 'P' || pos === 'TWP',
       ops, score,
+      hasSeasonStats: (pos === 'P' || pos === 'TWP')
+        ? !!ps && [ps.era, ps.whip, ps.inningsPitched].some(v => v !== undefined && v !== null && String(v).trim() !== '')
+        : !!hs && [hs.avg, hs.ops, hs.homeRuns, hs.rbi].some(v => v !== undefined && v !== null && String(v).trim() !== ''),
       stats: (pos === 'P' || pos === 'TWP') ? ps : hs,
       photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
     };
   }).sort((a, b) => {
-    // Field players before pitchers, then sort by IL duration ascending (short IL first)
+    // Field players before pitchers, then players closest to returning first.
     if (a.isPitcher !== b.isPitcher) return a.isPitcher ? 1 : -1;
-    return a.ilDays - b.ilDays;
+    const aRemain = a.daysRemaining ?? Number.POSITIVE_INFINITY;
+    const bRemain = b.daysRemaining ?? Number.POSITIVE_INFINITY;
+    return (aRemain - bRemain) || (a.ilDays - b.ilDays) || a.name.localeCompare(b.name);
   });
 
   // ── SP vs RP innings split (from season stats of classified pitchers) ──
@@ -4234,7 +4310,7 @@ function renderTeamStatsPanel(teamId, impact) {
     const rightLabel = lowerBetter ? minVal.toFixed(decimals) : maxVal.toFixed(decimals).replace(/^0/,'');
     return `<div class="team-stat-bar-wrap" style="margin-top:2px">
       <div class="team-stat-bar-fill" style="width:${fillPct}%;background:${color}"></div>
-      <div style="display:flex;justify-content:space-between;margin-top:3px;margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;margin-top:3px;margin-bottom:8px">
         <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed';opacity:.6">${leftLabel}</span>
         <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed';opacity:.6">${rightLabel}</span>
       </div>
@@ -4327,7 +4403,7 @@ function renderTeamStatsPanel(teamId, impact) {
           <div class="innings-bar-rp">${rpPct >= 18 ? `RP ${rpInnings}` : ''}</div>
         </div>
         <div class="innings-legend">
-          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:var(--accent)"></div>Abridores ${spInnings} inn (${spPct}%)</div>
+          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:var(--accent-blue)"></div>Abridores ${spInnings} inn (${spPct}%)</div>
           <div class="innings-legend-item"><div class="innings-legend-dot" style="background:#94a3b8"></div>Bullpen ${rpInnings} inn (${rpPct}%)</div>
         </div>
       </div>` : ''}
@@ -4415,7 +4491,9 @@ function renderDiamondPanel(teamId, impact) {
   if (ilPlayers.length) {
     function ilRowHTML(p) {
       const color    = p.isPitcher ? getDiamondPlayerColor(p.score,'pitcher') : getDiamondPlayerColor(p.ops,'hitter');
-      const val      = p.isPitcher ? (p.score > 0 ? p.score : '—') : (p.ops > 0 ? p.ops.toFixed(3) : '—');
+      const val      = p.isPitcher
+        ? (p.hasSeasonStats ? Math.max(0, p.score ?? 0) : '—')
+        : (p.ops > 0 ? p.ops.toFixed(3) : '—');
       const barLabel = p.isPitcher ? 'FORM' : 'OPS';
       const barPct   = p.isPitcher ? Math.min(100,Math.round(p.score/100*100)) : Math.min(100,Math.round(p.ops/1.2*100));
       const s        = p.stats || {};
@@ -4467,21 +4545,32 @@ function renderDiamondPanel(teamId, impact) {
 
     let groupsHTML = '';
     if (ilHitters.length) {
-      groupsHTML += `<div class="il-group">
-        <div class="il-group-label">Batters (${ilHitters.length})</div>
+      groupsHTML += `<details class="il-group-accordion">
+        <summary class="il-group-summary">
+          <span>Batters (${ilHitters.length})</span>
+          <svg class="il-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
         <div class="il-players-grid">${ilHitters.map(ilRowHTML).join('')}</div>
-      </div>`;
+      </details>`;
     }
     if (ilPitchers.length) {
-      groupsHTML += `<div class="il-group">
-        <div class="il-group-label">Pitchers (${ilPitchers.length})</div>
+      groupsHTML += `<details class="il-group-accordion">
+        <summary class="il-group-summary">
+          <span>Pitchers (${ilPitchers.length})</span>
+          <svg class="il-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
         <div class="il-players-grid">${ilPitchers.map(ilRowHTML).join('')}</div>
-      </div>`;
+      </details>`;
     }
 
     ilHTML = `<div class="il-section">
-      <div class="il-section-title">🏥 Injured List — ${ilPlayers.length} players</div>
-      ${groupsHTML}
+      <details class="il-accordion">
+        <summary class="il-summary-row">
+          <div class="il-section-title" style="margin-bottom:0">🏥 Injured List — ${ilPlayers.length} players</div>
+          <svg class="il-summary-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div style="margin-top:14px">${groupsHTML}</div>
+      </details>
     </div>`;
   }
 
@@ -5937,14 +6026,14 @@ async function loadTopGames() {
       // Players to Watch — merged, sorted by score, with team badge
       const awayRoster = tgRosterCache[away.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set(), spPids: new Set() };
       const homeRoster = tgRosterCache[home.team.id] || { hitterPids: new Set(), pitcherPids: new Set(), ilPids: new Set(), spPids: new Set() };
-      // Exclude only this game's probable pitchers (not all SPs) so CY candidates still show
+      // Exclude starters from Players to Watch; starters already have their own SP cards.
       const gameExcludeAway = new Set([awayPid].filter(Boolean));
       const gameExcludeHome = new Set([homePid].filter(Boolean));
       // Also exclude IL
       const awayExclude = new Set([...awayRoster.ilPids, ...gameExcludeAway]);
       const homeExclude = new Set([...homeRoster.ilPids, ...gameExcludeHome]);
-      const awayWatch = playersToWatch(away.team.id, awayExclude, new Set()).map(c => ({...c, teamMeta: awayMeta}));
-      const homeWatch = playersToWatch(home.team.id, homeExclude, new Set()).map(c => ({...c, teamMeta: homeMeta}));
+      const awayWatch = playersToWatch(away.team.id, awayExclude, awayRoster.spPids).map(c => ({...c, teamMeta: awayMeta}));
+      const homeWatch = playersToWatch(home.team.id, homeExclude, homeRoster.spPids).map(c => ({...c, teamMeta: homeMeta}));
 
       // Merge and sort by mvp score (rank is 1-20, lower = better, so sort ascending)
       const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 6);
