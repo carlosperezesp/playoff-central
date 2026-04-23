@@ -1216,6 +1216,7 @@ const COUNTRY_FLAG = {
   'USA': '🇺🇸', 'Dominican Republic': '🇩🇴', 'Venezuela': '🇻🇪',
   'Cuba': '🇨🇺', 'Panama': '🇵🇦', 'Puerto Rico': '🇵🇷',
   'Mexico': '🇲🇽', 'Japan': '🇯🇵', 'South Korea': '🇰🇷',
+  'Korea, South': '🇰🇷', 'Republic of Korea': '🇰🇷', 'Korea': '🇰🇷',
   'Canada': '🇨🇦', 'Colombia': '🇨🇴', 'Nicaragua': '🇳🇮',
   'Brazil': '🇧🇷', 'Australia': '🇦🇺', 'Curacao': '🇨🇼',
   'Netherlands': '🇳🇱', 'Germany': '🇩🇪', 'Taiwan': '🇹🇼',
@@ -3511,6 +3512,7 @@ async function fetchTeamImpact(teamId) {
   const hitterPosCount   = {}; // pid → {pos → count}
   const hitterPosRecent  = {}; // pid → {pos → lastDate}
   const pitcherApps      = {}; // pid → {starts, relief, closerApps, lastPitchDate, qualityStarts}
+  const lineupSnapshots  = []; // [{ date, gamePk, starters:[{pid,pos}] }]
 
   // Use all games for pitcher stats (QS needs full season), last15 is still used for hitter positions
   await Promise.all(allGameIds.map(async (gamePk) => {
@@ -3520,6 +3522,7 @@ async function fetchTeamImpact(teamId) {
       const teamKey = Object.keys(bData.teams||{}).find(k => bData.teams[k].team?.id === teamId);
       if (!teamKey) return;
       const gameDate = gamePkToDate[gamePk] || null;
+      const lineupStarters = [];
 
       // The pitchers array lists them in order: index 0 = starter
       const pitchersArr = bData.teams[teamKey].pitchers || [];
@@ -3530,12 +3533,10 @@ async function fetchTeamImpact(teamId) {
         const pos = pl.position?.abbreviation;
         if (!pid) return;
 
-        // Use allPositions if available — it lists every position played in this game
-        // e.g. a catcher who also pinch ran will have ['C','PR'] in allPositions
-        // The FIRST entry in allPositions is the primary position for this game
         const allPos = pl.allPositions || [];
-        // Primary game position: first in allPositions if available, else position
         const gamePrimaryPos = allPos.length > 0 ? allPos[0].abbreviation : pos;
+        const battingOrder = String(pl.battingOrder || '');
+        const isStartingBatter = battingOrder.endsWith('00');
 
         // Track hitter positions across ALL games this season (not just last 15)
         // Use gamePrimaryPos so we track where they actually played, not their roster slot
@@ -3550,6 +3551,9 @@ async function fetchTeamImpact(teamId) {
               hitterPosRecent[pid][trackPos] = gameDate;
             }
           }
+        }
+        if (isStartingBatter && gamePrimaryPos && gamePrimaryPos !== 'P' && gamePrimaryPos !== 'TWP' && gamePrimaryPos !== 'N/A') {
+          lineupStarters.push({ pid, pos: gamePrimaryPos });
         }
 
         // Check if this player pitched (primary pos P/TWP OR appears in pitchers array with pitching stats)
@@ -3581,8 +3585,23 @@ async function fetchTeamImpact(teamId) {
           }
         }
       });
+      if (lineupStarters.length && gameDate) {
+        lineupSnapshots.push({ date: gameDate, gamePk, starters: lineupStarters });
+      }
     } catch(e) {}
   }));
+
+  const latestLineup = lineupSnapshots
+    .slice()
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || ((b.gamePk || 0) - (a.gamePk || 0)))[0] || null;
+  const latestLineupByPos = {};
+  const latestLineupByPid = {};
+  if (latestLineup) {
+    latestLineup.starters.forEach(entry => {
+      if (!latestLineupByPos[entry.pos]) latestLineupByPos[entry.pos] = entry.pid;
+      latestLineupByPid[entry.pid] = entry.pos;
+    });
+  }
 
   // MLB debut year for rookie detection:
   // - Debuted this season = definite rookie
@@ -3604,12 +3623,9 @@ async function fetchTeamImpact(teamId) {
   });
 
   // ── HITTERS ──────────────────────────────────────────────────────────────
-  // POSITION ASSIGNMENT LOGIC:
-  // Source of truth = boxscores from this season (hitterPosCount).
-  // Starter at each position = player with most appearances there this season.
-  // Fallback for players with 0 boxscore data = roster API position.
-  // Each player is starter at exactly ONE position (their most-played).
-  // Alts = players who've played a pos ≥2 times but are already starter elsewhere.
+  // LAST LINEUP:
+  // Titulares = alineación inicial del último partido finalizado.
+  // Alternativas = posiciones habituales de temporada.
 
   const VALID_POS = new Set(['C','1B','2B','SS','3B','LF','CF','RF','DH']);
   const GENERIC_POS = new Set(['OF','IF','UT','PH','PR']);
@@ -3655,6 +3671,7 @@ async function fetchTeamImpact(teamId) {
       isTWP,
       posCount,
       posRecent: hitterPosRecent[pid] || {},
+      lastLineupPos: latestLineupByPid[pid] || null,
       bestBoxscorePos,
       fallbackPos,
       photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
@@ -3663,6 +3680,7 @@ async function fetchTeamImpact(teamId) {
 
   const hittersByPos = {};
   const nonTWP = allHitters.filter(p => !p.isTWP);
+  const hitterById = Object.fromEntries(allHitters.map(p => [p.id, p]));
 
   // STEP 1: Determine each player's "claim" position.
   // Priority order:
@@ -3696,10 +3714,7 @@ async function fetchTeamImpact(teamId) {
   });
 
 
-  // STEP 2: For each valid position, collect all players who have appeared there
-  //   (or whose fallback is that pos). Sort by: appearances at this pos desc,
-  //   then total gamesPlayed desc (so Will Smith with 60 GP beats Dalton Rushing
-  //   with 10 GP even if both have the same posCount), then OPS as last tiebreaker.
+  // STEP 2: Build candidate pools from season-long position usage.
   const POS_PRIORITY = ['C','SS','2B','3B','1B','CF','LF','RF','DH'];
   const candidatesByPos = {};
   POS_PRIORITY.forEach(pos => {
@@ -3720,59 +3735,58 @@ async function fetchTeamImpact(teamId) {
       });
   });
 
-  // STEP 3: Greedy assignment — each position gets the best available unassigned player.
-  // Players whose claimPos is DH are excluded from field position slots so they
-  // don't get stranded at LF/RF/etc. before DH is processed.
+  // STEP 3: Lock starters from the latest lineup, then fill any gaps greedily.
   const primaryPos = {};  // pid → pos (starter assignment)
+  Object.entries(latestLineupByPos).forEach(([pos, pid]) => {
+    if (VALID_POS.has(pos) && hitterById[pid]) primaryPos[pid] = pos;
+  });
   POS_PRIORITY.forEach(pos => {
+    if (Object.values(primaryPos).includes(pos)) return;
     const candidates = (candidatesByPos[pos] || []).filter(p =>
-      pos === 'DH' || p.claimPos !== 'DH'
+      !(p.id in primaryPos) && (pos === 'DH' || p.claimPos !== 'DH')
     );
-    const starter = candidates.find(p => !(p.id in primaryPos));
+    const starter = candidates[0];
     if (starter) primaryPos[starter.id] = pos;
   });
 
   // Players with no assignment go to DH as fallback
-  nonTWP.filter(p => !(p.id in primaryPos)).forEach(p => {
+  allHitters.filter(p => !(p.id in primaryPos)).forEach(p => {
     primaryPos[p.id] = 'DH';
   });
 
-  // TWP players (Ohtani-type): always the DH *starter*, regardless of fallback players.
-  // Any nonTWP player assigned DH via fallback will still appear as a DH alt.
+  // TWP players (Ohtani-type): fallback to DH only if latest lineup didn't already define DH.
   const twpPlayers = allHitters.filter(p => p.isTWP);
+  if (!latestLineupByPos['DH'] && twpPlayers.length && !(twpPlayers[0].id in primaryPos)) {
+    primaryPos[twpPlayers[0].id] = 'DH';
+  }
 
   // STEP 4: Build hittersByPos.
-  // - Starter: TWP takes DH unconditionally; all other positions use primaryPos.
-  // - Alts: ANY player who has played this pos ≥2 times this season AND whose
-  //   primaryPos is NOT this pos (i.e. they're a starter elsewhere, or a DH fallback).
-  //   This means Rushing appears as alt under C (Smith), Baty appears as alt under 1B and 3B, etc.
+  // - Starter: latest lineup if available, otherwise primaryPos fallback.
+  // - Alts: players who've actually played that spot, but are starters elsewhere or bench depth.
   POS_PRIORITY.forEach(pos => {
     let starter = null;
-    if (pos === 'DH' && twpPlayers.length) {
-      // TWP always starts at DH
-      starter = { ...twpPlayers[0], pos: 'DH', truePrimaryPos: 'DH' };
+    const latestPid = latestLineupByPos[pos];
+    if (latestPid && hitterById[latestPid]) {
+      starter = { ...hitterById[latestPid], pos, truePrimaryPos: pos };
     } else if (pos === 'DH') {
-      // Pick the DH with the most DH appearances (not just first in array order)
-      const dhCandidates = nonTWP
+      const dhCandidates = allHitters
         .filter(p => primaryPos[p.id] === 'DH')
         .sort((a, b) => (b.posCount['DH'] || 0) - (a.posCount['DH'] || 0) || b.gamesPlayed - a.gamesPlayed);
       if (dhCandidates[0]) starter = { ...dhCandidates[0], pos: 'DH', truePrimaryPos: 'DH' };
     } else {
-      const found = nonTWP.find(p => primaryPos[p.id] === pos);
+      const found = allHitters.find(p => primaryPos[p.id] === pos);
       if (found) starter = { ...found, pos, truePrimaryPos: pos };
     }
 
-    // Alts = players who have appeared at this pos ≥2× but are starters elsewhere
-    const alts = nonTWP
+    const alts = allHitters
       .filter(p =>
-        primaryPos[p.id] !== pos &&          // not the starter here
-        (p.posCount[pos] || 0) >= 2          // has actually played here ≥2 games
+        p.id !== starter?.id &&
+        primaryPos[p.id] !== pos &&
+        (p.posCount[pos] || 0) >= 2
       )
       .sort((a, b) => (b.posCount[pos]||0) - (a.posCount[pos]||0) || b.gamesPlayed - a.gamesPlayed || b.ops - a.ops);
 
-    // For DH with a TWP starter: also include the best nonTWP fallback player as first alt
-    // so the team still shows a human backup DH
-    if (pos === 'DH' && twpPlayers.length) {
+    if (pos === 'DH' && starter?.isTWP) {
       const dhFallbacks = nonTWP
         .filter(p => primaryPos[p.id] === 'DH' && (p.posCount['DH'] || 0) >= 1)
         .sort((a, b) => b.gamesPlayed - a.gamesPlayed || b.ops - a.ops);
@@ -4169,7 +4183,7 @@ function playerDetailHTML(p, type, roleOrPos) {
 
   let statsLine = '';
   if (isHitter) {
-    statsLine = `AVG ${s.avg||'.---'} · HR ${s.homeRuns??'—'} · RBI ${s.rbi??'—'} · SB ${s.stolenBases??'—'}`;
+    statsLine = formatSeasonHitterSummary(s);
   } else if (roleOrPos === 'SP') {
     const qsVal = s.qualityStarts != null ? s.qualityStarts : (p.qualityStarts || null);
     const qs = qsVal != null ? ` · QS ${qsVal}` : '';
@@ -4262,6 +4276,44 @@ function playerDetailHTML(p, type, roleOrPos) {
       ${!p.isRookie ? seasonDotsHTML(p.id, isHitter ? 'hitter' : 'pitcher') : ''}
     </div>
   </div>`;
+}
+
+function formatSeasonHitterSummary(stats) {
+  const s = stats || {};
+  const avg = s.avg || '.---';
+  const parts = [`AVG ${avg}`];
+  const extras = [];
+
+  const hr = parseInt(s.homeRuns) || 0;
+  const rbi = parseInt(s.rbi) || 0;
+  const sb = parseInt(s.stolenBases) || 0;
+  const runs = parseInt(s.runs) || 0;
+  const hits = parseInt(s.hits) || 0;
+  const walks = parseInt(s.baseOnBalls ?? s.walks) || 0;
+  const so = parseInt(s.strikeOuts) || 0;
+  const pa = parseInt(s.plateAppearances || s.atBats) || 0;
+  const obp = parseFloat(s.obp) || 0;
+  const slg = parseFloat(s.slg) || 0;
+  const kPct = pa > 0 ? (so / pa) * 100 : 0;
+
+  if (hr > 0) extras.push(`HR ${hr}`);
+  if (rbi > 0) extras.push(`RBI ${rbi}`);
+  if (sb > 0) extras.push(`SB ${sb}`);
+
+  if (obp >= 0.340) extras.push(`OBP ${obp.toFixed(3)}`);
+  if (slg >= 0.430) extras.push(`SLG ${slg.toFixed(3)}`);
+  if (pa >= 40 && kPct > 0 && kPct <= 18) extras.push(`K% ${kPct.toFixed(1)}`);
+  if (runs >= 10) extras.push(`R ${runs}`);
+
+  if (!extras.length) {
+    if (obp > 0) extras.push(`OBP ${obp.toFixed(3)}`);
+    if (slg > 0) extras.push(`SLG ${slg.toFixed(3)}`);
+    if (runs > 0) extras.push(`R ${runs}`);
+    if (walks > 0) extras.push(`BB ${walks}`);
+    if (hits > 0) extras.push(`H ${hits}`);
+  }
+
+  return parts.concat(extras.slice(0, 3)).join(' · ');
 }
 
 function renderTeamStatsPanel(teamId, impact) {
@@ -4499,7 +4551,7 @@ function renderDiamondPanel(teamId, impact) {
       const s        = p.stats || {};
       const statsLine = p.isPitcher
         ? `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · IP ${s.inningsPitched||'—'}`
-        : `AVG ${s.avg||'.---'} · HR ${s.homeRuns??'—'} · RBI ${s.rbi??'—'}`;
+        : formatSeasonHitterSummary(s);
       const ilLabel = p.ilType
         .replace(/(\d+)[\s-]*day[\s-]*injured[\s-]*list/i,'$1d IL')
         .replace(/injured list/i,'IL');
@@ -4585,7 +4637,7 @@ function renderDiamondPanel(teamId, impact) {
     ${renderTeamStatsPanel(teamId, impact)}
 
     <div class="diamond-box">
-      <div class="diamond-section-label">Defensive Shift</div>
+      <div class="diamond-section-label">Last Lineup</div>
       <div class="dfield-container">
         <div class="dfield-rombo"></div>
         <div class="dfield-homeplate"></div>
