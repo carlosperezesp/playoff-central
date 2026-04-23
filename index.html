@@ -1629,15 +1629,15 @@ async function ensureStandingsNextGames(teamIds) {
 }
 
 function standingsNextGameLabel(game) {
-  if (!game) return 'Sin próximo partido confirmado.';
+  if (!game) return 'No next game confirmed.';
   const todayStr = new Date().toISOString().split('T')[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   let dateLabel;
-  if (game.date === todayStr) dateLabel = 'Hoy';
-  else if (game.date === tomorrowStr) dateLabel = 'Mañana';
+  if (game.date === todayStr) dateLabel = 'Today';
+  else if (game.date === tomorrowStr) dateLabel = 'Tomorrow';
   else {
     const d = new Date(game.date + 'T12:00:00');
-    dateLabel = d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+    dateLabel = d.toLocaleDateString('en-US', { weekday:'short', day:'numeric', month:'short' });
   }
   const timeLabel = game.time ? ` · ${game.time}` : '';
   return `${dateLabel}${timeLabel}`;
@@ -1729,7 +1729,7 @@ function renderStandingsNextGames(teamIds) {
     if (!wrap) return;
     const game = standingsNextGameCache?.[teamId];
     if (!game) {
-      wrap.innerHTML = `<div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Sin próximo partido confirmado.</span></div>`;
+      wrap.innerHTML = `<div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">No next game confirmed.</span></div>`;
       return;
     }
     const own = findStandingsTeamRecord(teamId);
@@ -1756,7 +1756,7 @@ function renderWildcardNextGames(teamIds) {
     if (!wrap) return;
     const game = standingsNextGameCache?.[teamId];
     if (!game) {
-      wrap.innerHTML = `<div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Sin próximo partido confirmado.</span></div>`;
+      wrap.innerHTML = `<div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">No next game confirmed.</span></div>`;
       return;
     }
     const own = findStandingsTeamRecord(teamId);
@@ -1795,7 +1795,7 @@ async function renderStandings() {
   loadGamesRemaining(allTeamIds).then(rem => {
     const maxGR = Math.max(0, ...Object.values(rem));
     const today = new Date();
-    const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
+    const dateStr = today.toLocaleDateString('en-US', { day:'numeric', month:'short' }).toUpperCase();
     const dateInfo = document.getElementById('standingsDateInfo');
     const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
     const trackerGR = document.getElementById('trackerMaxGR');
@@ -1848,9 +1848,9 @@ async function renderStandings() {
         <span id="standingsDateInfo" class="standings-date-info"></span>
       </div>
       <div class="legend" style="margin-bottom:16px">
-        <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
+        <div class="legend-item"><div class="legend-dot div"></div> Division leader</div>
         <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
-        <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
+        <div class="legend-item"><div class="legend-dot out"></div> Eliminated</div>
       </div>
     </div>
     <div id="view-wildcard" style="display:none">
@@ -1858,9 +1858,9 @@ async function renderStandings() {
         <span id="standingsDateInfoWildcard" class="standings-date-info"></span>
       </div>
       <div class="legend" style="margin-bottom:20px">
-        <div class="legend-item"><div class="legend-dot div"></div> División líder</div>
+        <div class="legend-item"><div class="legend-dot div"></div> Division leader</div>
         <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
-        <div class="legend-item"><div class="legend-dot out"></div> Eliminado</div>
+        <div class="legend-item"><div class="legend-dot out"></div> Eliminated</div>
       </div>
       <div id="wcTablesContent"></div>
     </div>`;
@@ -1941,7 +1941,7 @@ async function renderStandings() {
         <td class="r div-col-hist">${histDotsHTML(tid)}</td>
       </tr>
       <tr class="standings-team-detail" id="stnext-${divId}-${tid}">
-        <td colspan="8"><div id="stnext-content-${tid}"><div class="standings-next-wrap"><span class="standings-next-label">Próximo</span><span class="standings-next-meta">Cargando...</span></div></div></td>
+        <td colspan="8"><div id="stnext-content-${tid}"><div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Loading...</span></div></div></td>
       </tr>`;
     });
 
@@ -1981,7 +1981,7 @@ async function renderStandings() {
 
   // Update date info label
   const today = new Date();
-  const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
+    const dateStr = today.toLocaleDateString('en-US', { day:'numeric', month:'short' }).toUpperCase();
   const dateInfo = document.getElementById('standingsDateInfo');
   const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
   if (dateInfo) dateInfo.textContent = dateStr;
@@ -2080,10 +2080,10 @@ function toggleDivision(divId) {
     const trackerGR = document.getElementById('trackerMaxGR');
     if (dateInfo && maxGR > 0) {
       const today = new Date();
-      const dateStr = today.toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase();
+      const dateStr = today.toLocaleDateString('en-US', { day:'numeric', month:'short' }).toUpperCase();
       dateInfo.textContent = `${dateStr} · ${maxGR} Games Until Playoff`;
     }
-    if (wcDateInfo && maxGR > 0) wcDateInfo.textContent = `${new Date().toLocaleDateString('es-ES', { day:'numeric', month:'short' }).toUpperCase()} · ${maxGR} Games Until Playoff`;
+    if (wcDateInfo && maxGR > 0) wcDateInfo.textContent = `${new Date().toLocaleDateString('en-US', { day:'numeric', month:'short' }).toUpperCase()} · ${maxGR} Games Until Playoff`;
     if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
   }).catch(()=>{});
 }
@@ -2165,7 +2165,7 @@ function renderWildCardTables() {
         <td>${badge}</td>
       </tr>
       <tr class="wc-team-detail" id="wcnext-${leagueKey}-${t.team.id}">
-        <td colspan="8"><div id="wcnext-content-${t.team.id}"><div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Cargando...</span></div></div></td>
+        <td colspan="8"><div id="wcnext-content-${t.team.id}"><div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Loading...</span></div></div></td>
       </tr>`;
     }).join('');
 
@@ -3000,9 +3000,9 @@ function renderProjectedBracket() {
     <div style="margin-bottom:20px">
       <div class="section-title" style="font-size:16px;margin-bottom:8px">🏆 WORLD SERIES</div>
       <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:0;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-        ${wsLogoCard(alSeeds,'AL CAMPEÓN')}
+        ${wsLogoCard(alSeeds,'AL CHAMPION')}
         <div style="text-align:center;font-family:'Bebas Neue';font-size:20px;color:var(--accent)">VS</div>
-        ${wsLogoCard(nlSeeds,'NL CAMPEÓN')}
+        ${wsLogoCard(nlSeeds,'NL CHAMPION')}
       </div>
     </div>
     ${renderBracket(alSeeds, 'AMERICAN LEAGUE')}
@@ -3961,20 +3961,21 @@ async function fetchAwards(pids) {
           if (name.includes('gold glove')) cache.goldGlove = true;
           // Silver Slugger — exact match only
           if (name.includes('silver slugger')) cache.silverSlugger = true;
-          // MVP — BBWAA seasonal award only (AL/NL Most Valuable Player)
-          // Exclude: All-Star MVP, LCS MVP, WS MVP, Game MVP, Hank Aaron Award
-          const mvpId = (a.awardId || '').toUpperCase();
-          if ((name.includes('most valuable player') || mvpId === 'ALMVP' || mvpId === 'NLMVP' || mvpId === 'MVP') &&
-              !name.includes('all-star') && !name.includes('all star') &&
-              !name.includes('series') && !name.includes('championship') &&
-              !name.includes('world') && !name.includes('game') &&
-              !name.includes('hank aaron') &&
-              !name.includes('league championship')) cache.mvp = true;
-          // Cy Young
-          if (name.includes('cy young')) cache.cyYoung = true;
         });
       }).catch(() => {})
   ));
+}
+
+function playerAwardState(pid) {
+  const apiAwards = awardsCache[pid] || { allStar:false, goldGlove:false, silverSlugger:false, mvp:false, cyYoung:false };
+  const pastAwards = PAST_AWARDS[pid] || null;
+  return {
+    allStar: !!apiAwards.allStar,
+    goldGlove: !!apiAwards.goldGlove,
+    silverSlugger: !!apiAwards.silverSlugger,
+    mvp: !!pastAwards?.mvp?.length,
+    cyYoung: !!pastAwards?.cy?.length,
+  };
 }
 
 // ── Award SVG icons (14×14 viewBox, minimalista/lineal) ───────────────────
@@ -4001,7 +4002,7 @@ const AWARD_POSITIONS = [
 ];
 
 function awardPipsHTML(pid) {
-  const a = awardsCache[pid];
+  const a = playerAwardState(pid);
   if (!a) return '';
   return AWARD_POSITIONS
     .filter(p => a[p.key])
@@ -4010,7 +4011,7 @@ function awardPipsHTML(pid) {
 }
 
 function awardInlineBadges(pid) {
-  const a = awardsCache[pid];
+  const a = playerAwardState(pid);
   if (!a) return '';
   return Object.entries(AWARD_SVGS)
     .filter(([key]) => a[key])
@@ -4088,7 +4089,7 @@ function getNarrativeBadges(stats, lgAvg, pa, opsLast30) {
 
   // 9. Poco Disciplinado: OBP < AVG+.025 o SO/BB ≥ 2.8
   if (pa >= 60 && (obp < avg + 0.025 || (bb > 0 && so/bb >= 2.8)))
-    badges.push('Poco Disciplinado');
+    badges.push('Undisciplined');
 
   // 10. Run Producer: RBI/PA ≥ 120% esperado (~0.10/PA)
   if (pa >= 80 && (rbi/pa) >= 0.12 && !has('Table Setter'))
@@ -4096,7 +4097,7 @@ function getNarrativeBadges(stats, lgAvg, pa, opsLast30) {
 
   // 11. En racha: OPS últimos 30d vs temporada ≥ .095 diferencia
   if (opsLast30 != null && ops > 0 && Math.abs(opsLast30 - ops) >= 0.095)
-    badges.push('En racha');
+    badges.push('On Fire');
 
   return badges.slice(0, 3);
 }
@@ -4449,13 +4450,13 @@ function renderTeamStatsPanel(teamId, impact) {
       </div>
       ${totalSeasonIp > 0 ? `
       <div class="team-stat-row innings-split-row" style="grid-column:1/-1">
-        <div class="innings-split-title">Innings trabajados por abridores vs bullpen (de 9)</div>
+        <div class="innings-split-title">Innings by starters vs bullpen (out of 9)</div>
         <div class="innings-bar-wrap">
           <div class="innings-bar-sp" style="width:${spPct}%">${spPct >= 18 ? `SP ${spInnings}` : ''}</div>
           <div class="innings-bar-rp">${rpPct >= 18 ? `RP ${rpInnings}` : ''}</div>
         </div>
         <div class="innings-legend">
-          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:var(--accent-blue)"></div>Abridores ${spInnings} inn (${spPct}%)</div>
+          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:var(--accent-blue)"></div>Starters ${spInnings} inn (${spPct}%)</div>
           <div class="innings-legend-item"><div class="innings-legend-dot" style="background:#94a3b8"></div>Bullpen ${rpInnings} inn (${rpPct}%)</div>
         </div>
       </div>` : ''}
@@ -4557,11 +4558,11 @@ function renderDiamondPanel(teamId, impact) {
         .replace(/injured list/i,'IL');
       const daysRemainingBadge = (() => {
         if (p.daysRemaining === null || p.daysRemaining === undefined) return '';
-        if (p.daysRemaining === 0) return `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px;margin-left:3px">✓ ELEGIBLE</span>`;
+        if (p.daysRemaining === 0) return `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(22,163,74,.12);color:var(--win);letter-spacing:.5px;margin-left:3px">✓ ELIGIBLE</span>`;
         const urgency = p.daysRemaining <= 7
           ? 'background:rgba(234,179,8,.15);color:#b45309'
           : 'background:rgba(220,38,38,.08);color:var(--loss)';
-        return `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;${urgency};letter-spacing:.5px;margin-left:3px">${p.daysRemaining}d restantes</span>`;
+        return `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;${urgency};letter-spacing:.5px;margin-left:3px">${p.daysRemaining}d remaining</span>`;
       })();
       const posLabel = p.isPitcher ? (p.pos||'P') : (p.pos||'?');
       const ilCareer = careerStatsCache[p.id];
@@ -4944,29 +4945,29 @@ function nextGameHTML(p, awardType) {
   const isToday = game.date === todayStr;
   const matchup = `${game.homeAway === 'vs' ? 'VS' : '@'} ${game.opponent}`;
   let dateLabel;
-  if (isToday) dateLabel = 'Hoy';
-  else if (game.date === tomorrowStr) dateLabel = 'Mañana';
+  if (isToday) dateLabel = 'Today';
+  else if (game.date === tomorrowStr) dateLabel = 'Tomorrow';
   else {
     const d = new Date(game.date + 'T12:00:00');
-    dateLabel = d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+    dateLabel = d.toLocaleDateString('en-US', { weekday:'short', day:'numeric', month:'short' });
   }
   const timeLabel = game.time ? ` · ${game.time}` : '';
   const stateCls  = ` confirmed${isToday ? ' today' : ''}`;
   if (awardType === 'cy') {
     const isStarter = (parseInt(p.s?.gamesStarted||0) > 0);
-    const label = isStarter ? 'Próximo inicio' : 'Próximo partido';
+    const label = isStarter ? 'Next start' : 'Next game';
     if (game.probablePids.has(p.pid))
       return `<div class="mvp-next${stateCls}">${label}: ${matchup} · ${dateLabel}${timeLabel}</div>`;
     else
-      return `<div class="mvp-next unconfirmed">${label}: sin confirmar</div>`;
+      return `<div class="mvp-next unconfirmed">${label}: unconfirmed</div>`;
   }
-  return `<div class="mvp-next${stateCls}">Próximo partido: ${matchup} · ${dateLabel}${timeLabel}</div>`;
+  return `<div class="mvp-next${stateCls}">Next game: ${matchup} · ${dateLabel}${timeLabel}</div>`;
 }
 
 function ilBadgeHTML(p) {
   const ilSet = mvpILCache[p.teamId];
   if (!ilSet || !ilSet.has(p.pid)) return '';
-  return `<div class="mvp-il">🏥 Lista de Lesionados</div>`;
+  return `<div class="mvp-il">🏥 Injured List</div>`;
 }
 
 async function fetchCareerStats(pids) {
@@ -5066,7 +5067,7 @@ function seasonDotsHTML(pid, type) {
     const color = getDiamondPlayerColor(val, type);
     const tooltip = type === 'hitter'
       ? `OPS ${val.toFixed(3)} (${yr})`
-      : `FORMA ${val} (${yr})`;
+      : `FORM ${val} (${yr})`;
     return `<span class="season-dot" style="background:${color}" title="${tooltip}"></span>`;
   }).join('');
 
@@ -5177,7 +5178,7 @@ function topGameCardHTML(game, gameScore, rank) {
     const era = s?.era || '—';
     return `<div>
       <div style="font-weight:700;font-size:13px;color:var(--text)">${pp.fullName}</div>
-      <div style="font-size:11px;color:var(--muted);font-family:'Barlow Condensed'">ERA ${era} · <span style="color:${formaColor};font-weight:700">FORMA ${forma}</span></div>
+      <div style="font-size:11px;color:var(--muted);font-family:'Barlow Condensed'">ERA ${era} · <span style="color:${formaColor};font-weight:700">FORM ${forma}</span></div>
     </div>`;
   }
 
@@ -5187,7 +5188,7 @@ function topGameCardHTML(game, gameScore, rank) {
   return `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <span style="font-family:'Bebas Neue';font-size:18px;letter-spacing:2px;color:var(--accent)">${rankLabel} Partido del día</span>
+        <span style="font-family:'Bebas Neue';font-size:18px;letter-spacing:2px;color:var(--accent)">${rankLabel} Game of the Day</span>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:1px">${gameTime}</span>
           <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;background:rgba(26,86,219,.08);color:var(--accent);border:1px solid rgba(26,86,219,.2);padding:2px 8px;border-radius:4px">SCORE ${scoreRound}</span>
@@ -6066,7 +6067,7 @@ async function loadTopGames() {
               </div>
             </div>
             <div class="impact-bar-val-wrap">
-              <span class="impact-bar-label">FORMA</span>
+              <span class="impact-bar-label">FORM</span>
               <span class="impact-bar-val" style="color:${color};font-size:20px">${Math.max(0,forma??0)}</span>
               <div class="impact-bar-block" style="grid-column:auto;grid-row:auto;height:4px;width:100%;margin:3px 0 0 auto"><div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div></div>
               ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
@@ -6131,7 +6132,7 @@ async function loadTopGames() {
               <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div>
             </div>
             <div class="impact-bar-val-wrap">
-              <span class="impact-bar-label">FORMA</span>
+              <span class="impact-bar-label">FORM</span>
               <span class="impact-bar-val" style="color:${color}">${forma}</span>
               ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
@@ -6246,29 +6247,29 @@ async function loadTopGames() {
       </div>`;
     }
 
-    const fmtDate = d => d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' }).toUpperCase();
+    const fmtDate = d => d.toLocaleDateString('en-US', { weekday:'short', day:'numeric', month:'short' }).toUpperCase();
 
     // AYER
     const yBody = yesterdayGames.length
       ? yesterdayGames.map((g, i) => yesterdayRowHTML(g, i)).join('')
-      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos ayer.</div>`;
+      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">No games yesterday.</div>`;
 
     // HOY
     const todayTiers = scoreTiers(todayGames);
     const todayBody = todayGames.length
-      ? todayGames.map((g,i) => futureRowHTML(g, i, 'hoy', todayTiers[i])).join('')
-      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos hoy.</div>`;
+      ? todayGames.map((g,i) => futureRowHTML(g, i, 'today', todayTiers[i])).join('')
+      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">No games today.</div>`;
 
     // MAÑANA
     const tmrTiers = scoreTiers(tomorrowGames);
     const tmrBody = tomorrowGames.length
       ? tomorrowGames.map((g,i) => futureRowHTML(g, i, 'tmr', tmrTiers[i])).join('')
-      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">Sin partidos mañana.</div>`;
+      : `<div style="padding:16px 18px;color:var(--muted);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px">No games tomorrow.</div>`;
 
     el.innerHTML =
-      dayBlock('tg-ayer', `AYER — ${fmtDate(yesterdayD)}`, `${yesterdayGames.length} partidos`, false, yBody) +
-      dayBlock('tg-hoy',  `HOY — ${fmtDate(todayD)}`,      `${todayGames.length} partidos`,     true,  todayBody) +
-      dayBlock('tg-tmr',  `MAÑANA — ${fmtDate(tomorrowD)}`,`${tomorrowGames.length} partidos`,  false, tmrBody);
+      dayBlock('tg-yday', `YESTERDAY — ${fmtDate(yesterdayD)}`, `${yesterdayGames.length} games`, false, yBody) +
+      dayBlock('tg-today',  `TODAY — ${fmtDate(todayD)}`,      `${todayGames.length} games`,     true,  todayBody) +
+      dayBlock('tg-tmr',  `TOMORROW — ${fmtDate(tomorrowD)}`,`${tomorrowGames.length} games`,  false, tmrBody);
 
   } catch(e) {
     el.innerHTML = `<div class="error-box">Error loading top games: ${e.message}</div>`;
@@ -6344,7 +6345,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'highvariance', label: 'High-Variance',
-    desc: 'Días de jonrones, días de fallos. Todo o nada',
+    desc: 'Home-run days, swing-and-miss days. All or nothing',
     type: 'hitter', statColor: '#f59e0b',
     displayStat: s => `${s.homeRuns ?? '—'} HR · ${s.strikeOuts ?? '—'} K`,
     filter: (s, lg) => {
@@ -6363,7 +6364,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'emptyavg', label: 'Empty Average',
-    desc: 'Muchos hits... pero sin poder ni impacto',
+    desc: 'Lots of hits... but little power or impact',
     type: 'hitter', statColor: '#94a3b8',
     displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · .${(parseFloat(s.slg)||0).toFixed(3).slice(2)} SLG`,
     filter: (s, lg) => {
@@ -6377,7 +6378,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'groundball', label: 'Groundball Machine',
-    desc: 'Muchos roletazos, pocos extrabases',
+    desc: 'Lots of grounders, very little extra-base damage',
     type: 'hitter', statColor: '#6b7280',
     displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · ${s.homeRuns ?? '—'} HR`,
     filter: (s, lg) => {
@@ -6391,7 +6392,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'clutch', label: 'Clutch Hitter',
-    desc: 'Responde cuando más se le necesita',
+    desc: 'Delivers when the game needs it most',
     type: 'hitter', statColor: '#dc2626',
     displayStat: s => {
       const risp = parseFloat(s.avgWithRISP||s.rISP||0)||0;
@@ -6415,8 +6416,8 @@ const PLAYER_CATEGORIES = [
   },
 
   {
-    key: 'undisciplined', label: 'Poco Disciplinado',
-    desc: 'Ataca casi todo, con pocos boletos',
+    key: 'undisciplined', label: 'Undisciplined',
+    desc: 'Chases a lot, with very few walks',
     type: 'hitter', statColor: '#f97316',
     displayStat: s => {
       const bb = parseInt(s.baseOnBalls||s.walks)||0;
@@ -6726,13 +6727,13 @@ async function loadPlayers() {
 
     el.innerHTML = `<div class="players-layout">
       <div class="section-title">⚾ BATEADORES</div>
-      ${hitterSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">No hay suficientes datos todavía.</div>'}
+      ${hitterSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">Not enough data yet.</div>'}
       <div class="section-title">🎯 PITCHERS</div>
-      ${pitcherSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">No hay suficientes datos todavía.</div>'}
+      ${pitcherSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">Not enough data yet.</div>'}
     </div>`;
 
   } catch(e) {
-    el.innerHTML = `<div class="error-box">Error cargando jugadores: ${e.message}</div>`;
+    el.innerHTML = `<div class="error-box">Error loading players: ${e.message}</div>`;
   }
 }
 
@@ -7166,12 +7167,12 @@ async function loadMVPTracker() {
       if (trend.source === 'hitting') {
         const sign = trend.delta >= 0 ? '+' : '−';
         const abs = Math.abs(trend.delta).toFixed(3).replace(/^0/, '');
-        return `OPS últimos 10 días: ${sign}${abs} vs. temporada (${trend.sampleSize} AB)`;
+        return `OPS last 10 days: ${sign}${abs} vs season (${trend.sampleSize} AB)`;
       } else {
         // For pitching, positive delta means recent ERA is BETTER (lower)
         const sign = trend.delta >= 0 ? '−' : '+';  // flip for ERA narrative
         const abs = Math.abs(trend.delta).toFixed(2);
-        return `ERA últimos 15 días: ${sign}${abs} vs. temporada (${trend.sampleSize} IP)`;
+        return `ERA last 15 days: ${sign}${abs} vs season (${trend.sampleSize} IP)`;
       }
     }
 
@@ -7327,8 +7328,8 @@ async function loadMVPTracker() {
       const isROY = /rookie/i.test(title);
       const awardType = awardTypeOverride || (isROY ? 'roy' : isPitching ? 'cy' : 'mvp');
       const emptyMsg = isROY
-        ? 'AÚN NO HAY ROOKIES CON SUFICIENTES DATOS'
-        : 'NO HAY SUFICIENTES DATOS AÚN';
+        ? 'NO ROOKIES WITH ENOUGH DATA YET'
+        : 'NOT ENOUGH DATA YET';
       const rows = players.length
         ? players.map(p => rowHTML(p, awardType)).join('')
         : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">${emptyMsg}</div>`;
@@ -7427,8 +7428,8 @@ async function loadMVPTracker() {
       ]);
     } catch(e) {}
 
-    const now = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-    const today = new Date().toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+    const now = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    const today = new Date().toLocaleDateString('en-US', { day:'numeric', month:'short' });
 
     function renderMVPView(filter) {
       const showMVP = filter === 'all' || filter === 'mvp';
@@ -7445,25 +7446,25 @@ async function loadMVPTracker() {
         grid += cardHTML('NL CY YOUNG', 'NATIONAL LEAGUE', nlCY);
       }
       if (showROY) {
-        grid += cardHTML('AL ROOKIE DEL AÑO', 'AMERICAN LEAGUE', alROY);
-        grid += cardHTML('NL ROOKIE DEL AÑO', 'NATIONAL LEAGUE', nlROY);
+        grid += cardHTML('AL ROOKIE OF THE YEAR', 'AMERICAN LEAGUE', alROY);
+        grid += cardHTML('NL ROOKIE OF THE YEAR', 'NATIONAL LEAGUE', nlROY);
       }
 
       el.innerHTML = `
         <div class="mvp-page-header">
           <div>
-            <div class="mvp-page-title">MVP · CY YOUNG · ROOKIE DEL AÑO</div>
-            <div class="mvp-page-subtitle">CANDIDATURAS EN TIEMPO REAL · ${CURRENT_YEAR} SEASON</div>
+            <div class="mvp-page-title">MVP · CY YOUNG · ROOKIE OF THE YEAR</div>
+            <div class="mvp-page-subtitle">REAL-TIME CANDIDATES · ${CURRENT_YEAR} SEASON</div>
           </div>
           <div class="mvp-tabs-row">
-            <button class="mvp-tab-btn ${filter==='all'?'active':''}" onclick="setMVPFilter('all')">TODOS</button>
+            <button class="mvp-tab-btn ${filter==='all'?'active':''}" onclick="setMVPFilter('all')">ALL</button>
             <button class="mvp-tab-btn ${filter==='mvp'?'active':''}" onclick="setMVPFilter('mvp')">MVP</button>
             <button class="mvp-tab-btn ${filter==='cy'?'active':''}" onclick="setMVPFilter('cy')">CY YOUNG</button>
             <button class="mvp-tab-btn ${filter==='roy'?'active':''}" onclick="setMVPFilter('roy')">ROOKIE</button>
           </div>
         </div>
         <div class="mvp-grid">${grid}</div>
-        <div class="mvp-last-update">Actualizado ${today} a las ${now} · Scores normalizados vs media de liga · Min. ${minPA} PA / ${minIP} IP</div>`;
+        <div class="mvp-last-update">Updated ${today} at ${now} · Scores normalized vs league average · Min. ${minPA} PA / ${minIP} IP</div>`;
     }
 
     window._renderMVPView = renderMVPView;
@@ -7471,7 +7472,7 @@ async function loadMVPTracker() {
 
   } catch(e) {
     document.getElementById('mvpContent').innerHTML =
-      `<div class="error-box">Error cargando MVP Tracker: ${e.message}</div>`;
+      `<div class="error-box">Error loading MVP Tracker: ${e.message}</div>`;
   }
 }
 
