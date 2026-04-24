@@ -1032,13 +1032,6 @@
     display: flex; align-items: center; gap: 6px; margin-top: 1px;
     flex-wrap: wrap;
   }
-  .mvp-statline {
-    font-size: 12px; color: var(--text); margin-top: 3px;
-    line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-family: 'Barlow Condensed';
-    letter-spacing: .35px;
-    font-weight: 600;
-  }
   .mvp-team {
     font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted);
     font-weight: 700; letter-spacing: .5px;
@@ -1054,12 +1047,22 @@
   .sr { color: var(--loss); font-weight: 700; }   /* red    — poor  */
   /* Next game line */
   .mvp-next {
-    font-size: 10px; font-weight: 600; color: var(--muted);
-    margin-top: 3px; white-space: normal; line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px; font-weight: 700; color: var(--accent-blue);
+    margin-top: 4px; white-space: normal; line-height: 1.3;
   }
   .mvp-next.confirmed,
   .mvp-next.today { color: var(--accent-blue); }
   .mvp-next.unconfirmed { opacity: .45; font-weight: 400; }
+  .mvp-next.linkable { cursor: pointer; }
+  .mvp-next-logo {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
   /* IL badge */
   .mvp-il {
     font-size: 9px; font-weight: 700; color: var(--loss);
@@ -1299,7 +1302,7 @@
   <div id="tab-topgames" class="tab-panel">
     <div id="topGamesBreadcrumb" style="display:none;align-items:center;gap:8px;padding:0 0 12px;cursor:pointer;color:#1a56db" onclick="switchTab('standings')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      <span style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;letter-spacing:.5px">PLAYOFF RACE</span>
+      <span id="topGamesBreadcrumbLabel" style="font-family:'Barlow Condensed';font-weight:700;font-size:13px;letter-spacing:.5px">PLAYOFF RACE</span>
     </div>
     <div id="topGamesContent" style="padding-bottom:8px"><div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div></div>
   </div>
@@ -1872,11 +1875,16 @@ function focusTopGameTarget() {
   setTimeout(tryOpen, 120);
 }
 
-function goToTopGameFromStandings(gamePk, dateStr) {
-  window._fromStandingsTopGames = true;
+function goToTopGame(gamePk, dateStr, source = 'standings') {
+  window._fromStandingsTopGames = source === 'standings';
+  window._fromMvpTopGames = source === 'mvp';
   window._topGamesTarget = { gamePk: String(gamePk), date: dateStr };
   switchTab('topgames');
   focusTopGameTarget();
+}
+
+function goToTopGameFromStandings(gamePk, dateStr) {
+  goToTopGame(gamePk, dateStr, 'standings');
 }
 
 function renderStandingsNextGames(teamIds) {
@@ -5042,9 +5050,10 @@ async function fetchMvpHeatPitching(pids) {
 // ── MVP Tracker: next game + probable pitcher + IL status ─────────────────
 let mvpScheduleCache = null;       // teamId -> { date, opponent, time, probablePids, homeAway }
 const mvpILCache = {};             // teamId -> Set of pids on IL
+const mvpPitcherQSCache = {};      // pid -> computed quality starts from game logs
 
 async function fetchMvpSchedule() {
-  if (mvpScheduleCache) return;
+  if (mvpScheduleCache && Object.keys(mvpScheduleCache).length) return;
   mvpScheduleCache = {};
   const today  = new Date().toISOString().split('T')[0];
   const future = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
@@ -5076,7 +5085,9 @@ async function fetchMvpSchedule() {
           mvpScheduleCache[awayId] = { gamePk: game.gamePk, date: dateStr, opponent: homeAbbr, opponentId: homeId, opponentLogo: homeMeta.logo, time: timeStr, probablePids: probPids, homeAway: '@' };
       }
     }
-  } catch(e) {}
+  } catch(e) {
+    mvpScheduleCache = {};
+  }
 }
 
 async function fetchMvpIL(teamIds) {
@@ -5095,6 +5106,32 @@ async function fetchMvpIL(teamIds) {
   ));
 }
 
+async function fetchMvpPitcherQS(pids) {
+  const missing = pids.filter(id => !(id in mvpPitcherQSCache));
+  if (!missing.length) return;
+  for (let i = 0; i < missing.length; i += 20) {
+    const chunk = missing.slice(i, i + 20).join(',');
+    await fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=gameLog,group=pitching,season=${CURRENT_YEAR})`
+    ).then(r => r.json()).then(d => {
+      (d.people || []).forEach(p => {
+        const splits = p.stats?.find(g => g.group?.displayName === 'pitching')?.splits || [];
+        let qs = 0;
+        splits.forEach(sp => {
+          const s = sp.stat || {};
+          const gs = parseInt(s.gamesStarted || 0) || 0;
+          const ip = parseFloat(s.inningsPitched || 0) || 0;
+          const er = parseInt(s.earnedRuns || 0) || 0;
+          if (gs > 0 && ip >= 6 && er <= 3) qs++;
+        });
+        mvpPitcherQSCache[p.id] = qs;
+      });
+    }).catch(() => {
+      missing.slice(i, i + 20).forEach(id => { mvpPitcherQSCache[id] = 0; });
+    });
+  }
+}
+
 function nextGameHTML(p, awardType) {
   const game = mvpScheduleCache?.[p.teamId];
   if (!game) return '';
@@ -5111,15 +5148,19 @@ function nextGameHTML(p, awardType) {
   }
   const timeLabel = game.time ? ` · ${game.time}` : '';
   const stateCls  = ` confirmed${isToday ? ' today' : ''}`;
+  const logoHtml = game.opponentLogo ? `<img class="mvp-next-logo" src="${game.opponentLogo}" alt="${game.opponent}" onerror="this.style.display='none'">` : '';
   if (awardType === 'cy') {
     const isStarter = (parseInt(p.s?.gamesStarted||0) > 0);
     const label = isStarter ? 'Next start' : 'Next game';
-    if (game.probablePids.has(p.pid))
-      return `<div class="mvp-next${stateCls}">${label}: ${matchup} · ${dateLabel}${timeLabel}</div>`;
+    if (game.probablePids.has(p.pid)) {
+      const canOpen = game.gamePk && isGameInTopGamesWindow(game.date);
+      return `<div class="mvp-next${stateCls}${canOpen ? ' linkable' : ''}" ${canOpen ? `onclick="event.stopPropagation();goToTopGame('${game.gamePk}','${game.date}','mvp')"` : ''}>${logoHtml}<span>${label}: ${matchup} · ${dateLabel}${timeLabel}</span></div>`;
+    }
     else
       return `<div class="mvp-next unconfirmed">${label}: unconfirmed</div>`;
   }
-  return `<div class="mvp-next${stateCls}">Next game: ${matchup} · ${dateLabel}${timeLabel}</div>`;
+  const canOpen = game.gamePk && isGameInTopGamesWindow(game.date);
+  return `<div class="mvp-next${stateCls}${canOpen ? ' linkable' : ''}" ${canOpen ? `onclick="event.stopPropagation();goToTopGame('${game.gamePk}','${game.date}','mvp')"` : ''}>${logoHtml}<span>Next game: ${matchup} · ${dateLabel}${timeLabel}</span></div>`;
 }
 
 function ilBadgeHTML(p) {
@@ -5166,9 +5207,19 @@ async function fetchCareerStats(pids) {
     ]);
   }
 
-  // Fetch per-season history for the last 5 completed seasons (for season dots)
+  await fetchSeasonHistory(pids);
+}
+
+async function fetchSeasonHistory(pids) {
+  const prevYear = CURRENT_YEAR - 1;
   const seasons = Array.from({length: 5}, (_, k) => prevYear - (4 - k)); // [prevYear-4 .. prevYear]
-  const missingHistory = pids.filter(id => !seasonHistoryCache[id]);
+  const missingHistory = pids.filter(id => {
+    const hist = seasonHistoryCache[id];
+    if (!hist) return true;
+    const hitCount = Object.keys(hist.hit || {}).length;
+    const pitchCount = Object.keys(hist.pitch || {}).length;
+    return hitCount === 0 && pitchCount === 0;
+  });
   if (!missingHistory.length) return;
 
   for (let i = 0; i < missingHistory.length; i += 20) {
@@ -5209,30 +5260,28 @@ async function fetchCareerStats(pids) {
   }
 }
 
-// Generate 5 small colored dots representing the last 5 seasons of OPS (hitters) or FORMA (pitchers)
+// Generate colored dots for each season with data (up to 5) for OPS (hitters) or FORMA (pitchers)
 function seasonDotsHTML(pid, type) {
   const hist = seasonHistoryCache[pid];
-  if (!hist) return '';
   const prevYear = CURRENT_YEAR - 1;
   const seasons = Array.from({length: 5}, (_, k) => prevYear - (4 - k));
-  const data = type === 'hitter' ? hist.hit : hist.pitch;
-  const hasDots = seasons.some(yr => data[yr] != null);
-  if (!hasDots) return '';
+  const data = hist ? (type === 'hitter' ? hist.hit : hist.pitch) : {};
 
-  const dots = seasons.map(yr => {
-    const val = data[yr];
-    if (val == null) return ''; // no MLB season that year → skip dot
-    const color = getDiamondPlayerColor(val, type);
-    const tooltip = type === 'hitter'
-      ? `OPS ${val.toFixed(3)} (${yr})`
-      : `FORM ${val} (${yr})`;
-    return `<span class="season-dot" style="background:${color}" title="${tooltip}"></span>`;
-  }).join('');
+  const dots = seasons
+    .filter(yr => data[yr] != null)
+    .map(yr => {
+      const val = data[yr];
+      const color = getDiamondPlayerColor(val, type);
+      const tooltip = type === 'hitter'
+        ? `OPS ${val.toFixed(3)} (${yr})`
+        : `FORM ${val} (${yr})`;
+      return `<span class="season-dot" style="background:${color}" title="${tooltip}"></span>`;
+    }).join('');
 
-  const dotsContent = dots.trim();
-  if (!dotsContent) return '';
+  if (!dots) return '';
+
   return `<div class="season-dots-row">
-    <span class="season-dot-label">5y</span>${dots}
+    <span class="season-dot-label">5Y</span>${dots}
   </div>`;
 }
 
@@ -5290,13 +5339,25 @@ function switchTab(tab) {
     else stopStandingsAutoRefresh();
     history.replaceState(null, '', `#${tab}`);
     if (tab !== 'rosters') window._fromStandings = false;
-    if (tab !== 'topgames') window._fromStandingsTopGames = false;
+    if (tab !== 'topgames') {
+      window._fromStandingsTopGames = false;
+      window._fromMvpTopGames = false;
+    }
     if (tab !== 'mvp') window._fromTopGames = false;
     // Show/hide MVP breadcrumb
     const mvpBC = document.getElementById('mvpBreadcrumb');
     if (mvpBC) mvpBC.style.display = (tab === 'mvp' && window._fromTopGames) ? 'flex' : 'none';
     const tgBC = document.getElementById('topGamesBreadcrumb');
-    if (tgBC) tgBC.style.display = (tab === 'topgames' && window._fromStandingsTopGames) ? 'flex' : 'none';
+    const tgBCLabel = document.getElementById('topGamesBreadcrumbLabel');
+    if (tgBC) {
+      const fromStandings = !!window._fromStandingsTopGames;
+      const fromMvp = !!window._fromMvpTopGames;
+      tgBC.style.display = (tab === 'topgames' && (fromStandings || fromMvp)) ? 'flex' : 'none';
+      if (tab === 'topgames' && (fromStandings || fromMvp)) {
+        if (tgBCLabel) tgBCLabel.textContent = fromMvp ? 'MVP RACE' : 'PLAYOFF RACE';
+        tgBC.onclick = () => switchTab(fromMvp ? 'mvp' : 'standings');
+      }
+    }
     if (!loaded[tab]) {
       loaded[tab] = true;
       if (tab === 'bracket') loadBracket();
@@ -6984,6 +7045,7 @@ async function loadMVPTracker() {
       positionMap  = cached.positionMap;
       // Restore career stats into the module-level cache
       Object.assign(careerStatsCache, cached.careerStatsCache);
+      if (cached.seasonHistoryCache) Object.assign(seasonHistoryCache, cached.seasonHistoryCache);
       careerLoaded = true;
     } else {
       careerLoaded = false;
@@ -7067,6 +7129,16 @@ async function loadMVPTracker() {
 
     rawHitters.forEach(p => { p.position = positionMap[p.pid] || ''; });
 
+    await fetchMvpPitcherQS(
+      rawPitchers
+        .filter(p => (parseInt(p.s?.gamesStarted || 0) || 0) > 0)
+        .map(p => p.pid)
+    );
+    rawPitchers.forEach(p => {
+      const computedQs = mvpPitcherQSCache[p.pid];
+      if (computedQs != null) p.s.qualityStarts = computedQs;
+    });
+
     // --- PA leader to set min threshold dynamically
     const maxPA = Math.max(1, ...rawHitters.map(p => parseInt(p.s?.plateAppearances||0)));
     const minPA = Math.max(50, Math.round(maxPA * 0.40));
@@ -7100,6 +7172,70 @@ async function loadMVPTracker() {
       k9:    lgPitch.k9   || 8.5,
       bb9:   lgPitch.bb9  || 3.2,
     };
+
+    function ordinal(n) {
+      if (!n) return '';
+      const mod10 = n % 10, mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return `${n}st`;
+      if (mod10 === 2 && mod100 !== 12) return `${n}nd`;
+      if (mod10 === 3 && mod100 !== 13) return `${n}rd`;
+      return `${n}th`;
+    }
+
+    function buildRankMap(players, valueFn, { desc = true, filter = () => true } = {}) {
+      const ranked = players
+        .filter(filter)
+        .map(p => ({ pid: p.pid, value: valueFn(p) }))
+        .filter(x => x.value != null && isFinite(x.value))
+        .sort((a, b) => desc ? (b.value - a.value) : (a.value - b.value));
+      const map = {};
+      let lastValue = null;
+      let lastRank = 0;
+      ranked.forEach((item, idx) => {
+        if (lastValue === null || item.value !== lastValue) lastRank = idx + 1;
+        map[item.pid] = lastRank;
+        lastValue = item.value;
+      });
+      return map;
+    }
+
+    const hitterRankMaps = {
+      ops: buildRankMap(rawHitters, p => (parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0), { filter: p => parseInt(p.s?.plateAppearances || 0) >= 20 }),
+      hr: buildRankMap(rawHitters, p => parseInt(p.s?.homeRuns || 0), { filter: p => parseInt(p.s?.plateAppearances || 0) >= 20 }),
+      rbi: buildRankMap(rawHitters, p => parseInt(p.s?.rbi || 0), { filter: p => parseInt(p.s?.plateAppearances || 0) >= 20 }),
+      sb: buildRankMap(rawHitters, p => parseInt(p.s?.stolenBases || 0), { filter: p => parseInt(p.s?.plateAppearances || 0) >= 20 }),
+    };
+    const pitcherRankMaps = {
+      era: buildRankMap(rawPitchers, p => parseFloat(p.s?.era || 99), { desc: false, filter: p => parseFloat(p.s?.inningsPitched || 0) >= 10 && parseInt(p.s?.gamesStarted || 0) > 0 }),
+      whip: buildRankMap(rawPitchers, p => parseFloat(p.s?.whip || 99), { desc: false, filter: p => parseFloat(p.s?.inningsPitched || 0) >= 10 && parseInt(p.s?.gamesStarted || 0) > 0 }),
+      qs: buildRankMap(rawPitchers, p => parseInt(p.s?.qualityStarts || 0), { filter: p => parseInt(p.s?.gamesStarted || 0) > 0 }),
+      k: buildRankMap(rawPitchers, p => parseInt(p.s?.strikeOuts || 0), { filter: p => parseFloat(p.s?.inningsPitched || 0) >= 10 }),
+    };
+
+    function trackerRankSummary(p, isPitcher) {
+      if (isPitcher) {
+        const candidates = [
+          { label: 'ERA', rank: pitcherRankMaps.era[p.pid], ok: (parseFloat(p.s?.era || 99) < 90) },
+          { label: 'WHIP', rank: pitcherRankMaps.whip[p.pid], ok: (parseFloat(p.s?.whip || 99) < 90) },
+          { label: 'QS', rank: pitcherRankMaps.qs[p.pid], ok: (parseInt(p.s?.qualityStarts || 0) > 0) },
+          { label: 'K', rank: pitcherRankMaps.k[p.pid], ok: (parseInt(p.s?.strikeOuts || 0) > 0) },
+        ]
+          .filter(x => x.ok && x.rank)
+          .sort((a, b) => a.rank - b.rank)
+          .slice(0, 3);
+        return candidates.length ? candidates.map(x => `${ordinal(x.rank)} in ${x.label}`).join(' · ') : '';
+      }
+      const candidates = [
+        { label: 'OPS', rank: hitterRankMaps.ops[p.pid], ok: (((parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0)) > 0) },
+        { label: 'HR', rank: hitterRankMaps.hr[p.pid], ok: (parseInt(p.s?.homeRuns || 0) > 0) },
+        { label: 'RBI', rank: hitterRankMaps.rbi[p.pid], ok: (parseInt(p.s?.rbi || 0) > 0) },
+        { label: 'SB', rank: hitterRankMaps.sb[p.pid], ok: (parseInt(p.s?.stolenBases || 0) > 0) },
+      ]
+        .filter(x => x.ok && x.rank)
+        .sort((a, b) => a.rank - b.rank)
+        .slice(0, 3);
+      return candidates.length ? candidates.map(x => `${ordinal(x.rank)} in ${x.label}`).join(' · ') : '';
+    }
 
     // --- Helper: normalize a stat value vs league average (returns index 0–200)
     function idx(val, ref) {
@@ -7284,28 +7420,46 @@ async function loadMVPTracker() {
       if (awardType === 'mvp') {
         const recent = mvpHeatHittingCache[p.pid];
         const seasonOps = (parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0);
-        if (!recent || recent.ab < 10 || seasonOps === 0) return null;
-        const delta = recent.ops - seasonOps;
+        if (recent && recent.ab >= 10 && seasonOps !== 0) {
+          const delta = recent.ops - seasonOps;
+          let kind;
+          if (delta >=  0.080) kind = 'up';
+          else if (delta <= -0.060) kind = 'down';
+          else kind = 'flat';
+          return { delta, kind, source: 'hitting', sampleSize: recent.ab };
+        }
+        const fallbackOps = recentHittingCache[p.pid];
+        if (fallbackOps == null || seasonOps === 0) return null;
+        const delta = fallbackOps - seasonOps;
         let kind;
         if (delta >=  0.080) kind = 'up';
         else if (delta <= -0.060) kind = 'down';
         else kind = 'flat';
-        return { delta, kind, source: 'hitting', sampleSize: recent.ab };
+        return { delta, kind, source: 'hitting', sampleSize: null };
       } else {
         const recent = mvpHeatPitchingCache[p.pid];
         const seasonEra = parseFloat(p.s?.era) || 99;
-        if (!recent || !recent.era || recent.ip < 6) return null;
-        const delta = seasonEra - recent.era;  // positive = recent ERA better
+        if (recent && recent.era && recent.ip >= 6) {
+          const delta = seasonEra - recent.era;  // positive = recent ERA better
+          let kind;
+          if (delta >=  1.00) kind = 'up';
+          else if (delta <= -0.80) kind = 'down';
+          else kind = 'flat';
+          return { delta, kind, source: 'pitching', sampleSize: recent.ip };
+        }
+        const fallback = recentPitchingCache[p.pid];
+        if (!fallback || !fallback.era) return null;
+        const delta = seasonEra - fallback.era;
         let kind;
         if (delta >=  1.00) kind = 'up';
         else if (delta <= -0.80) kind = 'down';
         else kind = 'flat';
-        return { delta, kind, source: 'pitching', sampleSize: recent.ip };
+        return { delta, kind, source: 'pitching', sampleSize: fallback.ip || null };
       }
     }
 
     function trendArrow(trend, rank) {
-      if (!trend) return '·';
+      if (!trend) return '→';
       if (trend.kind === 'up')   return '↑';
       // Rank 1: never show down arrow — cap at flat
       if (trend.kind === 'down' && rank === 1) return '→';
@@ -7325,12 +7479,16 @@ async function loadMVPTracker() {
       if (trend.source === 'hitting') {
         const sign = trend.delta >= 0 ? '+' : '−';
         const abs = Math.abs(trend.delta).toFixed(3).replace(/^0/, '');
-        return `OPS last 10 days: ${sign}${abs} vs season (${trend.sampleSize} AB)`;
+        return trend.sampleSize
+          ? `OPS last 10 days: ${sign}${abs} vs season (${trend.sampleSize} AB)`
+          : `Recent OPS: ${sign}${abs} vs season`;
       } else {
         // For pitching, positive delta means recent ERA is BETTER (lower)
         const sign = trend.delta >= 0 ? '−' : '+';  // flip for ERA narrative
         const abs = Math.abs(trend.delta).toFixed(2);
-        return `ERA last 15 days: ${sign}${abs} vs season (${trend.sampleSize} IP)`;
+        return trend.sampleSize
+          ? `ERA last 15 days: ${sign}${abs} vs season (${trend.sampleSize} IP)`
+          : `Recent ERA: ${sign}${abs} vs season`;
       }
     }
 
@@ -7372,127 +7530,52 @@ async function loadMVPTracker() {
       return mvpWhy(p);
     }
 
-    function mvpToneClass(ratio, lowerBetter = false) {
-      if (!ratio || !isFinite(ratio) || ratio <= 0) return 'mvp-tone-avg';
-      const rel = lowerBetter ? (1 / ratio) : ratio;
-      if (rel >= 1.18) return 'mvp-tone-elite';
-      if (rel >= 1.05) return 'mvp-tone-good';
-      if (rel >= 0.90) return 'mvp-tone-avg';
-      return 'mvp-tone-poor';
-    }
-
-    function snapshotStatHTML(label, value, toneCls) {
-      return `<div class="mvp-snapshot-stat ${toneCls}">
-        <span class="mvp-snapshot-label">${label}</span>
-        <span class="mvp-snapshot-value">${value}</span>
-      </div>`;
-    }
-
-    function compactSeasonLine(p, isPitcher) {
-      const s = p.s || {};
-      if (isPitcher) {
-        const era = s.era || '—';
-        const whip = s.whip || '—';
-        return `ERA ${era} · WHIP ${whip}`;
-      }
-      const ops = ((parseFloat(s.obp) || 0) + (parseFloat(s.slg) || 0));
-      const hr = parseInt(s.homeRuns) || 0;
-      const rhs = hr > 0 ? `HR ${hr}` : `OBP ${s.obp || '.000'}`;
-      return `OPS ${ops > 0 ? ops.toFixed(3) : '—'} · ${rhs}`;
-    }
-
-    function seasonSnapshotHTML(p, awardType) {
+    function trackerPlayerDetailHTML(p, awardType) {
       const isPitcher = awardType === 'cy' || (awardType === 'roy' && p.isPitcher);
-      const s = p.s || {};
-
-      if (isPitcher) {
-        const ip = parseFloat(s.inningsPitched) || 0;
-        const so = parseInt(s.strikeOuts) || 0;
-        const bb = parseInt(s.baseOnBalls || s.walks) || 0;
-        const gs = parseInt(s.gamesStarted) || 0;
-        const qs = parseInt(s.qualityStarts || 0) || 0;
-        const sv = parseInt(s.saves) || 0;
-        const hld = parseInt(s.holds) || 0;
-        const k9 = ip > 0 ? (so / ip) * 9 : 0;
-        const bb9 = ip > 0 ? (bb / ip) * 9 : 0;
-        const isStarter = gs >= 3 || awardType === 'cy';
-        const lastA = isStarter ? 'QS' : 'SV';
-        const lastB = isStarter ? 'GS' : 'HLD';
-        const lastAVal = isStarter ? qs : sv;
-        const lastBVal = isStarter ? gs : hld;
-
-        return `<div class="mvp-detail-block">
-          <div class="mvp-detail-title">Season Snapshot</div>
-          <div class="mvp-snapshot-grid">
-            ${snapshotStatHTML('ERA', s.era || '—', mvpToneClass((parseFloat(s.era) || 0) / (lgPitch.era || 4.10), true))}
-            ${snapshotStatHTML('WHIP', s.whip || '—', mvpToneClass((parseFloat(s.whip) || 0) / (lgPitch.whip || 1.28), true))}
-            ${snapshotStatHTML('IP', s.inningsPitched || '—', ip >= minIP * 1.2 ? 'mvp-tone-elite' : ip >= minIP ? 'mvp-tone-good' : 'mvp-tone-avg')}
-            ${snapshotStatHTML('K/9', k9 > 0 ? k9.toFixed(1) : '—', mvpToneClass(k9 / (lgPitch.k9 || 8.5)))}
-            ${snapshotStatHTML('BB/9', bb9 > 0 ? bb9.toFixed(1) : '—', mvpToneClass(bb9 / (lgPitch.bb9 || 3.2), true))}
-            ${snapshotStatHTML(lastA, String(lastAVal ?? '—'), isStarter ? (gs > 0 && (qs / Math.max(gs,1)) >= 0.6 ? 'mvp-tone-elite' : (qs > 0 ? 'mvp-tone-good' : 'mvp-tone-avg')) : (sv >= 10 ? 'mvp-tone-elite' : sv >= 5 ? 'mvp-tone-good' : 'mvp-tone-avg'))}
-            ${snapshotStatHTML(lastB, String(lastBVal ?? '—'), isStarter ? (gs >= minGS + 3 ? 'mvp-tone-good' : 'mvp-tone-avg') : (hld >= 8 ? 'mvp-tone-good' : 'mvp-tone-avg'))}
+      const stats = { ...(p.s || {}) };
+      const isRookie = awardType === 'roy' || (() => {
+        const c = careerStatsCache[p.pid];
+        if (!c) return true;
+        return (c.careerAB ?? 0) < 130 && (c.careerIP ?? 0) < 130;
+      })();
+      const awardBadge = awardsBadgeHTML(p.pid, awardType === 'roy' ? (isPitcher ? 'cy' : 'mvp') : awardType);
+      const seasonDots = seasonDotsHTML(p.pid, isPitcher ? 'pitcher' : 'hitter');
+      const trendBadge = !isRookie
+        ? (isPitcher
+            ? trendFormaHTML(calcPitcherScore(stats), careerStatsCache[p.pid]?.formaScore)
+            : trendBadgeHTML((parseFloat(stats.obp) || 0) + (parseFloat(stats.slg) || 0), careerStatsCache[p.pid]?.ops, 'ops'))
+        : '';
+      const color = getDiamondPlayerColor(isPitcher ? calcPitcherScore(stats) : ((parseFloat(stats.obp) || 0) + (parseFloat(stats.slg) || 0)), isPitcher ? 'pitcher' : 'hitter');
+      const statsLine = isPitcher
+        ? (() => {
+            const qs = parseInt(stats.qualityStarts || 0) || 0;
+            return `ERA ${stats.era || '—'} · WHIP ${stats.whip || '—'} · IP ${stats.inningsPitched || '—'} · GS ${stats.gamesStarted ?? '—'} · QS ${qs}`;
+          })()
+        : formatSeasonHitterSummary(stats);
+      const barLabel = isPitcher ? 'FORM' : 'OPS';
+      const barValue = isPitcher ? Math.max(0, calcPitcherScore(stats)) : (((parseFloat(stats.obp) || 0) + (parseFloat(stats.slg) || 0)).toFixed(3));
+      const barWidth = isPitcher
+        ? Math.min(100, Math.round(Math.max(0, calcPitcherScore(stats))))
+        : Math.min(100, Math.round((((parseFloat(stats.obp) || 0) + (parseFloat(stats.slg) || 0)) / 1.2) * 100));
+      const rankSummary = trackerRankSummary(p, isPitcher);
+      return `<div class="impact-detail-card">
+        <div class="impact-row">
+          <div class="impact-row-left">
+            <div class="impact-name-block">
+              <div class="impact-name">${awardBadge || ''}</div>
+              <div class="impact-stats-line">${statsLine}</div>
+              ${rankSummary ? `<div class="impact-stats-line" style="margin-top:5px">${rankSummary}</div>` : ''}
+            </div>
           </div>
-        </div>`;
-      }
-
-      const pa = parseInt(s.plateAppearances || 0) || 0;
-      const hr = parseInt(s.homeRuns) || 0;
-      const rbi = parseInt(s.rbi) || 0;
-      const runs = parseInt(s.runs) || 0;
-      const sb = parseInt(s.stolenBases) || 0;
-      const so = parseInt(s.strikeOuts) || 0;
-      const avg = parseFloat(s.avg) || 0;
-      const obp = parseFloat(s.obp) || 0;
-      const slg = parseFloat(s.slg) || 0;
-      const ops = obp + slg;
-      const kPct = pa > 0 ? (so / pa) * 100 : 0;
-      const hrRate = pa > 0 ? hr / pa : 0;
-      const rbiRate = pa > 0 ? rbi / pa : 0;
-      const runRate = pa > 0 ? runs / pa : 0;
-      const sbRate = pa > 0 ? sb / pa : 0;
-
-      return `<div class="mvp-detail-block">
-        <div class="mvp-detail-title">Season Snapshot</div>
-        <div class="mvp-snapshot-grid">
-          ${snapshotStatHTML('AVG', s.avg || '.---', mvpToneClass(avg / (lgAvg.avg || 0.245)))}
-          ${snapshotStatHTML('OBP', s.obp || '.000', mvpToneClass(obp / (lg.obp || 0.315)))}
-          ${snapshotStatHTML('SLG', s.slg || '.000', mvpToneClass(slg / (lg.slg || 0.405)))}
-          ${snapshotStatHTML('OPS', ops > 0 ? ops.toFixed(3) : '—', mvpToneClass(ops / (lg.ops || 0.720)))}
-          ${snapshotStatHTML('HR', String(hr), hrRate >= (lg.hrPA || 0.032) * 1.3 ? 'mvp-tone-elite' : hrRate >= (lg.hrPA || 0.032) * 1.05 ? 'mvp-tone-good' : 'mvp-tone-avg')}
-          ${snapshotStatHTML('RBI', String(rbi), mvpToneClass(rbiRate / (lg.rbiPA || 0.055)))}
-          ${snapshotStatHTML('R', String(runs), mvpToneClass(runRate / (lg.runsPA || 0.055)))}
-          ${snapshotStatHTML('SB', String(sb), sbRate >= 0.035 ? 'mvp-tone-elite' : sbRate >= 0.015 ? 'mvp-tone-good' : 'mvp-tone-avg')}
-          ${snapshotStatHTML('K%', kPct > 0 ? `${kPct.toFixed(1)}%` : '—', mvpToneClass((kPct / 100) / (lgPitch.soPA || lgAvg.soPA || 0.225), true))}
-        </div>
-      </div>`;
-    }
-
-    function nextGameDetailHTML(p, awardType) {
-      const game = mvpScheduleCache?.[p.teamId];
-      if (!game) return '';
-      const isPitcherAward = awardType === 'cy' || (awardType === 'roy' && p.isPitcher);
-      const isConfirmedStart = !!game.probablePids?.has(p.pid);
-      if (isPitcherAward && !isConfirmedStart) return '';
-      const todayStr = new Date().toISOString().split('T')[0];
-      const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-      let dateLabel;
-      if (game.date === todayStr) dateLabel = 'Today';
-      else if (game.date === tomorrowStr) dateLabel = 'Tomorrow';
-      else dateLabel = new Date(game.date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', day:'numeric', month:'short' });
-      const matchup = `${game.homeAway === 'vs' ? 'VS' : '@'} ${game.opponent}`;
-      const timeLabel = game.time ? ` · ${game.time}` : '';
-      const heading = isPitcherAward ? 'Next Start' : 'Next Game';
-      const logoHtml = game.opponentLogo
-        ? `<img src="${game.opponentLogo}" alt="${game.opponent}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
-        : '';
-      const linkHtml = (game.gamePk && isGameInTopGamesWindow(game.date) && (!isPitcherAward || isConfirmedStart))
-        ? `<button type="button" class="mvp-detail-next-link" onclick="event.stopPropagation();goToTopGameFromStandings('${game.gamePk}','${game.date}')">Open in Top Games</button>`
-        : '';
-      return `<div class="mvp-detail-block">
-        <div class="mvp-detail-title">${heading}</div>
-        <div class="mvp-detail-next">
-          <div class="mvp-detail-next-text" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${logoHtml}<span>${matchup} · ${dateLabel}${timeLabel}</span></div>
-          ${linkHtml}
+          <div class="impact-bar-block">
+            <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
+          </div>
+          <div class="impact-bar-val-wrap">
+            <span class="impact-bar-label">${barLabel}</span>
+            <span class="impact-bar-val" style="color:${color}">${barValue}</span>
+            ${trendBadge ? `<div style="margin-top:3px;text-align:right">${trendBadge}</div>` : ''}
+            ${seasonDots}
+          </div>
         </div>
       </div>`;
     }
@@ -7583,8 +7666,8 @@ async function loadMVPTracker() {
       const awardHtml = awardsBadgeHTML(p.pid, awardType === 'roy' ? (p.isPitcher ? 'cy' : 'mvp') : awardType);
       const trend = getMvpTrend(p, p.isPitcher ? 'cy' : awardType);
       const ilHtml   = ilBadgeHTML(p);
-      const statLine = compactSeasonLine(p, isPitcher);
-      const detailHtml = `${seasonSnapshotHTML(p, awardType)}${ilHtml ? '' : nextGameDetailHTML(p, p.isPitcher ? 'cy' : awardType)}`;
+      const nextHtml = ilHtml ? '' : nextGameHTML(p, p.isPitcher ? 'cy' : awardType);
+      const detailHtml = trackerPlayerDetailHTML(p, awardType);
       return `<details class="mvp-row-wrap">
         <summary class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
@@ -7596,8 +7679,8 @@ async function loadMVPTracker() {
             <span class="mvp-team">${teamLogo}${p.teamAbbr}</span>
             ${awardHtml}
           </div>
-          <div class="mvp-statline">${statLine}</div>
           ${ilHtml}
+          ${nextHtml}
         </div>
         <div class="mvp-score-block">
           <div class="mvp-score-val">${score}</div>
@@ -7686,16 +7769,6 @@ async function loadMVPTracker() {
       ));
     }
 
-    // Save to localStorage after all heavy fetches complete (only if we just fetched fresh data)
-    if (!cached) {
-      saveCache({
-        rawHitters,
-        rawPitchers,
-        positionMap,
-        careerStatsCache: { ...careerStatsCache },
-      });
-    }
-
     // Build ROY lists (now that career stats are available for eligibility check)
     const alROY = buildROYList(rawHitters, rawPitchers, 103);
     const nlROY = buildROYList(rawHitters, rawPitchers, 104);
@@ -7708,12 +7781,26 @@ async function loadMVPTracker() {
     const allTeamIds = [...new Set([...alMVP, ...nlMVP, ...alCY, ...nlCY, ...alROY, ...nlROY].map(p => p.teamId).filter(Boolean))];
     try {
       await Promise.all([
+        fetchSeasonHistory([...new Set([...allHitterPids, ...allPitcherPids])]),
         fetchMvpHeatHitting(allHitterPids),
         fetchMvpHeatPitching(allPitcherPids),
+        fetchRecentHitting(allHitterPids),
+        fetchRecentPitching(allPitcherPids),
         fetchMvpSchedule(),
         fetchMvpIL(allTeamIds),
       ]);
     } catch(e) {}
+
+    // Save to localStorage after all heavy fetches complete (only if we just fetched fresh data)
+    if (!cached) {
+      saveCache({
+        rawHitters,
+        rawPitchers,
+        positionMap,
+        careerStatsCache: { ...careerStatsCache },
+        seasonHistoryCache: { ...seasonHistoryCache },
+      });
+    }
 
     const now = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
     const today = new Date().toLocaleDateString('en-US', { day:'numeric', month:'short' });
