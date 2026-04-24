@@ -1341,6 +1341,7 @@
     </div>
   </div>
   <div class="app-footer">
+  <div id="update-disclaimer" style="font-size:11px;color:var(--muted);opacity:.6;margin-bottom:8px;letter-spacing:.5px"></div>
   <div>Feedback? Bugs? Suggestions? Email me!</div>
   <a href="mailto:perezzamoracarlos.20@gmail.com?subject=BaseballLens%20feedback" class="contact-btn">
     Contact
@@ -5467,6 +5468,12 @@ function tgToggleGame(gameId) {
 
 async function loadTopGames() {
   const el = document.getElementById('topGamesContent');
+  const todayKey = new Date().toISOString().split('T')[0];
+  const cache = window._topGamesCache;
+  if (cache?.dateKey === todayKey && !(window._mvpLists && !cache.hadMvpLists)) {
+    el.innerHTML = cache.html;
+    return;
+  }
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING TOP GAMES...</div></div>`;
   try {
     const todayD = new Date();
@@ -5583,13 +5590,25 @@ async function loadTopGames() {
           const maxIP = Math.max(1,...rawP.map(p=>parseFloat(p.s?.inningsPitched||0)));
           const minPA = Math.max(50, Math.round(maxPA*0.40));
           const minIP = Math.max(15, Math.round(maxIP*0.40));
-          const lg = { ops:(lgAvg.obp||.315)+(lgAvg.slg||.405), obp:lgAvg.obp||.315, slg:lgAvg.slg||.405, hrPA:lgAvg.hrPA||.032, rbiPA:.055, runsPA:.055, sbEff:.72, paShare:maxPA*.75, era:lgPitch.era||4.10, whip:lgPitch.whip||1.28, k9:lgPitch.k9||8.5, bb9:lgPitch.bb9||3.2 };
+          let totRBI=0,totRuns=0,totSB=0,totCS=0,totPA=0;
+          rawH.forEach(p=>{const pa=parseInt(p.s?.plateAppearances||0);if(pa<30)return;totRBI+=parseInt(p.s?.rbi||0);totRuns+=parseInt(p.s?.runs||0);totSB+=parseInt(p.s?.stolenBases||0);totCS+=parseInt(p.s?.caughtStealing||0);totPA+=pa;});
+          const lg = { ops:(lgAvg.obp||.315)+(lgAvg.slg||.405), obp:lgAvg.obp||.315, slg:lgAvg.slg||.405, hrPA:lgAvg.hrPA||.032, rbiPA:totPA>0?totRBI/totPA:.055, runsPA:totPA>0?totRuns/totPA:.055, sbEff:(totSB+totCS)>0?totSB/(totSB+totCS):.72, paShare:maxPA*.75, era:lgPitch.era||4.10, whip:lgPitch.whip||1.28, k9:lgPitch.k9||8.5, bb9:lgPitch.bb9||3.2 };
           // Simplified score functions (same as MVP tab)
           const mvpScoreSimple = p => {
             const s=p.s; const pa=parseInt(s?.plateAppearances||0); if(pa<minPA) return null;
-            const ops=(parseFloat(s?.obp||0)+parseFloat(s?.slg||0));
             const idx=(v,r)=>r?Math.min(200,Math.max(0,(v/r)*100)):100;
-            return Math.min(99.9,(0.45*idx(ops,lg.ops)+0.20*idx(parseInt(s?.homeRuns||0)/Math.max(pa,1),lg.hrPA)+0.15*idx(pa,lg.paShare))*0.58);
+            const hits=parseInt(s?.hits||0), ab=parseInt(s?.atBats||1);
+            const h1=hits-(parseInt(s?.doubles||0)+parseInt(s?.triples||0)+parseInt(s?.homeRuns||0));
+            const tb=h1+2*parseInt(s?.doubles||0)+3*parseInt(s?.triples||0)+4*parseInt(s?.homeRuns||0);
+            const obp=ab>0?parseFloat(s?.obp||0):0, slg=ab>0?(tb/ab):0, ops=obp+slg;
+            const hr=parseInt(s?.homeRuns||0), rbi=parseInt(s?.rbi||0), runs=parseInt(s?.runs||0);
+            const sb=parseInt(s?.stolenBases||0), cs=parseInt(s?.caughtStealing||0);
+            const sbEff=(sb+cs)>0?sb/(sb+cs):0;
+            const raw=0.30*idx(ops,lg.ops)+0.15*idx(obp,lg.obp)+0.10*idx(slg,lg.slg)
+              +0.15*idx(hr/Math.max(pa,1),lg.hrPA)+0.10*idx(rbi/Math.max(pa,1),lg.rbiPA)
+              +0.05*idx(runs/Math.max(pa,1),lg.runsPA)+0.05*((sb+cs)>=3?idx(sbEff,lg.sbEff):100)
+              +0.10*idx(pa,lg.paShare);
+            return Math.min(99.9, raw*0.58);
           };
           const cyScoreSimple = p => {
             const s=p.s; const gs=parseInt(s?.gamesStarted||0); const ip=parseFloat(s?.inningsPitched||0);
@@ -6398,26 +6417,31 @@ async function loadTopGames() {
         </div>`;
       }
 
-      // Award candidacy badges for PTW players — requires _mvpLists (real formula).
-      // Returns '' when _mvpLists is not yet loaded to avoid simplified-formula false positives.
+      // Award candidacy badges for PTW players.
+      // Uses live _mvpLists ranks when available; falls back to cached labels from buildCandidateSets.
       function awardCandidacyBadge(c) {
-        if (!window._mvpLists) return '';
-        const ml = window._mvpLists;
+        if (!c.labels?.length) return '';
         const labelMap = { MVP: 'MVP RACE', CY: 'CY RACE', ROY: 'ROY RACE' };
         const order = { MVP: 0, CY: 1, ROY: 2 };
         const badgeThreshold = { MVP: 10, CY: 10, ROY: 5 };
-        const liveLookup = {
-          MVP: [...(ml.alMVP||[]), ...(ml.nlMVP||[])],
-          CY:  [...(ml.alCY||[]),  ...(ml.nlCY||[])],
-          ROY: [...(ml.alROY||[]), ...(ml.nlROY||[])],
-        };
-        const live = [];
-        for (const [key, list] of Object.entries(liveLookup)) {
-          const found = list.find(p => p.pid === c.pid);
-          if (found) live.push({ key, rank: found.rank });
+        let effectiveLabels = c.labels;
+        if (window._mvpLists) {
+          const ml = window._mvpLists;
+          const liveLookup = {
+            MVP: [...(ml.alMVP||[]), ...(ml.nlMVP||[])],
+            CY:  [...(ml.alCY||[]),  ...(ml.nlCY||[])],
+            ROY: [...(ml.alROY||[]), ...(ml.nlROY||[])],
+          };
+          const live = [];
+          for (const [key, list] of Object.entries(liveLookup)) {
+            const found = list.find(p => p.pid === c.pid);
+            if (found) live.push({ key, rank: found.rank });
+          }
+          effectiveLabels = live; // empty = not in any live list → no badges
         }
-        if (!live.length) return '';
-        return live
+        if (!effectiveLabels.length) return '';
+        return effectiveLabels
+          .slice()
           .sort((a, b) => (order[a.key] ?? 99) - (order[b.key] ?? 99) || a.rank - b.rank)
           .filter(entry => entry.rank <= (badgeThreshold[entry.key] ?? 0))
           .map(entry => {
@@ -6504,6 +6528,8 @@ async function loadTopGames() {
       dayBlock('tg-yday', `YESTERDAY — ${fmtDate(yesterdayD)}`, `${yesterdayGames.length} games`, false, yBody) +
       dayBlock('tg-today',  `TODAY — ${fmtDate(todayD)}`,      `${todayGames.length} games`,     true,  todayBody) +
       dayBlock('tg-tmr',  `TOMORROW — ${fmtDate(tomorrowD)}`,`${tomorrowGames.length} games`,  false, tmrBody);
+
+    window._topGamesCache = { html: el.innerHTML, dateKey: todayKey, hadMvpLists: !!window._mvpLists };
 
   } catch(e) {
     el.innerHTML = `<div class="error-box">Error loading top games: ${e.message}</div>`;
@@ -7879,6 +7905,17 @@ function getTeamLeagueId(teamId) {
   const AL = new Set([108,110,111,114,116,117,118,133,136,139,140,141,142,145,147]);
   return AL.has(teamId) ? 103 : 104;
 }
+
+// Update disclaimer: show the daily refresh time in local timezone
+(function() {
+  const el = document.getElementById('update-disclaimer');
+  if (!el) return;
+  const utcRefresh = new Date();
+  utcRefresh.setUTCHours(9, 0, 0, 0);
+  if (new Date() >= utcRefresh) utcRefresh.setUTCDate(utcRefresh.getUTCDate() + 1);
+  const localTime = utcRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+  el.textContent = `Stats update daily at ${localTime}`;
+})();
 
 // On load, jump to the tab specified in the URL hash (e.g. #mvp, #players)
 const VALID_TABS = new Set(['standings','topgames','rosters','mvp']);
