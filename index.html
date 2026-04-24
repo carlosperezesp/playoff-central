@@ -5490,7 +5490,6 @@ async function loadTopGames() {
     const yesterdayGames = (yData.dates?.[0]?.games || []);
     const todayGames     = (todayData.dates?.[0]?.games || []).slice().sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
     const tomorrowGames  = (tmrData.dates?.[0]?.games  || []).slice().sort((a,b) => new Date(a.gameDate) - new Date(b.gameDate));
-    const todayFinalGames = todayGames.filter(g => g.status?.abstractGameState === 'Final');
     const yesterdayBoxscores = await Promise.all(
       yesterdayGames.map(g =>
         fetchWithTimeout(`${MLB_API}/game/${g.gamePk}/boxscore`)
@@ -5503,25 +5502,6 @@ async function loadTopGames() {
       ['away', 'home'].forEach(side => {
         Object.values(box?.teams?.[side]?.players || {}).forEach(player => {
           if (player?.person?.id) yesterdayPlayerIds.add(player.person.id);
-        });
-      });
-    });
-    const todayFinalBoxscores = await Promise.all(
-      todayFinalGames.map(g =>
-        fetchWithTimeout(`${MLB_API}/game/${g.gamePk}/boxscore`)
-          .then(r => r.json())
-          .catch(() => null)
-      )
-    );
-    const todayFinalBoxscoresByGamePk = {};
-    const todayFinalPlayerIds = new Set();
-    todayFinalGames.forEach((g, idx) => {
-      const box = todayFinalBoxscores[idx];
-      if (!box) return;
-      todayFinalBoxscoresByGamePk[g.gamePk] = box;
-      ['away', 'home'].forEach(side => {
-        Object.values(box?.teams?.[side]?.players || {}).forEach(player => {
-          if (player?.person?.id) todayFinalPlayerIds.add(player.person.id);
         });
       });
     });
@@ -5769,7 +5749,6 @@ async function loadTopGames() {
       (candidatesByTeam[tid] || []).forEach(c => ptwPids.add(c.pid));
     });
     [...yesterdayPlayerIds].forEach(pid => ptwPids.add(pid));
-    [...todayFinalPlayerIds].forEach(pid => ptwPids.add(pid));
     // Also fetch stats for probable pitchers if not already in pitcherStats
     [...todayGames, ...tomorrowGames].forEach(g => {
       [g.teams.away.probablePitcher?.id, g.teams.home.probablePitcher?.id].forEach(id => { if(id) ptwPids.add(id); });
@@ -6451,25 +6430,20 @@ async function loadTopGames() {
           .join(' ');
       }
 
-      const finalKeyPerformances = state === 'Final'
-        ? yesterdayKeyPlayersHTML(todayFinalBoxscoresByGamePk[g.gamePk])
-        : '';
       const detailHTML = `<div class="tg-detail" id="tgd-${gameId}">
         ${sameDivision ? `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><span style="font-size:10px;font-weight:700;padding:2px 7px;background:rgba(234,179,8,.15);color:#b45309;border-radius:3px;letter-spacing:.5px">DIVISIONAL</span></div>` : ''}
-        ${state === 'Final'
-          ? (finalKeyPerformances || `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No key performances found for this game.</div>`)
-          : `<div class="tg-detail-inner">
-              <div class="tg-detail-col">
-                ${spMini(awayPid, awayPName, awayF, awayS, awayMeta, away.team.id)}
-              </div>
-              <div class="tg-detail-col">
-                ${spMini(homePid, homePName, homeF, homeS, homeMeta, home.team.id)}
-              </div>
-            </div>
-            ${allWatch.length ? `<div class="impact-detail-card" style="margin-top:10px">
-              <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
-              ${allWatch.map(p => ptwPlayerCard(p, awardCandidacyBadge)).join('')}
-            </div>` : ''}`}
+        <div class="tg-detail-inner">
+          <div class="tg-detail-col">
+            ${spMini(awayPid, awayPName, awayF, awayS, awayMeta, away.team.id)}
+          </div>
+          <div class="tg-detail-col">
+            ${spMini(homePid, homePName, homeF, homeS, homeMeta, home.team.id)}
+          </div>
+        </div>
+        ${allWatch.length ? `<div class="impact-detail-card" style="margin-top:10px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">PLAYERS TO WATCH</div>
+          ${allWatch.map(p => ptwPlayerCard(p, awardCandidacyBadge)).join('')}
+        </div>` : ''}
       </div>`;
 
       return `<div>
