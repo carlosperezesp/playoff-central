@@ -5549,7 +5549,7 @@ async function loadTopGames() {
     let candidatesByTeam = {}; // teamId → [{pid, name, labels:[{key, rank}], rank, position}]
 
     async function buildCandidateSets() {
-      const MVP_LIMIT = 10;
+      const MVP_LIMIT = 30;
       const CY_LIMIT = 10;
       const ROY_LIMIT = 5;
       let lists = window._mvpLists;
@@ -5653,6 +5653,7 @@ async function loadTopGames() {
             alROY: buildROYSimple(103),
             nlROY: buildROYSimple(104),
           };
+          window._tgNeedsRefresh = true; // simplified formula used; refresh when _mvpLists loads
         } catch(e) { lists = { alMVP:[], nlMVP:[], alCY:[], nlCY:[], alROY:[], nlROY:[] }; }
       }
 
@@ -6308,7 +6309,7 @@ async function loadTopGames() {
       const homeWatch = playersToWatch(home.team.id, homeExclude, homeRoster.spPids).map(c => ({...c, teamMeta: homeMeta}));
 
       // Merge and sort by mvp score (rank is 1-20, lower = better, so sort ascending)
-      const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 6);
+      const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 4);
 
       function ptwPlayerCard(c, badgeFn) {
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${c.pid}/headshot/67/current`;
@@ -6399,12 +6400,32 @@ async function loadTopGames() {
 
       // Award candidacy badges for PTW players
       function awardCandidacyBadge(c) {
-        if (!c.labels?.length) return '';
         const labelMap = { MVP: 'MVP RACE', CY: 'CY RACE', ROY: 'ROY RACE' };
         const order = { MVP: 0, CY: 1, ROY: 2 };
-        return c.labels
+        const badgeThreshold = { MVP: 10, CY: 10, ROY: 5 };
+
+        // Always use live _mvpLists ranks when available to avoid simplified-formula drift
+        let effectiveLabels = c.labels || [];
+        if (window._mvpLists) {
+          const ml = window._mvpLists;
+          const liveLookup = {
+            MVP: [...(ml.alMVP||[]), ...(ml.nlMVP||[])],
+            CY:  [...(ml.alCY||[]),  ...(ml.nlCY||[])],
+            ROY: [...(ml.alROY||[]), ...(ml.nlROY||[])],
+          };
+          const live = [];
+          for (const [key, list] of Object.entries(liveLookup)) {
+            const found = list.find(p => p.pid === c.pid);
+            if (found) live.push({ key, rank: found.rank });
+          }
+          effectiveLabels = live; // empty = player not in any live list → no badges
+        }
+
+        if (!effectiveLabels.length) return '';
+        return effectiveLabels
           .slice()
           .sort((a, b) => (order[a.key] ?? 99) - (order[b.key] ?? 99) || a.rank - b.rank)
+          .filter(entry => entry.rank <= (badgeThreshold[entry.key] ?? 0))
           .map(entry => {
             const label = labelMap[entry.key] || entry.key;
             return `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${entry.key}')">${label}</span>`;
@@ -7493,13 +7514,13 @@ async function loadMVPTracker() {
     }
 
     // --- Build ranked lists
-    function buildMVPList(players, scoreFunc, whyFunc, leagueId, forceTWP) {
+    function buildMVPList(players, scoreFunc, whyFunc, leagueId, forceTWP, limit = 10) {
       const ranked = players
         .filter(p => !leagueId || p.leagueId === leagueId)
         .map(p => ({ ...p, mvpS: scoreFunc(p) }))
         .filter(p => p.mvpS !== null)
         .sort((a,b) => b.mvpS - a.mvpS)
-        .slice(0, 10);
+        .slice(0, limit);
       // For MVP and Cy Young: if a TWP (two-way player like Ohtani) exists in this
       // league but didn't make the top 10 by score, force them in — but ONLY if their
       // score is at least 70 (otherwise TWP status alone isn't enough, they're underperforming).
@@ -7713,10 +7734,10 @@ async function loadMVPTracker() {
     }
 
     // Build all 4 MVP/CY trackers
-    const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103, true);
-    const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true);
-    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103);
-    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104);
+    const alMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  103, true, 30);
+    const nlMVP  = buildMVPList(rawHitters,  mvpScore, mvpWhy,  104, true, 30);
+    const alCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   103, false, 10);
+    const nlCY   = buildMVPList(rawPitchers, cyScore,  cyWhy,   104, false, 10);
     // Save globally so Top Games can reuse without re-fetching
     window._mvpLists = { alMVP, nlMVP, alCY, nlCY, alROY: null, nlROY: null };
 
@@ -7773,7 +7794,11 @@ async function loadMVPTracker() {
     const alROY = buildROYList(rawHitters, rawPitchers, 103);
     const nlROY = buildROYList(rawHitters, rawPitchers, 104);
     // Update global with ROY lists now available
-    if (window._mvpLists) { window._mvpLists.alROY = alROY; window._mvpLists.nlROY = nlROY; }
+    if (window._mvpLists) {
+      window._mvpLists.alROY = alROY; window._mvpLists.nlROY = nlROY;
+      // If Top Games was already rendered with simplified-formula data, reload it now
+      if (window._tgNeedsRefresh) { window._tgNeedsRefresh = false; loadTopGames(); }
+    }
 
     // Fetch RECENT-FORM stats for all top-10 players + ROY candidates
     const allHitterPids  = [...new Set([...alMVP, ...nlMVP, ...alROY.filter(p => !p.isPitcher), ...nlROY.filter(p => !p.isPitcher)].map(p => p.pid))];
@@ -7812,8 +7837,8 @@ async function loadMVPTracker() {
 
       let grid = '';
       if (showMVP) {
-        grid += cardHTML('AL MVP', 'AMERICAN LEAGUE', alMVP);
-        grid += cardHTML('NL MVP', 'NATIONAL LEAGUE', nlMVP);
+        grid += cardHTML('AL MVP', 'AMERICAN LEAGUE', alMVP.slice(0, 10));
+        grid += cardHTML('NL MVP', 'NATIONAL LEAGUE', nlMVP.slice(0, 10));
       }
       if (showCY) {
         grid += cardHTML('AL CY YOUNG', 'AMERICAN LEAGUE', alCY);
