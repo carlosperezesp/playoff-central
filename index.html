@@ -6398,32 +6398,26 @@ async function loadTopGames() {
         </div>`;
       }
 
-      // Award candidacy badges for PTW players
+      // Award candidacy badges for PTW players — requires _mvpLists (real formula).
+      // Returns '' when _mvpLists is not yet loaded to avoid simplified-formula false positives.
       function awardCandidacyBadge(c) {
+        if (!window._mvpLists) return '';
+        const ml = window._mvpLists;
         const labelMap = { MVP: 'MVP RACE', CY: 'CY RACE', ROY: 'ROY RACE' };
         const order = { MVP: 0, CY: 1, ROY: 2 };
         const badgeThreshold = { MVP: 10, CY: 10, ROY: 5 };
-
-        // Always use live _mvpLists ranks when available to avoid simplified-formula drift
-        let effectiveLabels = c.labels || [];
-        if (window._mvpLists) {
-          const ml = window._mvpLists;
-          const liveLookup = {
-            MVP: [...(ml.alMVP||[]), ...(ml.nlMVP||[])],
-            CY:  [...(ml.alCY||[]),  ...(ml.nlCY||[])],
-            ROY: [...(ml.alROY||[]), ...(ml.nlROY||[])],
-          };
-          const live = [];
-          for (const [key, list] of Object.entries(liveLookup)) {
-            const found = list.find(p => p.pid === c.pid);
-            if (found) live.push({ key, rank: found.rank });
-          }
-          effectiveLabels = live; // empty = player not in any live list → no badges
+        const liveLookup = {
+          MVP: [...(ml.alMVP||[]), ...(ml.nlMVP||[])],
+          CY:  [...(ml.alCY||[]),  ...(ml.nlCY||[])],
+          ROY: [...(ml.alROY||[]), ...(ml.nlROY||[])],
+        };
+        const live = [];
+        for (const [key, list] of Object.entries(liveLookup)) {
+          const found = list.find(p => p.pid === c.pid);
+          if (found) live.push({ key, rank: found.rank });
         }
-
-        if (!effectiveLabels.length) return '';
-        return effectiveLabels
-          .slice()
+        if (!live.length) return '';
+        return live
           .sort((a, b) => (order[a.key] ?? 99) - (order[b.key] ?? 99) || a.rank - b.rank)
           .filter(entry => entry.rank <= (badgeThreshold[entry.key] ?? 0))
           .map(entry => {
