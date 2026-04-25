@@ -4164,12 +4164,12 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   let pitcherScore = 0;
   let eliteDuel = false;
   if (awayP && homeP) {
-    if (minForma >= 75) { pitcherScore = 3; eliteDuel = true; }
-    else if (avgForma >= 65) pitcherScore = 2;
-    else if (avgForma >= 50) pitcherScore = 1;
+    if (minForma >= 92) { pitcherScore = 3; eliteDuel = true; }
+    else if (avgForma >= 88) pitcherScore = 2;
+    else if (avgForma >= 78) pitcherScore = 1;
   } else if (awayP || homeP) {
     const forma = awayP ? awayForma : homeForma;
-    pitcherScore = forma >= 70 ? 1 : 0;
+    pitcherScore = forma >= 86 ? 1 : 0;
   }
 
   // --- Standings axis (0-3) ---
@@ -4225,15 +4225,16 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     standingsScore = Math.min(4, standingsScore * elimMod * seasonMult);
   }
 
-  // --- Award candidates axis (0-2) ---
+  // --- Award candidates axis (0-2) — only top-3 ranked (in real contention) ---
   let candScore = 0;
-  if (candidatesByTeam && (candidatesByTeam[awayAbbr]?.length || candidatesByTeam[homeAbbr]?.length)) {
-    const total = (candidatesByTeam[awayAbbr]?.length || 0) + (candidatesByTeam[homeAbbr]?.length || 0);
-    candScore = total >= 3 ? 2 : 1;
+  if (candidatesByTeam) {
+    const countTop = abbr => (candidatesByTeam[abbr] || []).filter(c => (c.rank || 99) <= 3).length;
+    const topTotal = countTop(awayAbbr) + countTop(homeAbbr);
+    candScore = topTotal >= 3 ? 2 : topTotal >= 1 ? 1 : 0;
   }
 
   const total = pitcherScore + standingsScore + candScore;
-  const isTopMatch = eliteDuel || total >= 4.5;
+  const isTopMatch = eliteDuel || total >= 7.0;
   return { isTopMatch, eliteDuel, pitcherScore, standingsScore, candScore, total };
 }
 
