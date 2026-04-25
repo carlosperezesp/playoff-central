@@ -4122,6 +4122,32 @@ function hasCompleteMvpLists() {
     window._mvpLists?.alROY && window._mvpLists?.nlROY);
 }
 
+function isTopGamesDisplayableGame(game, day) {
+  const status = game.status || {};
+  const detailed = String(status.detailedState || '').toLowerCase();
+  const abstractState = status.abstractGameState;
+
+  if (/(cancelled|canceled)/i.test(detailed)) return false;
+
+  if (abstractState === 'Final') {
+    const awayScore = game.teams?.away?.score;
+    const homeScore = game.teams?.home?.score;
+    const hasLinescore = !!game.linescore?.innings?.length;
+    const isScorelessNoBoxscore = (awayScore ?? 0) === 0 && (homeScore ?? 0) === 0 && !hasLinescore;
+    return day === 'hoy' && (!isScorelessNoBoxscore || isPostponedLikeGame(game));
+  }
+
+  return abstractState === 'Live' || abstractState === 'Preview';
+}
+
+function isPostponedLikeGame(game) {
+  const status = game.status || {};
+  const detailed = String(status.detailedState || '').toLowerCase();
+  const reason = String(status.reason || status.abstractGameCode || '').toLowerCase();
+  return /(postponed|suspended|rescheduled)/i.test(detailed) ||
+    /(postponed|suspended|rescheduled)/i.test(reason);
+}
+
 // ── Independent TOP MATCH scoring ──────────────────────────────────────────────
 function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   // --- Pitcher duel axis (0-3) ---
@@ -4298,7 +4324,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
     // Fetch schedule
     const schedRes  = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateStr}&hydrate=probablePitcher,linescore,team`);
     const schedData = await schedRes.json();
-    const games = (schedData.dates?.[0]?.games || []).filter(g => g.status?.abstractGameState !== 'Final' || day === 'hoy');
+    const games = (schedData.dates?.[0]?.games || []).filter(g => isTopGamesDisplayableGame(g, day));
 
     if (!games.length) {
       contentEl.innerHTML = `<p style="color:var(--muted);padding:20px;text-align:center">No hay partidos para este día.</p>`;
@@ -4420,7 +4446,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const barW = Math.min(100, Math.round((forma/100)*100));
       const careerForma = pitcherCareerMap[pid];
       const isRookiePitcher = pid && careerForma === undefined;
-      const spTrend = (!isRookiePitcher && careerForma != null && forma > 0) ? trendFormaHTML(forma, careerForma) : '';
+      const spTrend = (!isRookiePitcher && careerForma != null) ? trendFormaHTML(forma, careerForma) : '';
       const rookieBadge = isRookiePitcher ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
       return `<div style="background:${bg};border:1px solid ${bdr};border-radius:7px;padding:10px 12px;width:100%">
         ${teamPill}
@@ -4455,6 +4481,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const stats  = ptwStats[pid] || {};
       const keys   = c.awardKeys || [c.awardKey].filter(Boolean);
       const isPitcher = stats.type === 'pitcher' || keys.includes('CY');
+      const rookieBadge = keys.includes('ROY') ? `<span class="rookie-badge">R</span>` : '';
       const forma  = isPitcher ? (calcBaseScore(parseFloat(stats.era), parseFloat(stats.whip)) ?? 0) : 0;
       const opsVal = isPitcher ? 0 : (parseFloat(stats.ops) || 0);
       const color  = isPitcher ? getDiamondPlayerColor(forma, 'pitcher') : getDiamondPlayerColor(opsVal, 'hitter');
@@ -4495,7 +4522,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
           <img class="impact-photo" src="${photoUrl}"
             onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
           <div class="impact-name-block">
-            <div class="impact-name">${c.name||'?'} ${teamPill}</div>
+            <div class="impact-name">${c.name||'?'} ${rookieBadge} ${teamPill}</div>
             ${statsLine ? `<div class="impact-stats-line">${statsLine}</div>` : ''}
             ${badges ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${badges}</div>` : ''}
           </div>
@@ -4509,15 +4536,18 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const mA = (typeof TEAM_META!=='undefined'&&TEAM_META[tid_a]) || { abbr:away.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${tid_a}.svg` };
       const mH = (typeof TEAM_META!=='undefined'&&TEAM_META[tid_h]) || { abbr:home.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${tid_h}.svg` };
       const state = g.status?.abstractGameState;
+      const isPostponed = isPostponedLikeGame(g);
       const gdate = new Date(g.gameDate);
       const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
       const inningLabel = g.linescore?.currentInningOrdinal || 'LIVE';
-      const statusText  = state==='Live' ? `● ${inningLabel}` : state==='Final' ? 'FINAL' : timeStr;
-      const statusStyle = state==='Live'
+      const statusText  = isPostponed ? 'POSTPONED' : state==='Live' ? `● ${inningLabel}` : state==='Final' ? 'FINAL' : timeStr;
+      const statusStyle = isPostponed
+        ? "padding:0;font-size:11px;letter-spacing:.5px;color:var(--loss)"
+        : state==='Live'
         ? "padding:0;font-size:11px;letter-spacing:.5px;color:var(--win);animation:pulse 1.5s infinite"
         : "padding:0;font-size:11px;letter-spacing:.5px;color:var(--muted)";
-      const aScore = (state==='Live'||state==='Final') ? (away.score??'0') : '';
-      const hScore = (state==='Live'||state==='Final') ? (home.score??'0') : '';
+      const aScore = (!isPostponed && (state==='Live'||state==='Final')) ? (away.score??'0') : '';
+      const hScore = (!isPostponed && (state==='Live'||state==='Final')) ? (home.score??'0') : '';
       const aWon = state==='Final' && typeof away.score==='number' && typeof home.score==='number' && away.score > home.score;
       const hWon = state==='Final' && typeof home.score==='number' && typeof away.score==='number' && home.score > away.score;
       const sA = aWon ? 'font-weight:800;color:var(--text)' : state==='Final' ? 'color:var(--muted)' : '';
@@ -4726,24 +4756,34 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     return selected.filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,2);
   }
 
+  function _aIsRookie(pid, type) {
+    const career = careerStatsCache[pid];
+    if (!career) return false;
+    if (type === 'pitcher') return (career.careerIP ?? 0) < 130 && (career.careerAB ?? 0) < 130;
+    return (career.careerAB ?? 0) < 130;
+  }
+
   function _aStarRowHTML(p) {
     const teamPill = `<span style="display:inline-flex;align-items:center;gap:3px;flex-shrink:0"><img src="${p.teamMeta.logo}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'"><span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;color:var(--muted)">${p.teamMeta.abbr}</span></span>`;
     const roleBadge = p.displayRole ? `<span class="sec-pos-badge">${p.displayRole}</span>` : '';
+    const rookieBadge = p.isRookie ? `<span class="rookie-badge">R</span>` : '';
     const statsLine = p.topStats.join(' · ') || (p.type==='pitcher' ? '0 ER' : '1 H');
     return `<div class="impact-row">
       <div class="impact-row-left">
         <img class="impact-photo" src="${p.photoUrl}" onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
         <div class="impact-name-block">
-          <div class="impact-name">${p.name} ${roleBadge} ${teamPill}</div>
+          <div class="impact-name">${p.name} ${roleBadge} ${rookieBadge} ${teamPill}</div>
           <div class="impact-stats-line">${statsLine}</div>
         </div>
       </div>
     </div>`;
   }
 
-  function _aKeyPlayersHTML(box) {
+  async function _aKeyPlayersHTML(box) {
     const sel = _aSelectStars(box);
     if (!sel.length) return '';
+    await fetchCareerStats(sel.map(p => p.pid).filter(Boolean)).catch(() => {});
+    sel.forEach(p => { p.isRookie = _aIsRookie(p.pid, p.type); });
     return `<div class="impact-detail-card" style="background:#fff;border-color:#dfe6f2;box-shadow:0 1px 4px rgba(15,25,35,.04)">
       <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:6px">Key Performances</div>
       ${sel.map(p => _aStarRowHTML(p)).join('')}
@@ -4809,7 +4849,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
       try {
         const boxRes = await fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore`);
         const box    = await boxRes.json();
-        const starsHtml = _aKeyPlayersHTML(box);
+        const starsHtml = await _aKeyPlayersHTML(box);
         placeholder.outerHTML = starsHtml ||
           `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No hay actuaciones destacadas.</div>`;
       } catch(e) {
