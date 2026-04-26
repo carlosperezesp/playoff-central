@@ -7019,7 +7019,7 @@ async function _loadMVPTracker() {
       const statsLine = isPitcher
         ? (() => {
             const qs = parseInt(stats.qualityStarts || 0) || 0;
-            return `ERA ${stats.era || '—'} · WHIP ${stats.whip || '—'} · IP ${stats.inningsPitched || '—'} · GS ${stats.gamesStarted ?? '—'} · QS ${qs}`;
+            return `ERA ${stats.era || '—'} · WHIP ${stats.whip || '—'} · IP ${stats.inningsPitched || '—'}<br>GS ${stats.gamesStarted ?? '—'} · QS ${qs}`;
           })()
         : formatSeasonHitterSummary(stats);
       const barLabel = isPitcher ? 'FORM' : 'OPS';
