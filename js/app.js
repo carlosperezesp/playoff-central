@@ -741,13 +741,14 @@ async function renderStandings() {
         <td class="r">${tr.wins}</td>
         <td class="r">${tr.losses}</td>
         <td class="r">${pct}</td>
+        <td class="r">${gb}</td>
         <td class="r div-col-l10">${l10html}</td>
         <td class="r div-col-strk">${streakHtml}</td>
         <td class="r div-col-mn">${mnHtml}</td>
         <td class="r div-col-hist">${histDotsHTML(tid)}</td>
       </tr>
       <tr class="standings-team-detail" id="stnext-${divId}-${tid}">
-        <td colspan="8"><div id="stnext-content-${tid}"><div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Loading...</span></div></div></td>
+        <td colspan="9"><div id="stnext-content-${tid}"><div class="standings-next-wrap"><span class="standings-next-label">NEXT GAME</span><span class="standings-next-meta">Loading...</span></div></div></td>
       </tr>`;
     });
 
@@ -774,7 +775,7 @@ async function renderStandings() {
         <table class="div-table">
           <thead><tr>
             <th>TEAM</th><th class="r">W</th><th class="r">L</th>
-            <th class="r">PCT</th><th class="r div-col-l10" style="white-space:nowrap">L10</th><th class="r div-col-strk">STRK</th><th class="r div-col-mn" style="${mnColStyle}">MN</th><th class="r div-col-hist" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
+            <th class="r">PCT</th><th class="r">GB</th><th class="r div-col-l10" style="white-space:nowrap">L10</th><th class="r div-col-strk">STRK</th><th class="r div-col-mn" style="${mnColStyle}">MN</th><th class="r div-col-hist" style="white-space:nowrap;font-size:10px;letter-spacing:.5px">LAST 5 SEASONS</th>
           </tr></thead>
           <tbody>${rows.replace(/class="r div-col-mn"/g, `class="r div-col-mn" style="${mnColStyle}"`)}</tbody>
         </table>
