@@ -1340,11 +1340,17 @@ async function initTracker() {
     }
   }, 100);
 
-  // If data already loaded, draw immediately; otherwise load
+  // If data already loaded, draw immediately — but reload if it's a new day
   if (trackerLoaded) {
-    const loadMsg = document.getElementById('trackerLoadingMsg');
-    if (loadMsg) loadMsg.style.display = 'none';
-    drawTracker(trackerDates.length - 1);
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (trackerDates[trackerDates.length - 1] !== todayStr) {
+      // Day has changed since last load — refresh tracker dates and today's data
+      loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
+    } else {
+      const loadMsg = document.getElementById('trackerLoadingMsg');
+      if (loadMsg) loadMsg.style.display = 'none';
+      drawTracker(trackerDates.length - 1);
+    }
   } else {
     loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
   }
@@ -1352,14 +1358,15 @@ async function initTracker() {
 
 async function loadTrackerData() {
   const start = new Date(`${CURRENT_YEAR}-03-25`);
-  const today = new Date(); today.setHours(0,0,0,0);
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const todayUTC = new Date(`${todayStr}T00:00:00Z`);
   const dates = [];
   let d = new Date(start);
-  while (d <= today) {
+  while (d <= todayUTC) {
     dates.push(d.toISOString().split('T')[0]);
-    d = new Date(d); d.setDate(d.getDate() + 7);
+    d = new Date(d); d.setUTCDate(d.getUTCDate() + 7);
   }
-  const todayStr = today.toISOString().split('T')[0];
   if (dates[dates.length-1] !== todayStr) dates.push(todayStr);
   trackerDates = dates;
 
@@ -3008,7 +3015,7 @@ function playerDetailHTML(p, type, roleOrPos) {
   } else if (roleOrPos === 'SP') {
     const qsVal = s.qualityStarts != null ? s.qualityStarts : (p.qualityStarts || null);
     const qs = qsVal != null ? ` · QS ${qsVal}` : '';
-    statsLine = `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · IP ${s.inningsPitched||'—'} · GS ${s.gamesStarted??'—'}${qs}`;
+    statsLine = `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · IP ${s.inningsPitched||'—'}<br>GS ${s.gamesStarted??'—'}${qs}`;
   } else if (roleOrPos === 'CL') {
     statsLine = `ERA ${s.era||'—'} · WHIP ${s.whip||'—'} · SV ${s.saves??'—'} · SVO ${s.saveOpportunities??'—'}`;
   } else {
@@ -4396,6 +4403,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
 
     // Build award-candidate sets (if MVP data loaded)
     const candidatesByTeam = {};
+    const spAwardMap = {};  // pid → awardKeys — for showing badges on SP cards
     if (window._mvpLists) {
       const ml = window._mvpLists;
       const flatCands = [
@@ -4413,6 +4421,9 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         const dup = candidatesByTeam[abbr].find(x => x.pid === c.pid);
         if (dup) { if (!dup.awardKeys.includes(c.awardKey)) dup.awardKeys.push(c.awardKey); }
         else candidatesByTeam[abbr].push({...c, awardKeys:[c.awardKey]});
+        // Also index by pid for SP card lookup
+        if (!spAwardMap[c.pid]) spAwardMap[c.pid] = [];
+        if (!spAwardMap[c.pid].includes(c.awardKey)) spAwardMap[c.pid].push(c.awardKey);
       }
     }
 
@@ -4487,6 +4498,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
               <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
               <div class="impact-stats-line">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'}</div>
               <div class="impact-stats-line">IP ${ps.ip||'—'} · GS ${ps.gs??'—'}</div>
+              ${(spAwardMap[pid]||[]).length ? `<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${(spAwardMap[pid]||[]).map(k => `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${k}')">${{MVP:'MVP RACE',CY:'CY RACE',ROY:'ROY RACE'}[k]||k}</span>`).join('')}</div>` : ''}
             </div>
           </div>
           <div class="impact-bar-val-wrap">
