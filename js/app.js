@@ -934,18 +934,31 @@ function renderWildCardTables() {
     const ordered = [...divLeaders, ...rest];
     const wcIds = new Set(ordered.filter(t => !divLeaderIds.has(t.team.id)).slice(0,3).map(t => t.team.id));
     const cutoffIdx = 6; // border-top on 7th row (after 6 playoff spots)
+    const wcBubble = rest[2] || rest[rest.length - 1] || null; // WC3 — the last playoff spot, reference for all GB
 
     let rows = ordered.map((t, i) => {
       const meta = TEAM_META[t.team.id] || { name: t.team.name, abbr:'???' };
       const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;
       const isDivW = divLeaderIds.has(t.team.id);
       const isWC = wcIds.has(t.team.id);
+      const isWC3 = isWC && wcBubble && t.team.id === wcBubble.team.id;
       const isElim = t.eliminationNumber === 'E' || t.wildCardEliminationNumber === 'E';
       const rowCls = isElim ? 'wc-elim' : isDivW ? 'wc-div' : isWC ? 'wc-wc' : '';
       const pct = parseFloat(t.winningPercentage||0).toFixed(3).replace(/^0/,'');
-      const wcgb = parseFloat(t.wildCardGamesBack);
-      // Format: in-playoff teams show '—', others show plain number (no +)
-      const wcgbStr = (isNaN(wcgb) || wcgb <= 0 || isDivW || isWC) ? '—' : `${wcgb}`;
+      // GB logic:
+      // - Div leaders & WC3 (bubble): '—'
+      // - WC1/WC2: +games ahead of WC3 (with + prefix)
+      // - Outside playoff: GB from WC3 (bubble distance)
+      let wcgbStr;
+      if (isDivW || isWC3) {
+        wcgbStr = '—';
+      } else if (isWC && wcBubble) {
+        const ahead = ((parseInt(t.wins) - parseInt(wcBubble.wins)) + (parseInt(wcBubble.losses) - parseInt(t.losses))) / 2;
+        wcgbStr = ahead <= 0 ? '—' : `+${ahead % 1 === 0 ? ahead : ahead.toFixed(1)}`;
+      } else {
+        const wcgb = parseFloat(t.wildCardGamesBack);
+        wcgbStr = (isNaN(wcgb) || wcgb <= 0) ? '—' : `${wcgb}`;
+      }
       const l10 = t.records?.splitRecords?.find(s=>s.type==='lastTen');
       const l10w = l10?.wins ?? 0, l10l = l10?.losses ?? 0;
       const l10color = l10w > l10l ? 'var(--win)' : l10w < l10l ? 'var(--loss)' : 'var(--text)';
@@ -986,7 +999,7 @@ function renderWildCardTables() {
             <th style="width:20px">#</th>
             <th>TEAM</th>
             <th class="r">W</th><th class="r">L</th><th class="r">PCT</th>
-            <th class="r" style="white-space:nowrap">GB</th>
+            <th class="r" style="white-space:nowrap">WCGB</th>
             <th class="r wc-col-l10" style="white-space:nowrap">L10</th>
             <th>STATUS</th>
           </tr></thead>
