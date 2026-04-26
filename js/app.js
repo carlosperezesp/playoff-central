@@ -4164,12 +4164,12 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   let pitcherScore = 0;
   let eliteDuel = false;
   if (awayP && homeP) {
-    if (minForma >= 92) { pitcherScore = 3; eliteDuel = true; }
-    else if (avgForma >= 88) pitcherScore = 2;
-    else if (avgForma >= 78) pitcherScore = 1;
+    if (minForma >= 75) { pitcherScore = 3; eliteDuel = true; }
+    else if (avgForma >= 65) pitcherScore = 2;
+    else if (avgForma >= 52) pitcherScore = 1;
   } else if (awayP || homeP) {
     const forma = awayP ? awayForma : homeForma;
-    pitcherScore = forma >= 86 ? 1 : 0;
+    pitcherScore = forma >= 68 ? 1 : 0;
   }
 
   // --- Standings axis (0-3) ---
@@ -4353,11 +4353,10 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         const [statsData, careerData] = await Promise.all([statsRes.json(), careerRes.json()]);
         for (const p of (statsData.people || [])) {
           const s = p.stats?.find(st => st.group?.displayName === 'pitching' && st.type?.displayName === 'season')?.splits?.[0]?.stat || {};
-          const era  = parseFloat(s.era)  || 9.99;
-          const whip = parseFloat(s.whip) || 2.0;
+          const era  = parseFloat(s.era);
+          const whip = parseFloat(s.whip);
           const ip   = parseFloat(s.inningsPitched) || 0;
-          let forma  = 0;
-          if (ip >= 20) forma = Math.round(Math.max(0, Math.min(100, 100 - (era - 3.0) * 12 - (whip - 1.15) * 30)));
+          const forma = ip >= 5 ? (calcBaseScore(era, whip) ?? 0) : 0;
           pitcherFormaMap[p.id]       = forma;
           pitcherFormaMap[p.fullName] = forma;
           pitcherStatsMap[p.id] = { era: s.era || '—', whip: s.whip || '—', ip: s.inningsPitched || '—', gs: s.gamesStarted ?? '—' };
