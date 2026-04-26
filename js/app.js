@@ -19,13 +19,24 @@ function countryFlag(country) {
 }
 
 // ── CACHE SYSTEM ─────────────────────────────────────────────────────────────
-// All data refreshes once daily at 1:00am LA time (09:00 UTC).
+// All data refreshes once daily at 1:00am PT (08:00 UTC summer / 09:00 UTC winter).
 // Tracker history is additive — past snapshots are never deleted.
 
+function isPacificDST(date) {
+  // US DST: 2nd Sunday of March (2am PST→PDT) through 1st Sunday of November (2am PDT→PST)
+  const y = date.getUTCFullYear();
+  const marchFirst = new Date(Date.UTC(y, 2, 1));
+  const dstStart = new Date(Date.UTC(y, 2, (7 - marchFirst.getUTCDay()) % 7 + 8, 10)); // 2am PST = 10:00 UTC
+  const novFirst = new Date(Date.UTC(y, 10, 1));
+  const dstEnd   = new Date(Date.UTC(y, 10, (7 - novFirst.getUTCDay()) % 7 + 1,   9)); // 2am PDT = 09:00 UTC
+  return date >= dstStart && date < dstEnd;
+}
+
 function getCacheExpiry() {
-  // Next 09:00 UTC (= 01:00 PT winter / 02:00 PT summer) from now
+  // 1:00 AM PT = 08:00 UTC in summer (PDT, UTC-7) / 09:00 UTC in winter (PST, UTC-8)
   const now = new Date();
-  const expiry = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0));
+  const utcHour = isPacificDST(now) ? 8 : 9;
+  const expiry = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), utcHour, 0, 0));
   if (now >= expiry) expiry.setUTCDate(expiry.getUTCDate() + 1);
   return expiry.getTime();
 }
@@ -7298,13 +7309,14 @@ function getTeamLeagueId(teamId) {
   return AL.has(teamId) ? 103 : 104;
 }
 
-// Update disclaimer: show the daily refresh time in local timezone
+// Update disclaimer: show the daily refresh time in the user's local timezone
 (function() {
   const el = document.getElementById('update-disclaimer');
   if (!el) return;
-  const utcRefresh = new Date();
-  utcRefresh.setUTCHours(9, 0, 0, 0);
-  if (new Date() >= utcRefresh) utcRefresh.setUTCDate(utcRefresh.getUTCDate() + 1);
+  const now = new Date();
+  const utcHour = isPacificDST(now) ? 8 : 9;
+  const utcRefresh = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), utcHour, 0, 0));
+  if (now >= utcRefresh) utcRefresh.setUTCDate(utcRefresh.getUTCDate() + 1);
   const localTime = utcRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
   el.textContent = `Stats update daily at ${localTime}`;
 })();
