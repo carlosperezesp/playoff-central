@@ -774,6 +774,14 @@
     border: 1px solid rgba(245,158,11,.3);
     margin-right: 2px;
   }
+  .narrative-badge.skill {
+    background: rgba(245,158,11,.15); color: #b45309;
+    border-color: rgba(245,158,11,.3);
+  }
+  .narrative-badge.descriptor {
+    background: rgba(124,58,237,.13); color: #6d28d9;
+    border-color: rgba(124,58,237,.28);
+  }
   .narrative-badges-row {
     display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;
   }
