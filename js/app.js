@@ -3111,7 +3111,7 @@ function playerDetailHTML(p, type, roleOrPos) {
       <span class="impact-bar-label">${barLabel}</span>
       <span class="impact-bar-val" style="color:${color}">${barDisp}</span>
       ${trendBadge ? `<div style="margin-top:3px;text-align:right">${trendBadge}</div>` : ''}
-      ${!p.isRookie ? seasonDotsHTML(p.id, isHitter ? 'hitter' : 'pitcher') : ''}
+      ${seasonDotsHTML(p.id, isHitter ? 'hitter' : 'pitcher')}
     </div>
   </div>`;
 }
@@ -3425,7 +3425,7 @@ function renderDiamondPanel(teamId, impact) {
           <span class="impact-bar-label">${barLabel}</span>
           <span class="impact-bar-val" style="color:${color};opacity:.7">${val}</span>
           ${ilTrend ? `<div style="margin-top:3px;text-align:right">${ilTrend}</div>` : ''}
-          ${!p.isRookie ? seasonDotsHTML(p.id, p.isPitcher ? 'pitcher' : 'hitter') : ''}
+          ${seasonDotsHTML(p.id, p.isPitcher ? 'pitcher' : 'hitter')}
         </div>
       </div>`;
     }
@@ -3526,7 +3526,7 @@ function selectDiamondKey(key, teamId) {
     let html = `<div class="impact-detail-card">
       ${playerDetailHTML(p, 'hitter', pos)}`;
     if (alts.length) {
-      html += `<div class="alts-section-title">ALTERNATIVAS</div>`;
+      html += `<div class="alts-section-title">ALTERNATIVES</div>`;
       alts.forEach((a) => {
         html += playerDetailHTML(a, 'hitter', pos);
       });
@@ -3832,13 +3832,13 @@ function nextGameHTML(p, awardType) {
     const label = isStarter ? 'Next start' : 'Next game';
     if (game.probablePids.has(p.pid)) {
       const canOpen = game.gamePk && isGameInTopGamesWindow(game.date);
-      return `<div class="mvp-next${stateCls}${canOpen ? ' linkable' : ''}" ${canOpen ? `onclick="event.stopPropagation();goToTopGame('${game.gamePk}','${game.date}','mvp')"` : ''}>${logoHtml}<span>${label}: ${matchup} · ${dateLabel}${timeLabel}</span></div>`;
+      return `<div class="mvp-next${stateCls}${canOpen ? ' linkable' : ''}" ${canOpen ? `onclick="event.stopPropagation();goToTopGame('${game.gamePk}','${game.date}','mvp')"` : ''}>${logoHtml}<span>${label}: ${matchup}<span class="mvp-next-sep"> · </span><span class="mvp-next-datetime">${dateLabel}${timeLabel}</span></span></div>`;
     }
     else
       return `<div class="mvp-next unconfirmed">${label}: unconfirmed</div>`;
   }
   const canOpen = game.gamePk && isGameInTopGamesWindow(game.date);
-  return `<div class="mvp-next${stateCls}${canOpen ? ' linkable' : ''}" ${canOpen ? `onclick="event.stopPropagation();goToTopGame('${game.gamePk}','${game.date}','mvp')"` : ''}>${logoHtml}<span>Next game: ${matchup} · ${dateLabel}${timeLabel}</span></div>`;
+  return `<div class="mvp-next${stateCls}${canOpen ? ' linkable' : ''}" ${canOpen ? `onclick="event.stopPropagation();goToTopGame('${game.gamePk}','${game.date}','mvp')"` : ''}>${logoHtml}<span>Next game: ${matchup}<span class="mvp-next-sep"> · </span><span class="mvp-next-datetime">${dateLabel}${timeLabel}</span></span></div>`;
 }
 
 function ilBadgeHTML(p) {
@@ -3871,6 +3871,7 @@ async function fetchCareerStats(pids) {
         (d.people||[]).forEach(p => {
           const s = p.stats?.find(g => g.group?.displayName==='pitching')?.splits?.[0]?.stat;
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
+          if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
           if (s) {
             const era = parseFloat(s.era), whip = parseFloat(s.whip);
             careerStatsCache[p.id].era       = era;
@@ -3878,7 +3879,7 @@ async function fetchCareerStats(pids) {
             careerStatsCache[p.id].formaScore = calcBaseScore(era, whip);
             careerStatsCache[p.id].careerIP  = parseFloat(s.inningsPitched)||0;
           } else {
-            careerStatsCache[p.id].careerIP = 0; // no prior pitching stats = rookie-eligible
+            careerStatsCache[p.id].careerIP = 0;
           }
         });
       }).catch(()=>{})
@@ -4363,7 +4364,7 @@ async function loadTopGamesDay(day) {
 
 // ── HOY / MAÑANA loader ─────────────────────────────────────────────────────────
 async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
-  contentEl.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CARGANDO ${day.toUpperCase()}...</div></div>`;
+  contentEl.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING ${day.toUpperCase()}...</div></div>`;
   try {
     if (!hasCompleteMvpLists()) {
       ensureMvpLists().catch(e => console.warn('MVP lists for Top Games failed:', e));
@@ -4375,7 +4376,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
     const games = (schedData.dates?.[0]?.games || []).filter(g => isTopGamesDisplayableGame(g, day));
 
     if (!games.length) {
-      contentEl.innerHTML = `<p style="color:var(--muted);padding:20px;text-align:center">No hay partidos para este día.</p>`;
+      contentEl.innerHTML = `<p style="color:var(--muted);padding:20px;text-align:center">No games for this day.</p>`;
       return;
     }
 
@@ -4478,7 +4479,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;width:100%">
           ${teamPill}
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
-          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">Por confirmar</div>
+          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">TBD</div>
         </div>`;
       }
       const pid   = pitcher.id;
@@ -4666,7 +4667,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       html += _ftrRow(g, i, tms.isTopMatch);
     }
 
-    contentEl.innerHTML = html || `<p style="color:var(--muted);padding:20px;text-align:center">No hay partidos destacados.</p>`;
+    contentEl.innerHTML = html || `<p style="color:var(--muted);padding:20px;text-align:center">No featured games.</p>`;
 
     window._tgDayCache[day] = {
       dateKey: dateStr,
@@ -4676,7 +4677,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
     // If MVP data wasn't loaded yet, schedule a refresh for when it arrives
     if (!hasCompleteMvpLists()) window._tgNeedsRefresh = true;
   } catch(e) {
-    contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error cargando partidos.</p>`;
+    contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error loading games.</p>`;
     console.error('_tgLoadFuture error:', e);
   }
 }
@@ -4869,20 +4870,20 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
         </div>
       </div>
       <div class="tg-detail" id="tgd-${gameId}">
-        <div id="tgstars-${g.gamePk}" style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">Cargando actuaciones clave...</div>
+        <div id="tgstars-${g.gamePk}" style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">Loading key performances...</div>
       </div>
     </div>`;
   }
   // ── End helpers ────────────────────────────────────────────────────────────
 
-  contentEl.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CARGANDO AYER...</div></div>`;
+  contentEl.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING YESTERDAY...</div></div>`;
   try {
     const schedRes  = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateStr}&hydrate=linescore,decisions,probables,team`);
     const schedData = await schedRes.json();
     const games     = schedData.dates?.[0]?.games || [];
 
     if (!games.length) {
-      contentEl.innerHTML = `<p style="color:var(--muted);padding:20px;text-align:center">No hay partidos para este día.</p>`;
+      contentEl.innerHTML = `<p style="color:var(--muted);padding:20px;text-align:center">No games for this day.</p>`;
       return;
     }
 
@@ -4900,7 +4901,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
         const box    = await boxRes.json();
         const starsHtml = await _aKeyPlayersHTML(box);
         placeholder.outerHTML = starsHtml ||
-          `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No hay actuaciones destacadas.</div>`;
+          `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No key performances.</div>`;
       } catch(e) {
         placeholder.outerHTML = '';
       }
@@ -4913,7 +4914,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
       hadMvpLists: !!window._mvpLists
     };
   } catch(e) {
-    contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error cargando partidos de ayer.</p>`;
+    contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error loading yesterday's games.</p>`;
     console.error('_tgLoadAyer error:', e);
   }
 }
@@ -5078,7 +5079,7 @@ async function _OLD_loadTopGames() {
           };
           const buildROYSimple = (leagueId) => {
             const CAREER_AB_LIMIT = 130;
-            const CAREER_IP_LIMIT = 130;
+            const CAREER_IP_LIMIT = 50;
             const royHitters = rawH
               .filter(p => p.leagueId === leagueId)
               .filter(p => parseInt(p.s?.plateAppearances || 0) >= 20)
@@ -5088,7 +5089,13 @@ async function _OLD_loadTopGames() {
             const royPitchers = rawP
               .filter(p => p.leagueId === leagueId)
               .filter(p => parseFloat(p.s?.inningsPitched || 0) >= 5)
-              .filter(p => (careerMap[p.pid]?.careerIP ?? 0) < CAREER_IP_LIMIT && (careerMap[p.pid]?.careerAB ?? 0) < CAREER_AB_LIMIT)
+              .filter(p => {
+                const c = careerMap[p.pid];
+                if (!c) return true;
+                if (c.debutYear && c.debutYear < CURRENT_YEAR - 1) return false;
+                if (c.debutYear && c.debutYear < CURRENT_YEAR) return (c.careerIP ?? 0) < 20;
+                return (c.careerIP ?? 0) < CAREER_IP_LIMIT && (c.careerAB ?? 0) < CAREER_AB_LIMIT;
+              })
               .map(p => ({ ...p, sc: cyScoreSimple(p), isPitcher: true, position: 'P' }))
               .filter(p => p.sc !== null);
             const merged = [...royHitters, ...royPitchers].sort((a,b) => b.sc - a.sc).slice(0, ROY_LIMIT);
@@ -5713,7 +5720,7 @@ async function _OLD_loadTopGames() {
         const awardEntry = pid && teamId ? candidateEntry(pid, teamId) : null;
         const hasRoyLabel = awardEntry?.labels?.some(e => e.key === 'ROY') ?? false;
         const isRookie = pid ? (isTopGamesRookie(pid, 'pitcher') || hasRoyLabel) : false;
-        const rookieBadge = isRookie ? `<span class="rookie-badge">R</span>` : '';
+        const rookieBadge = hasRoyLabel ? `<span class="rookie-badge">R</span>` : '';
         const spAwardBadges = awardEntry?.labels?.length
           ? awardEntry.labels
               .filter(entry => entry.key === 'CY' || entry.key === 'ROY')
@@ -5740,7 +5747,7 @@ async function _OLD_loadTopGames() {
         if (isTBD) return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;width:100%">
           ${teamPill}
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
-          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">Por confirmar</div>
+          <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">TBD</div>
         </div>`;
         const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
         const ps = stat || ptwPitchStats[pid] || {};
@@ -5796,7 +5803,7 @@ async function _OLD_loadTopGames() {
         const awardKeys = (c.labels || []).map(l => l.key);
         const isPitcher = awardKeys.includes('CY') || (ps && (!hs || (parseInt(ps.gamesStarted||0)+parseInt(ps.gamesPitched||0)) > parseInt(hs.gamesPlayed||0)));
         const isRookie = isTopGamesRookie(c.pid, isPitcher ? 'pitcher' : 'hitter');
-        const rookieBadge = isRookie ? `<span class="rookie-badge">R</span>` : '';
+        const rookieBadge = awardKeys.includes('ROY') ? `<span class="rookie-badge">R</span>` : '';
         const pos = c.position || (isPitcher ? 'P' : '');
         // Team pill
         const tm = c.teamMeta;
@@ -6857,7 +6864,10 @@ async function _loadMVPTracker() {
           .filter(x => x.ok && x.rank)
           .sort((a, b) => a.rank - b.rank)
           .slice(0, 3);
-        return candidates.length ? candidates.map(x => `${ordinal(x.rank)} in ${x.label}`).join(' · ') : '';
+        return candidates.length ? candidates.map(x => {
+          const c = x.rank <= 10 ? 'var(--win)' : x.rank <= 20 ? 'var(--accent-blue)' : '';
+          return c ? `<span style="color:${c}">${ordinal(x.rank)} in ${x.label}</span>` : `${ordinal(x.rank)} in ${x.label}`;
+        }).join(' · ') : '';
       }
       const candidates = [
         { label: 'OPS', rank: hitterRankMaps.ops[p.pid], ok: (((parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0)) > 0) },
@@ -6868,7 +6878,10 @@ async function _loadMVPTracker() {
         .filter(x => x.ok && x.rank)
         .sort((a, b) => a.rank - b.rank)
         .slice(0, 3);
-      return candidates.length ? candidates.map(x => `${ordinal(x.rank)} in ${x.label}`).join(' · ') : '';
+      return candidates.length ? candidates.map(x => {
+        const c = x.rank <= 10 ? 'var(--win)' : x.rank <= 20 ? 'var(--accent-blue)' : '';
+        return c ? `<span style="color:${c}">${ordinal(x.rank)} in ${x.label}</span>` : `${ordinal(x.rank)} in ${x.label}`;
+      }).join(' · ') : '';
     }
 
     // --- Helper: normalize a stat value vs league average (returns index 0–200)
@@ -7223,7 +7236,7 @@ async function _loadMVPTracker() {
       const ROY_MIN_PA = 20;
       const ROY_MIN_IP = 5;
       const CAREER_AB_LIMIT = 130;
-      const CAREER_IP_LIMIT = 130;
+      const CAREER_IP_LIMIT = 50;
 
       // Filter eligible hitters
       // TWP exception: a player with career IP > 50 but career AB < 130 can still
@@ -7248,7 +7261,10 @@ async function _loadMVPTracker() {
         .filter(p => parseFloat(p.s?.inningsPitched||0) >= ROY_MIN_IP)
         .filter(p => {
           const c = careerStatsCache[p.pid];
-          if (!c || !('careerIP' in c)) return true;
+          if (!c || !('careerIP' in c)) return true; // no prior data = first MLB year
+          if (c.debutYear && c.debutYear < CURRENT_YEAR - 1) return false; // 2+ years in majors
+          // Prior-season debut: strict threshold — 20 IP already means meaningful MLB service
+          if (c.debutYear && c.debutYear < CURRENT_YEAR) return (c.careerIP||0) < 20;
           return (c.careerIP||0) < CAREER_IP_LIMIT && (c.careerAB||0) < CAREER_AB_LIMIT;
         })
         .map(p => ({ ...p, mvpS: cyScore(p), isPitcher: true }))
