@@ -3729,7 +3729,7 @@ async function fetchMvpSchedule() {
         const dateStr  = dateObj.date;
         const gameTime = game.gameDate ? new Date(game.gameDate) : null;
         const timeStr  = gameTime
-          ? gameTime.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })
+          ? gameTime.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
           : null;
         const home = game.teams?.home;
         const away = game.teams?.away;
@@ -4481,21 +4481,18 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
       const barW = Math.min(100, Math.round((forma/100)*100));
       const careerForma = pitcherCareerMap[pid];
-      const isRookiePitcher = pid && careerForma === undefined;
+      const isRookiePitcher = pid && (careerForma === undefined || (spAwardMap[pid]||[]).includes('ROY'));
       const spTrend = (!isRookiePitcher && careerForma != null) ? trendFormaHTML(forma, careerForma) : '';
-      const rookieBadge = isRookiePitcher ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
+      const rookieBadge = isRookiePitcher ? `<span class="rookie-badge">R</span>` : '';
       return `<div style="background:${bg};border:1px solid ${bdr};border-radius:7px;padding:10px 12px;width:100%">
         ${teamPill}
         <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${lc};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
         <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
           <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-            <div style="position:relative;display:inline-block">
-              <img class="impact-photo" src="${photoUrl}"
-                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
-              ${rookieBadge}
-            </div>
+            <img class="impact-photo" src="${photoUrl}"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
             <div class="impact-name-block">
-              <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+              <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name} ${rookieBadge}</div>
               <div class="impact-stats-line">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'}</div>
               <div class="impact-stats-line">IP ${ps.ip||'—'} · GS ${ps.gs??'—'}</div>
               ${(spAwardMap[pid]||[]).length ? `<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${(spAwardMap[pid]||[]).map(k => `<span class="mvp-award-badge" style="cursor:pointer" onclick="event.stopPropagation();goToMVPFromTopGames('${k}')">${{MVP:'MVP RACE',CY:'CY RACE',ROY:'ROY RACE'}[k]||k}</span>`).join('')}</div>` : ''}
@@ -5672,7 +5669,8 @@ async function _OLD_loadTopGames() {
       function spMini(pid, name, forma, stat, teamMeta, teamId) {
         const isTBD = !name;
         const awardEntry = pid && teamId ? candidateEntry(pid, teamId) : null;
-        const isRookie = pid ? isTopGamesRookie(pid, 'pitcher') : false;
+        const hasRoyLabel = awardEntry?.labels?.some(e => e.key === 'ROY') ?? false;
+        const isRookie = pid ? (isTopGamesRookie(pid, 'pitcher') || hasRoyLabel) : false;
         const rookieBadge = isRookie ? `<span class="rookie-badge">R</span>` : '';
         const spAwardBadges = awardEntry?.labels?.length
           ? awardEntry.labels
