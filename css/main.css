@@ -1238,7 +1238,7 @@
   .tg-score { font-family: 'Bebas Neue'; font-size: 18px; color: var(--text); margin: 0 2px; }
   .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 3px; }
   .tg-time { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 10px; }
-  .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; }
+  .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; max-width: min(360px, 44vw); }
   .tg-detail { display: none; background: #f7f9fd; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
   .tg-detail.open { display: block; }
   .tg-detail .impact-detail-card { background: #ffffff; border-color: #dfe6f2; box-shadow: 0 1px 4px rgba(15,25,35,.04); }
@@ -1253,6 +1253,7 @@
   @media (max-width: 768px) {
     .tg-day-title { font-size: 16px; }
     .tg-game-row { padding: 10px 14px; }
+    .tg-badges { max-width: 34vw; }
     .tg-detail { padding: 12px 14px 14px; }
     .tg-detail-grid { display: flex; flex-direction: column; gap: 12px; }
     .tg-detail-at { display: none; }

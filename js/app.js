@@ -4751,6 +4751,73 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     else if (_aIntStat(s.baseOnBalls) === 0) out.push('0 BB');
     return out.slice(0, 3);
   }
+  function _aSpecialBadgeHTML(label) {
+    return `<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(168,85,247,.15);color:#a855f7;border:1px solid rgba(168,85,247,.3);letter-spacing:.5px">${label}</span>`;
+  }
+  function _aIsExtraInnings(g) {
+    if (g.status?.abstractGameState !== 'Final') return false;
+    const scheduled = g.linescore?.scheduledInnings || 9;
+    const current = g.linescore?.currentInning || 0;
+    const innings = g.linescore?.innings?.length || 0;
+    return current > scheduled || innings > scheduled;
+  }
+  function _aDetectNoHitTag(g, box) {
+    if (g.status?.abstractGameState !== 'Final') return null;
+    const ls = g.linescore;
+    if (!ls) return null;
+    const awayHits = ls.teams?.away?.hits ?? null;
+    const homeHits = ls.teams?.home?.hits ?? null;
+    if (awayHits === null || homeHits === null) return null;
+
+    let noHitSide = null;
+    if (awayHits === 0) noHitSide = 'away';
+    else if (homeHits === 0) noHitSide = 'home';
+    if (!noHitSide) return null;
+
+    const pitchingSide = noHitSide === 'away' ? 'home' : 'away';
+    const isCombined = (box?.teams?.[pitchingSide]?.pitchers?.length ?? 1) > 1;
+    const bat = box?.teams?.[noHitSide]?.teamStats?.batting || {};
+    const walks = bat.baseOnBalls ?? 1;
+    const hbp = bat.hitByPitch ?? 0;
+    const errorsByPitchingTeam = ls.teams?.[pitchingSide]?.errors ?? 1;
+    const isPerfect = walks === 0 && hbp === 0 && errorsByPitchingTeam === 0;
+
+    if (isPerfect && isCombined) return 'COMBINED PERFECT GAME';
+    if (isPerfect) return 'PERFECT GAME';
+    if (isCombined) return 'COMBINED NO-HITTER';
+    return 'NO-HITTER';
+  }
+  function _aHasCompleteGame(box) {
+    if (!box?.teams) return false;
+    return ['away','home'].some(side =>
+      Object.values(box.teams?.[side]?.players || {}).some(player =>
+        _aParseIp(player.stats?.pitching?.inningsPitched) >= 27
+      )
+    );
+  }
+  function _aDetectWalkoffTag(g, feed) {
+    if (g.status?.abstractGameState !== 'Final') return null;
+    const awayScore = g.teams?.away?.score;
+    const homeScore = g.teams?.home?.score;
+    if (typeof awayScore !== 'number' || typeof homeScore !== 'number' || homeScore <= awayScore) return null;
+
+    const plays = feed?.liveData?.plays?.allPlays || [];
+    const lastPlay = plays[plays.length - 1];
+    if (!lastPlay || lastPlay.about?.halfInning !== 'bottom') return null;
+
+    const event = `${lastPlay.result?.eventType || ''} ${lastPlay.result?.event || ''}`.toLowerCase();
+    return event.includes('home_run') || event.includes('home run') ? 'WALK-OFF HR' : 'WALK-OFF';
+  }
+  function _aGameTagsHTML(g, box, feed) {
+    const tags = [];
+    const noHitTag = _aDetectNoHitTag(g, box);
+    const walkoffTag = _aDetectWalkoffTag(g, feed);
+    if (noHitTag) tags.push(noHitTag);
+    if (_aHasCompleteGame(box)) tags.push('COMPLETE GAME');
+    if (_aIsExtraInnings(g)) tags.push('EXTRA INNINGS');
+    if (walkoffTag) tags.push(walkoffTag);
+    return tags.map(_aSpecialBadgeHTML).join('');
+  }
 
   function _aSelectStars(box) {
     const hitters = [], pitchers = [];
@@ -4864,6 +4931,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
           <span class="tg-abbr" style="${sH}">${mH.abbr}</span>
           <img class="tg-team-logo" src="${mH.logo}" onerror="this.style.display='none'" alt="">
         </div>
+        <div class="tg-badges" id="tgbadges-${g.gamePk}">${_aIsExtraInnings(g) ? _aSpecialBadgeHTML('EXTRA INNINGS') : ''}</div>
         <div style="text-align:right;flex-shrink:0;padding-left:10px">
           <div class="tg-time" style="padding:0;font-size:11px;letter-spacing:.5px;color:var(--muted)">${status}</div>
           ${venue ? `<div style="font-family:'Barlow Condensed';font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;margin-top:1px">${venue}</div>` : ''}
@@ -4897,8 +4965,12 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
       const placeholder = document.getElementById('tgstars-' + gId);
       if (!placeholder) continue;
       try {
-        const boxRes = await fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore`);
-        const box    = await boxRes.json();
+        const [box, feed] = await Promise.all([
+          fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore`).then(r => r.json()),
+          fetch(`https://statsapi.mlb.com/api/v1.1/game/${gId}/feed/live?fields=liveData,plays,allPlays,result,event,eventType,about,halfInning`).then(r => r.json()).catch(() => null)
+        ]);
+        const badgesEl = document.getElementById('tgbadges-' + gId);
+        if (badgesEl) badgesEl.innerHTML = _aGameTagsHTML(g, box, feed);
         const starsHtml = await _aKeyPlayersHTML(box);
         placeholder.outerHTML = starsHtml ||
           `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No key performances.</div>`;
