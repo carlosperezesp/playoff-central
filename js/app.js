@@ -195,7 +195,7 @@ function fetchWithTimeout(url, ms = 12000) {
 }
 
 function clearAllCache() {
-  ['mlb_standings', 'mlb_tracker_history', `mvp_cache_${CURRENT_YEAR}`].forEach(k => localStorage.removeItem(k));
+  ['mlb_standings', 'mlb_tracker_history', `mvp_cache_${CURRENT_YEAR}`, `mvp_cache_${CURRENT_YEAR}_v2`].forEach(k => localStorage.removeItem(k));
   // Also clear any tracker today keys
   Object.keys(localStorage).filter(k => k.startsWith('mlb_tracker_today_')).forEach(k => localStorage.removeItem(k));
 }
@@ -2203,6 +2203,9 @@ async function selectTeam(teamId) {
       fetchRecentHitting(hitterPids),
       fetchAwards(uniquePids),
     ]);
+    Object.values(impact.hittersByPos).flat().forEach(p => { p.isRookie = isRookieEligible(p.id, 'hitter'); });
+    [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => { p.isRookie = isRookieEligible(p.id, 'pitcher'); });
+    impact.ilPlayers.forEach(p => { p.isRookie = isRookieEligible(p.id, p.isPitcher ? 'pitcher' : 'hitter'); });
     // Recalculate FORMA with recent data now available
     [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => {
       const recent = recentPitchingCache[p.id];
@@ -2435,6 +2438,7 @@ async function fetchTeamImpact(teamId) {
   // - Debuted last season but career AB < 130 AND career IP < 130 = still ROY-eligible (e.g. McLean)
   const rookiePids = new Set();
   roster.forEach(p => {
+    if (NON_ROOKIE_OVERRIDES.has(p.person?.id)) return;
     const debut = p.person?.mlbDebutDate;
     if (!debut) return;
     const debutYear = parseInt(debut.slice(0, 4));
@@ -2443,7 +2447,7 @@ async function fetchTeamImpact(teamId) {
     } else if (debutYear === season - 1) {
       // Check career thresholds — if loaded, use them; if not yet loaded, mark tentatively
       const c = careerStatsCache[p.person.id];
-      if (!c || ((c.careerAB ?? 0) < 130 && (c.careerIP ?? 0) < 130)) {
+      if (!c || isRookieEligible(p.person.id, p.position?.abbreviation === 'P' ? 'pitcher' : 'hitter')) {
         rookiePids.add(p.person.id);
       }
     }
@@ -3638,6 +3642,86 @@ const recentPitchingCache = {};
 // Per-season history for the last 5 years: { pid: { hit: {year: ops}, pitch: {year: formaScore} } }
 const seasonHistoryCache = {};
 
+const ROOKIE_AB_LIMIT = 130;
+const ROOKIE_IP_LIMIT = 50;
+const NON_ROOKIE_OVERRIDES = new Set([
+  808963, // Roki Sasaki: exceeded rookie service-time limit in 2025 despite low IP.
+]);
+
+function inningsToOuts(ip) {
+  if (ip == null) return 0;
+  const [wholeRaw, fracRaw = '0'] = String(ip).split('.');
+  const whole = parseInt(wholeRaw, 10) || 0;
+  const frac = parseInt(fracRaw, 10) || 0;
+  return whole * 3 + (frac === 1 || frac === 2 ? frac : 0);
+}
+
+function outsToInnings(outs) {
+  return (outs || 0) / 3;
+}
+
+function priorSeasonSplits(person, groupName) {
+  return (person.stats || [])
+    .find(g => g.group?.displayName?.toLowerCase() === groupName && g.type?.displayName?.toLowerCase() === 'yearbyyear')
+    ?.splits
+    ?.filter(sp => parseInt(sp.season, 10) < CURRENT_YEAR) || [];
+}
+
+function summarizePriorHitting(person) {
+  const totals = priorSeasonSplits(person, 'hitting').reduce((acc, sp) => {
+    const s = sp.stat || {};
+    acc.ab += parseInt(s.atBats, 10) || 0;
+    acc.h += parseInt(s.hits, 10) || 0;
+    acc.d += parseInt(s.doubles, 10) || 0;
+    acc.t += parseInt(s.triples, 10) || 0;
+    acc.hr += parseInt(s.homeRuns, 10) || 0;
+    acc.bb += parseInt(s.baseOnBalls, 10) || 0;
+    acc.hbp += parseInt(s.hitByPitch, 10) || 0;
+    acc.sf += parseInt(s.sacFlies, 10) || 0;
+    return acc;
+  }, { ab:0, h:0, d:0, t:0, hr:0, bb:0, hbp:0, sf:0 });
+  const singles = Math.max(0, totals.h - totals.d - totals.t - totals.hr);
+  const tb = singles + 2 * totals.d + 3 * totals.t + 4 * totals.hr;
+  const obpDen = totals.ab + totals.bb + totals.hbp + totals.sf;
+  const obp = obpDen > 0 ? (totals.h + totals.bb + totals.hbp) / obpDen : 0;
+  const slg = totals.ab > 0 ? tb / totals.ab : 0;
+  return {
+    careerAB: totals.ab,
+    avg: totals.ab > 0 ? totals.h / totals.ab : 0,
+    ops: obp + slg,
+  };
+}
+
+function summarizePriorPitching(person) {
+  const totals = priorSeasonSplits(person, 'pitching').reduce((acc, sp) => {
+    const s = sp.stat || {};
+    acc.outs += inningsToOuts(s.inningsPitched);
+    acc.er += parseInt(s.earnedRuns, 10) || 0;
+    acc.h += parseInt(s.hits, 10) || 0;
+    acc.bb += parseInt(s.baseOnBalls, 10) || 0;
+    return acc;
+  }, { outs:0, er:0, h:0, bb:0 });
+  const ip = outsToInnings(totals.outs);
+  const era = ip > 0 ? (totals.er * 9) / ip : 0;
+  const whip = ip > 0 ? (totals.h + totals.bb) / ip : 0;
+  return {
+    careerIP: ip,
+    era,
+    whip,
+    formaScore: ip > 0 ? calcBaseScore(era, whip) : null,
+  };
+}
+
+function isRookieEligible(pid, role = 'both') {
+  if (!pid || NON_ROOKIE_OVERRIDES.has(pid)) return false;
+  const c = careerStatsCache[pid];
+  if (!c) return true;
+  if (c.debutYear && c.debutYear < CURRENT_YEAR - 1) return false;
+  if (role === 'hitter') return (c.careerAB ?? 0) < ROOKIE_AB_LIMIT;
+  if (role === 'pitcher') return (c.careerIP ?? 0) < ROOKIE_IP_LIMIT;
+  return (c.careerAB ?? 0) < ROOKIE_AB_LIMIT && (c.careerIP ?? 0) < ROOKIE_IP_LIMIT;
+}
+
 // Cache for last-30d hitter stats (for "En racha" badge)
 const recentHittingCache = {};
 
@@ -3850,37 +3934,21 @@ function ilBadgeHTML(p) {
 async function fetchCareerStats(pids) {
   const missing = pids.filter(id => !(id in careerStatsCache));
   if (!missing.length) return;
-  const prevYear = CURRENT_YEAR - 1;
   for (let i = 0; i < missing.length; i += 20) {
     const chunk = missing.slice(i, i+20).join(',');
     await Promise.all([
-      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=hitting,startSeason=2000,endSeason=${prevYear})`).then(r=>r.json()).then(d=>{
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting)`).then(r=>r.json()).then(d=>{
         (d.people||[]).forEach(p => {
-          const s = p.stats?.find(g => g.group?.displayName==='hitting')?.splits?.[0]?.stat;
-          careerStatsCache[p.id] = careerStatsCache[p.id] || {};
-          if (s) {
-            careerStatsCache[p.id].ops     = parseFloat(s.ops)||0;
-            careerStatsCache[p.id].avg     = parseFloat(s.avg)||0;
-            careerStatsCache[p.id].careerAB = parseInt(s.atBats)||0;
-          } else {
-            careerStatsCache[p.id].careerAB = 0; // no prior hitting stats = rookie-eligible
-          }
-        });
-      }).catch(()=>{}),
-      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${prevYear})`).then(r=>r.json()).then(d=>{
-        (d.people||[]).forEach(p => {
-          const s = p.stats?.find(g => g.group?.displayName==='pitching')?.splits?.[0]?.stat;
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
           if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
-          if (s) {
-            const era = parseFloat(s.era), whip = parseFloat(s.whip);
-            careerStatsCache[p.id].era       = era;
-            careerStatsCache[p.id].whip      = whip;
-            careerStatsCache[p.id].formaScore = calcBaseScore(era, whip);
-            careerStatsCache[p.id].careerIP  = parseFloat(s.inningsPitched)||0;
-          } else {
-            careerStatsCache[p.id].careerIP = 0;
-          }
+          Object.assign(careerStatsCache[p.id], summarizePriorHitting(p));
+        });
+      }).catch(()=>{}),
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching)`).then(r=>r.json()).then(d=>{
+        (d.people||[]).forEach(p => {
+          careerStatsCache[p.id] = careerStatsCache[p.id] || {};
+          if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
+          Object.assign(careerStatsCache[p.id], summarizePriorPitching(p));
         });
       }).catch(()=>{})
     ]);
@@ -4497,7 +4565,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
       const barW = Math.min(100, Math.round((forma/100)*100));
       const careerForma = pitcherCareerMap[pid];
-      const isRookiePitcher = pid && (careerForma === undefined || (spAwardMap[pid]||[]).includes('ROY'));
+      const isRookiePitcher = pid && !NON_ROOKIE_OVERRIDES.has(pid) && (careerForma === undefined || (spAwardMap[pid]||[]).includes('ROY'));
       const spTrend = (!isRookiePitcher && careerForma != null) ? trendFormaHTML(forma, careerForma) : '';
       const rookieBadge = isRookiePitcher ? `<span class="rookie-badge">R</span>` : '';
       return `<div style="background:${bg};border:1px solid ${bdr};border-radius:7px;padding:10px 12px;width:100%">
@@ -4874,10 +4942,11 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
   }
 
   function _aIsRookie(pid, type) {
+    if (NON_ROOKIE_OVERRIDES.has(pid)) return false;
     const career = careerStatsCache[pid];
     if (!career) return false;
-    if (type === 'pitcher') return (career.careerIP ?? 0) < 130 && (career.careerAB ?? 0) < 130;
-    return (career.careerAB ?? 0) < 130;
+    if (type === 'pitcher') return isRookieEligible(pid, 'pitcher');
+    return isRookieEligible(pid, 'hitter');
   }
 
   function _aStarRowHTML(p) {
@@ -4958,26 +5027,29 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     // Render all rows immediately with loading placeholders
     contentEl.innerHTML = games.map((g, i) => _aBasicRowHTML(g, i)).join('');
 
-    // Progressive: fetch each boxscore and update key performances
-    for (let i = 0; i < games.length; i++) {
-      const g   = games[i];
+    // Progressive: start all data requests immediately, then let each row update as soon as it can.
+    const gameDataTasks = games.map(g => {
       const gId = g.gamePk;
+      const boxPromise = fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore`).then(r => r.json());
+      const feedPromise = fetch(`https://statsapi.mlb.com/api/v1.1/game/${gId}/feed/live?fields=liveData,plays,allPlays,result,event,eventType,about,halfInning`).then(r => r.json()).catch(() => null);
+      return { g, gId, boxPromise, feedPromise };
+    });
+
+    await Promise.all(gameDataTasks.map(async ({ g, gId, boxPromise, feedPromise }) => {
       const placeholder = document.getElementById('tgstars-' + gId);
-      if (!placeholder) continue;
       try {
-        const [box, feed] = await Promise.all([
-          fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore`).then(r => r.json()),
-          fetch(`https://statsapi.mlb.com/api/v1.1/game/${gId}/feed/live?fields=liveData,plays,allPlays,result,event,eventType,about,halfInning`).then(r => r.json()).catch(() => null)
-        ]);
+        const [box, feed] = await Promise.all([boxPromise, feedPromise]);
         const badgesEl = document.getElementById('tgbadges-' + gId);
         if (badgesEl) badgesEl.innerHTML = _aGameTagsHTML(g, box, feed);
+
+        if (!placeholder) return;
         const starsHtml = await _aKeyPlayersHTML(box);
         placeholder.outerHTML = starsHtml ||
           `<div style="font-family:'Barlow Condensed';font-size:13px;color:var(--muted)">No key performances.</div>`;
       } catch(e) {
-        placeholder.outerHTML = '';
+        if (placeholder) placeholder.outerHTML = '';
       }
-    }
+    }));
 
     // Cache final state
     window._tgDayCache['ayer'] = {
@@ -5080,7 +5152,7 @@ async function _OLD_loadTopGames() {
           ]);
           const cachedMvp = (() => {
             try {
-              const raw = localStorage.getItem(`mvp_cache_${CURRENT_YEAR}`);
+              const raw = localStorage.getItem(`mvp_cache_${CURRENT_YEAR}_v2`);
               if (!raw) return null;
               const parsed = JSON.parse(raw);
               if (!parsed?.expiry || Date.now() > parsed.expiry) return null;
@@ -5127,46 +5199,26 @@ async function _OLD_loadTopGames() {
           const ensureCareerMap = async () => {
             const missingIds = [...new Set([...rawH, ...rawP].map(p => p.pid).filter(pid => !(pid in careerMap)))];
             if (!missingIds.length) return;
-            for (let i = 0; i < missingIds.length; i += 100) {
-              const chunk = missingIds.slice(i, i + 100).join(',');
-              await Promise.all([
-                fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=hitting,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
-                  .then(r=>r.json()).then(d=>{
-                    (d.people||[]).forEach(p=>{
-                      const s = p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat;
-                      careerMap[p.id] = careerMap[p.id] || {};
-                      careerMap[p.id].careerAB = s ? (parseInt(s.atBats) || 0) : 0;
-                    });
-                  }).catch(()=>{}),
-                fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
-                  .then(r=>r.json()).then(d=>{
-                    (d.people||[]).forEach(p=>{
-                      const s = p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat;
-                      careerMap[p.id] = careerMap[p.id] || {};
-                      careerMap[p.id].careerIP = s ? (parseFloat(s.inningsPitched) || 0) : 0;
-                    });
-                  }).catch(()=>{})
-              ]);
-            }
+            await fetchCareerStats(missingIds);
+            missingIds.forEach(pid => { careerMap[pid] = { ...(careerStatsCache[pid] || {}) }; });
           };
           const buildROYSimple = (leagueId) => {
-            const CAREER_AB_LIMIT = 130;
-            const CAREER_IP_LIMIT = 50;
             const royHitters = rawH
               .filter(p => p.leagueId === leagueId)
+              .filter(p => !NON_ROOKIE_OVERRIDES.has(p.pid))
               .filter(p => parseInt(p.s?.plateAppearances || 0) >= 20)
-              .filter(p => (careerMap[p.pid]?.careerAB ?? 0) < CAREER_AB_LIMIT)
+              .filter(p => (careerMap[p.pid]?.careerAB ?? 0) < ROOKIE_AB_LIMIT)
               .map(p => ({ ...p, sc: mvpScoreSimple(p), isPitcher: false }))
               .filter(p => p.sc !== null);
             const royPitchers = rawP
               .filter(p => p.leagueId === leagueId)
+              .filter(p => !NON_ROOKIE_OVERRIDES.has(p.pid))
               .filter(p => parseFloat(p.s?.inningsPitched || 0) >= 5)
               .filter(p => {
                 const c = careerMap[p.pid];
                 if (!c) return true;
                 if (c.debutYear && c.debutYear < CURRENT_YEAR - 1) return false;
-                if (c.debutYear && c.debutYear < CURRENT_YEAR) return (c.careerIP ?? 0) < 20;
-                return (c.careerIP ?? 0) < CAREER_IP_LIMIT && (c.careerAB ?? 0) < CAREER_AB_LIMIT;
+                return (c.careerIP ?? 0) < ROOKIE_IP_LIMIT;
               })
               .map(p => ({ ...p, sc: cyScoreSimple(p), isPitcher: true, position: 'P' }))
               .filter(p => p.sc !== null);
@@ -5300,34 +5352,26 @@ async function _OLD_loadTopGames() {
             .then(r=>r.json()).then(d=>{
               (d.people||[]).forEach(p=>{ const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat; if(s){ ptwPitchStats[p.id]=s; if(!pitcherStats[p.id]) pitcherStats[p.id]=s; if(!(p.id in pitcherForma)) pitcherForma[p.id]=calcBaseScore(parseFloat(s.era),parseFloat(s.whip))??0; } });
             }).catch(()=>{}),
-          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=hitting,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
+          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting)`)
             .then(r=>r.json()).then(d=>{
               (d.people||[]).forEach(p=>{
-                const s=p.stats?.find(g=>g.group?.displayName==='hitting')?.splits?.[0]?.stat;
                 ptwCareer[p.id]=ptwCareer[p.id]||{};
-                if(s){
-                  ptwCareer[p.id].ops=parseFloat(s.ops)||0;
-                  ptwCareer[p.id].careerAB=parseInt(s.atBats)||0;
-                } else {
-                  ptwCareer[p.id].careerAB=0;
-                }
+                if (p.mlbDebutDate) ptwCareer[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
+                Object.assign(ptwCareer[p.id], summarizePriorHitting(p));
               });
             }).catch(()=>{}),
-          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=career,group=pitching,startSeason=2000,endSeason=${CURRENT_YEAR-1})`)
+          fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching)`)
             .then(r=>r.json()).then(d=>{
               (d.people||[]).forEach(p=>{
-                const s=p.stats?.find(g=>g.group?.displayName==='pitching')?.splits?.[0]?.stat;
                 ptwCareer[p.id]=ptwCareer[p.id]||{};
-                if(s){
-                  ptwCareer[p.id].formaScore=calcBaseScore(parseFloat(s.era),parseFloat(s.whip));
-                  ptwCareer[p.id].careerIP=parseFloat(s.inningsPitched)||0;
-                } else {
-                  ptwCareer[p.id].careerIP=0;
-                }
+                if (p.mlbDebutDate) ptwCareer[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
+                Object.assign(ptwCareer[p.id], summarizePriorPitching(p));
               });
             }).catch(()=>{})
         ]);
       }
+      await fetchCareerStats(missingPtwPids);
+      missingPtwPids.forEach(pid => { ptwCareer[pid] = { ...(ptwCareer[pid] || {}), ...(careerStatsCache[pid] || {}) }; });
     }
 
     // Classify SPs in each team's roster cache using fetched pitch stats
@@ -5344,12 +5388,14 @@ async function _OLD_loadTopGames() {
     });
 
     function isTopGamesRookie(pid, type) {
+      if (NON_ROOKIE_OVERRIDES.has(pid)) return false;
       const career = ptwCareer[pid];
       if (!career) return true;
       if (type === 'pitcher') {
-        return (career.careerIP ?? 0) < 130 && (career.careerAB ?? 0) < 130;
+        if (career.debutYear && career.debutYear < CURRENT_YEAR - 1) return false;
+        return (career.careerIP ?? 0) < ROOKIE_IP_LIMIT;
       }
-      return (career.careerAB ?? 0) < 130;
+      return (career.careerAB ?? 0) < ROOKIE_AB_LIMIT;
     }
 
     // Score a game — now includes MVP/CY candidate bonus
@@ -5526,8 +5572,6 @@ async function _OLD_loadTopGames() {
     function selectYesterdayStarsFromBox(box) {
       const hitters = [];
       const pitchers = [];
-      const CAREER_AB_LIMIT = 130;
-      const CAREER_IP_LIMIT = 130;
       if (!box?.teams) return [];
 
       ['away', 'home'].forEach(side => {
@@ -5561,7 +5605,7 @@ async function _OLD_loadTopGames() {
             const seasonHit = ptwHitStats[pid] || {};
             const career = ptwCareer[pid];
             const seasonOps = parseFloat(seasonHit.ops) || 0;
-            const isRookie = !career || (career.careerAB ?? 0) < CAREER_AB_LIMIT;
+            const isRookie = !career || isTopGamesRookie(pid, 'hitter');
             hitters.push({
               pid,
               name,
@@ -5581,7 +5625,7 @@ async function _OLD_loadTopGames() {
             const seasonPitch = ptwPitchStats[pid] || pitcherStats[pid] || {};
             const career = ptwCareer[pid];
             const seasonForma = calcBaseScore(parseFloat(seasonPitch.era), parseFloat(seasonPitch.whip));
-            const isRookie = !career || ((career.careerIP ?? 0) < CAREER_IP_LIMIT && (career.careerAB ?? 0) < CAREER_AB_LIMIT);
+            const isRookie = !career || isTopGamesRookie(pid, 'pitcher');
             pitchers.push({
               pid,
               name,
@@ -6725,7 +6769,7 @@ async function _loadMVPTracker() {
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">CALCULATING SCORES...</div></div>`;
 
   // ── Daily cache: expires at 09:00 UTC (= 01:00 PT) ──────────────────────
-  const CACHE_KEY = `mvp_cache_${CURRENT_YEAR}`;
+  const CACHE_KEY = `mvp_cache_${CURRENT_YEAR}_v2`;
   function loadCache() {
     try {
       const raw = localStorage.getItem(CACHE_KEY);
@@ -7253,9 +7297,7 @@ async function _loadMVPTracker() {
       const isPitcher = awardType === 'cy' || (awardType === 'roy' && p.isPitcher);
       const stats = { ...(p.s || {}) };
       const isRookie = awardType === 'roy' || (() => {
-        const c = careerStatsCache[p.pid];
-        if (!c) return true;
-        return (c.careerAB ?? 0) < 130 && (c.careerIP ?? 0) < 130;
+        return isRookieEligible(p.pid, isPitcher ? 'pitcher' : 'hitter');
       })();
       const awardBadge = awardsBadgeHTML(p.pid, awardType === 'roy' ? (isPitcher ? 'cy' : 'mvp') : awardType);
       const seasonDots = seasonDotsHTML(p.pid, isPitcher ? 'pitcher' : 'hitter');
@@ -7304,11 +7346,16 @@ async function _loadMVPTracker() {
     // Players without career stats in cache are assumed eligible (true rookies).
     // Scoring: mvpScore for hitters, cyScore for pitchers, then convert to
     // percentile within the eligible pool so both types compete on equal footing.
+    //
+    // MLB also strips rookie status after 45 active roster days (IL time excluded).
+    // This can't be computed from stats alone, so edge cases are handled via the
+    // global NON_ROOKIE_OVERRIDES set.
+    // To find a player's PID: open DevTools console after page load and run:
+    //   [...document.querySelectorAll('[data-pid]')].find(el=>el.textContent.includes('Sasaki'))
+    // or check mlb.com/player/<name> — the numeric ID is in the URL.
     function buildROYList(hitters, pitchers, leagueId) {
       const ROY_MIN_PA = 20;
       const ROY_MIN_IP = 5;
-      const CAREER_AB_LIMIT = 130;
-      const CAREER_IP_LIMIT = 50;
 
       // Filter eligible hitters
       // TWP exception: a player with career IP > 50 but career AB < 130 can still
@@ -7316,13 +7363,14 @@ async function _loadMVPTracker() {
       // The MLB rule counts hitting and pitching service separately.
       const royHitters = hitters
         .filter(p => !leagueId || p.leagueId === leagueId)
+        .filter(p => !NON_ROOKIE_OVERRIDES.has(p.pid))
         .filter(p => parseInt(p.s?.plateAppearances||0) >= ROY_MIN_PA)
         .filter(p => {
           const c = careerStatsCache[p.pid];
           if (!c || !('careerAB' in c)) return true;
           // Eligible as hitter if career AB < 130, regardless of career IP
           // (pitcher-turned-batter is judged on hitting service time)
-          return c.careerAB < CAREER_AB_LIMIT;
+          return c.careerAB < ROOKIE_AB_LIMIT;
         })
         .map(p => ({ ...p, mvpS: mvpScore(p), isPitcher: false }))
         .filter(p => p.mvpS !== null);
@@ -7330,14 +7378,12 @@ async function _loadMVPTracker() {
       // Filter eligible pitchers
       const royPitchers = pitchers
         .filter(p => !leagueId || p.leagueId === leagueId)
+        .filter(p => !NON_ROOKIE_OVERRIDES.has(p.pid))
         .filter(p => parseFloat(p.s?.inningsPitched||0) >= ROY_MIN_IP)
         .filter(p => {
           const c = careerStatsCache[p.pid];
           if (!c || !('careerIP' in c)) return true; // no prior data = first MLB year
-          if (c.debutYear && c.debutYear < CURRENT_YEAR - 1) return false; // 2+ years in majors
-          // Prior-season debut: strict threshold — 20 IP already means meaningful MLB service
-          if (c.debutYear && c.debutYear < CURRENT_YEAR) return (c.careerIP||0) < 20;
-          return (c.careerIP||0) < CAREER_IP_LIMIT && (c.careerAB||0) < CAREER_AB_LIMIT;
+          return isRookieEligible(p.pid, 'pitcher');
         })
         .map(p => ({ ...p, mvpS: cyScore(p), isPitcher: true }))
         .filter(p => p.mvpS !== null);
@@ -7373,14 +7419,8 @@ async function _loadMVPTracker() {
         posHtml = `<span class="mvp-pos-pill">${p.position}</span>`;
       }
       // Rookie badge — shown in ROY always, and in MVP/CY if player is ROY-eligible
-      const CAREER_AB_LIMIT = 130;
-      const CAREER_IP_LIMIT = 130;
       function isRoyEligible(pid) {
-        const c = careerStatsCache[pid];
-        if (!c) return true; // no career data = assume eligible
-        const ab = c.careerAB ?? 0;
-        const ip = c.careerIP ?? 0;
-        return ab < CAREER_AB_LIMIT && ip < CAREER_IP_LIMIT;
+        return isRookieEligible(pid, isPitcher ? 'pitcher' : 'hitter');
       }
       const rookieBadge = (awardType === 'roy' || isRoyEligible(p.pid))
         ? `<span style="display:inline-block;font-size:8px;font-weight:800;padding:1px 4px;border-radius:3px;background:#b45309;color:#fff;margin-right:3px;letter-spacing:.3px">R</span>`
@@ -7445,9 +7485,13 @@ async function _loadMVPTracker() {
     // Fetch career stats for ROY eligibility check.
     const royCandidateHitters  = rawHitters.filter(p => parseInt(p.s?.plateAppearances||0) >= 20);
     const royCandidatePitchers = rawPitchers.filter(p => parseFloat(p.s?.inningsPitched||0) >= 5);
+    // Also include pitchers not already in rawHitters — needed so TWP candidates like McLean
+    // (debuted as pitcher, batting this year with few IP) can be evaluated for careerAB.
+    const twpCandidatePitchers = rawPitchers.filter(p => !rawHitters.some(h => h.pid === p.pid));
     const royCandidatePids = [...new Set([
       ...royCandidateHitters.map(p => p.pid),
       ...royCandidatePitchers.map(p => p.pid),
+      ...twpCandidatePitchers.map(p => p.pid),
     ])];
     await fetchCareerStats(royCandidatePids);
 
