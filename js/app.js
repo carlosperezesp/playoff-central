@@ -230,12 +230,16 @@ let allData = { standings: null, playoffs: null, schedule: null };
 let playoffTeamIds = new Set();
 let isPlayoffSeason = false;
 let standingsNextGameCache = null;
-const STANDINGS_REFRESH_MS = 15 * 60 * 1000;
+const STANDINGS_LIVE_REFRESH_MS = 15 * 60 * 1000;
+const STANDINGS_AFTER_START_CHECK_DELAY_MS = 3 * 60 * 60 * 1000;
+const STANDINGS_MIN_REFRESH_DELAY_MS = 5 * 60 * 1000;
 let standingsRefreshTimer = null;
 let standingsRefreshState = {
   dateKey: null,
   lastFinalCount: null,
   allFinished: false,
+  hasLiveGames: false,
+  nextGameStart: null,
   inFlight: false,
 };
 
@@ -357,7 +361,7 @@ async function loadStandingsWithOptions(options = {}) {
 }
 
 function standingsTodayKey() {
-  return new Date().toISOString().split('T')[0];
+  return dateKeyInTimeZone();
 }
 
 function isStandingsTabActive() {
@@ -371,13 +375,18 @@ async function fetchTodayScheduleStatus() {
   const data = await res.json();
   const games = data.dates?.[0]?.games || [];
   const finals = games.filter(g => g.status?.abstractGameState === 'Final').length;
-  const active = games.filter(g => ['Live', 'Preview'].includes(g.status?.abstractGameState)).length;
+  const live = games.filter(g => g.status?.abstractGameState === 'Live').length;
+  const upcomingStarts = games
+    .filter(g => g.status?.abstractGameState === 'Preview' && g.gameDate)
+    .map(g => new Date(g.gameDate).getTime())
+    .filter(t => Number.isFinite(t) && t > Date.now());
   return {
     dateKey: today,
     totalGames: games.length,
     finalCount: finals,
     allFinished: games.length > 0 && finals === games.length,
-    activeGames: active,
+    hasLiveGames: live > 0,
+    nextGameStart: upcomingStarts.length ? Math.min(...upcomingStarts) : null,
   };
 }
 
@@ -389,7 +398,15 @@ function stopStandingsAutoRefresh() {
 function scheduleNextStandingsRefresh() {
   stopStandingsAutoRefresh();
   if (!isStandingsTabActive() || standingsRefreshState.allFinished) return;
-  standingsRefreshTimer = setTimeout(checkStandingsAutoRefresh, STANDINGS_REFRESH_MS);
+
+  let delay = STANDINGS_LIVE_REFRESH_MS;
+  if (standingsRefreshState.dateKey && !standingsRefreshState.hasLiveGames) {
+    if (!standingsRefreshState.nextGameStart) return;
+    delay = standingsRefreshState.nextGameStart - Date.now() + STANDINGS_AFTER_START_CHECK_DELAY_MS;
+    delay = Math.max(delay, STANDINGS_MIN_REFRESH_DELAY_MS);
+  }
+
+  standingsRefreshTimer = setTimeout(checkStandingsAutoRefresh, delay);
 }
 
 function startStandingsAutoRefresh(reset = false) {
@@ -399,6 +416,8 @@ function startStandingsAutoRefresh(reset = false) {
       dateKey: null,
       lastFinalCount: null,
       allFinished: false,
+      hasLiveGames: false,
+      nextGameStart: null,
       inFlight: false,
     };
   } else if (standingsRefreshState.dateKey && standingsRefreshState.dateKey !== todayKey) {
@@ -406,6 +425,8 @@ function startStandingsAutoRefresh(reset = false) {
       dateKey: null,
       lastFinalCount: null,
       allFinished: false,
+      hasLiveGames: false,
+      nextGameStart: null,
       inFlight: false,
     };
   }
@@ -414,6 +435,10 @@ function startStandingsAutoRefresh(reset = false) {
     return;
   }
   if (standingsRefreshState.inFlight) return;
+  if (!standingsRefreshState.dateKey) {
+    checkStandingsAutoRefresh();
+    return;
+  }
   scheduleNextStandingsRefresh();
 }
 
@@ -434,6 +459,8 @@ async function checkStandingsAutoRefresh() {
 
     standingsRefreshState.lastFinalCount = status.finalCount;
     standingsRefreshState.allFinished = status.allFinished;
+    standingsRefreshState.hasLiveGames = status.hasLiveGames;
+    standingsRefreshState.nextGameStart = status.nextGameStart;
 
     if (finalsIncreased || dayJustFinished) {
       await loadStandingsWithOptions({ force: true });
