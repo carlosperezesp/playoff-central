@@ -19,8 +19,11 @@ function countryFlag(country) {
 }
 
 // ── CACHE SYSTEM ─────────────────────────────────────────────────────────────
-// All data refreshes once daily at 1:00am PT (08:00 UTC summer / 09:00 UTC winter).
+// Cache refreshes after the estimated final game window, with 10:00 Amsterdam as fallback.
 // Tracker history is additive — past snapshots are never deleted.
+const SMART_CACHE_EXPIRY_KEY = 'mlb_smart_cache_expiry';
+const ESTIMATED_GAME_DURATION_MS = 3.5 * 60 * 60 * 1000;
+const POST_LAST_GAME_REFRESH_DELAY_MS = 4 * 60 * 60 * 1000;
 
 function isPacificDST(date) {
   // US DST: 2nd Sunday of March (2am PST→PDT) through 1st Sunday of November (2am PDT→PST)
@@ -32,13 +35,62 @@ function isPacificDST(date) {
   return date >= dstStart && date < dstEnd;
 }
 
-function getCacheExpiry() {
+function getAmsterdamFallbackCacheExpiry() {
   // 1:00 AM PT = 08:00 UTC in summer (PDT, UTC-7) / 09:00 UTC in winter (PST, UTC-8)
+  // This is 10:00 in Amsterdam for the MLB season and remains the public fallback time.
   const now = new Date();
   const utcHour = isPacificDST(now) ? 8 : 9;
   const expiry = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), utcHour, 0, 0));
   if (now >= expiry) expiry.setUTCDate(expiry.getUTCDate() + 1);
   return expiry.getTime();
+}
+
+function dateKeyInTimeZone(date = new Date(), timeZone = 'America/New_York') {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getStoredSmartCacheExpiry() {
+  try {
+    const raw = localStorage.getItem(SMART_CACHE_EXPIRY_KEY);
+    if (!raw) return null;
+    const smart = JSON.parse(raw);
+    const todayKey = dateKeyInTimeZone();
+    if (smart.dateKey !== todayKey || !smart.expiry || Date.now() >= smart.expiry) return null;
+    return smart.expiry;
+  } catch(e) {
+    return null;
+  }
+}
+
+function getCacheExpiry() {
+  return getStoredSmartCacheExpiry() || getAmsterdamFallbackCacheExpiry();
+}
+
+function applyCacheExpiryToDailyKeys(expiry) {
+  try {
+    const dailyKeys = [
+      'mlb_standings',
+      `mvp_cache_${CURRENT_YEAR}`,
+      `mvp_cache_${CURRENT_YEAR}_v2`,
+      ...Object.keys(localStorage).filter(k => k.startsWith('mlb_tracker_today_')),
+    ];
+    dailyKeys.forEach(key => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || !('data' in obj)) return;
+      localStorage.setItem(key, JSON.stringify({ ...obj, expiry }));
+    });
+  } catch(e) {}
 }
 
 function cacheGet(key) {
@@ -192,6 +244,44 @@ function fetchWithTimeout(url, ms = 12000) {
   const timer = setTimeout(() => controller.abort(), ms);
   return fetch(url, { signal: controller.signal })
     .finally(() => clearTimeout(timer));
+}
+
+async function refreshSmartCacheExpiry() {
+  try {
+    const dateKey = dateKeyInTimeZone();
+    const existing = getStoredSmartCacheExpiry();
+    if (existing) return existing;
+
+    const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${dateKey}`);
+    if (!res.ok) throw new Error(`MLB API returned ${res.status}`);
+    const data = await res.json();
+    const games = data.dates?.[0]?.games || [];
+    const starts = games
+      .map(g => g.gameDate ? new Date(g.gameDate).getTime() : NaN)
+      .filter(Number.isFinite);
+
+    if (!starts.length) {
+      localStorage.removeItem(SMART_CACHE_EXPIRY_KEY);
+      return getAmsterdamFallbackCacheExpiry();
+    }
+
+    const expiry = Math.max(...starts) + ESTIMATED_GAME_DURATION_MS + POST_LAST_GAME_REFRESH_DELAY_MS;
+    if (expiry > Date.now()) {
+      localStorage.setItem(SMART_CACHE_EXPIRY_KEY, JSON.stringify({
+        dateKey,
+        expiry,
+        generatedAt: Date.now(),
+      }));
+      applyCacheExpiryToDailyKeys(expiry);
+      return expiry;
+    }
+
+    localStorage.removeItem(SMART_CACHE_EXPIRY_KEY);
+    return getAmsterdamFallbackCacheExpiry();
+  } catch(e) {
+    console.warn('Smart cache expiry skipped:', e);
+    return getAmsterdamFallbackCacheExpiry();
+  }
 }
 
 function clearAllCache() {
@@ -7631,16 +7721,11 @@ function getTeamLeagueId(teamId) {
   return AL.has(teamId) ? 103 : 104;
 }
 
-// Update disclaimer: show the daily refresh time in the user's local timezone
+// Update disclaimer: keep the public fallback time clear.
 (function() {
   const el = document.getElementById('update-disclaimer');
   if (!el) return;
-  const now = new Date();
-  const utcHour = isPacificDST(now) ? 8 : 9;
-  const utcRefresh = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), utcHour, 0, 0));
-  if (now >= utcRefresh) utcRefresh.setUTCDate(utcRefresh.getUTCDate() + 1);
-  const localTime = utcRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
-  el.textContent = `Stats update daily at ${localTime}`;
+  el.textContent = 'Stats update daily by 10:00 Amsterdam time';
 })();
 
 // On load, jump to the tab specified in the URL hash (e.g. #mvp, #players)
@@ -7650,6 +7735,8 @@ const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
+  refreshSmartCacheExpiry();
   if (isStandingsTabActive()) startStandingsAutoRefresh();
 });
+refreshSmartCacheExpiry();
 init();

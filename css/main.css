@@ -25,6 +25,13 @@
   }
   .logo {
     display: flex; align-items: center; gap: 10px;
+    background: none; border: 0; color: inherit; font: inherit; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .home-logo:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 4px;
   }
   .logo-lockup {
     display: flex; flex-direction: column; justify-content: center; gap: 0;
