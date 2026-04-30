@@ -4468,8 +4468,13 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   // --- Award candidates axis (0-2) — only top-3 ranked (in real contention) ---
   let candScore = 0;
   if (candidatesByTeam) {
-    const countTop = abbr => (candidatesByTeam[abbr] || []).filter(c => (c.rank || 99) <= 3).length;
-    const topTotal = countTop(awayAbbr) + countTop(homeAbbr);
+    const teamCandidates = (teamId, abbr) =>
+      candidatesByTeam[String(teamId)] ||
+      candidatesByTeam[TEAM_META[teamId]?.abbr] ||
+      candidatesByTeam[abbr] ||
+      [];
+    const countTop = (teamId, abbr) => teamCandidates(teamId, abbr).filter(c => (c.rank || 99) <= 3).length;
+    const topTotal = countTop(awayId, awayAbbr) + countTop(homeId, homeAbbr);
     candScore = topTotal >= 3 ? 2 : topTotal >= 1 ? 1 : 0;
   }
 
@@ -4622,12 +4627,14 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         ...(ml.nlROY  || []).map(c => ({...c, awardKey:'ROY'})),
       ];
       for (const c of flatCands) {
-        const abbr = c.teamAbbr;
-        if (!abbr) continue;
-        if (!candidatesByTeam[abbr]) candidatesByTeam[abbr] = [];
-        const dup = candidatesByTeam[abbr].find(x => x.pid === c.pid);
-        if (dup) { if (!dup.awardKeys.includes(c.awardKey)) dup.awardKeys.push(c.awardKey); }
-        else candidatesByTeam[abbr].push({...c, awardKeys:[c.awardKey]});
+        const keys = [...new Set([c.teamId, c.teamAbbr].filter(Boolean).map(String))];
+        if (!keys.length) continue;
+        for (const key of keys) {
+          if (!candidatesByTeam[key]) candidatesByTeam[key] = [];
+          const dup = candidatesByTeam[key].find(x => x.pid === c.pid);
+          if (dup) { if (!dup.awardKeys.includes(c.awardKey)) dup.awardKeys.push(c.awardKey); }
+          else candidatesByTeam[key].push({...c, awardKeys:[c.awardKey]});
+        }
         // Also index by pid for SP card lookup
         if (!spAwardMap[c.pid]) spAwardMap[c.pid] = [];
         if (!spAwardMap[c.pid].includes(c.awardKey)) spAwardMap[c.pid].push(c.awardKey);
@@ -4813,8 +4820,13 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         if (st?.type === 'pitcher' && parseInt(st.gamesStarted || 0) >= 2) return false; // starter
         return true;
       };
-      const awayCands  = (candidatesByTeam[awayAbbr] || []).filter(_notSp);
-      const homeCands  = (candidatesByTeam[homeAbbr] || []).filter(_notSp);
+      const teamCandidates = (teamId, abbr, metaAbbr) =>
+        candidatesByTeam[String(teamId)] ||
+        candidatesByTeam[metaAbbr] ||
+        candidatesByTeam[abbr] ||
+        [];
+      const awayCands  = teamCandidates(tid_a, awayAbbr, mA.abbr).filter(_notSp);
+      const homeCands  = teamCandidates(tid_h, homeAbbr, mH.abbr).filter(_notSp);
       const allCands   = [...awayCands.map(c=>({...c,tm:mA})), ...homeCands.map(c=>({...c,tm:mH}))]
         .sort((a,b) => (a.rank||99)-(b.rank||99)).slice(0, 4);
       return `<div>
