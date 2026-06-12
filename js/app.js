@@ -83,11 +83,16 @@ function applyCacheExpiryToDailyKeys(expiry) {
       `mvp_cache_${CURRENT_YEAR}_v2`,
       ...Object.keys(localStorage).filter(k => k.startsWith('mlb_tracker_today_')),
     ];
+    const todayKey = dateKeyInTimeZone();
     dailyKeys.forEach(key => {
       const raw = localStorage.getItem(key);
       if (!raw) return;
       const obj = JSON.parse(raw);
       if (!obj || typeof obj !== 'object' || !('data' in obj)) return;
+      // Only extend entries stored today — older data must expire and refresh,
+      // otherwise stale data gets its expiry pushed forward indefinitely.
+      if (obj.expiry && Date.now() > obj.expiry) return;
+      if (!obj.storedAt || dateKeyInTimeZone(new Date(obj.storedAt)) !== todayKey) return;
       localStorage.setItem(key, JSON.stringify({ ...obj, expiry }));
     });
   } catch(e) {}
@@ -105,13 +110,14 @@ function cacheGet(key) {
 
 function cacheSet(key, data, useExpiry = true) {
   try {
-    const payload = useExpiry ? { expiry: getCacheExpiry(), data } : { data };
+    const payload = useExpiry ? { expiry: getCacheExpiry(), storedAt: Date.now(), data } : { data };
     localStorage.setItem(key, JSON.stringify(payload));
   } catch(e) {
-    // Quota exceeded — clear old tracker history and retry once
+    // Quota exceeded — clear old tracker history and team caches, retry once
     try {
       localStorage.removeItem('mlb_tracker_history');
-      localStorage.setItem(key, JSON.stringify({ expiry: getCacheExpiry(), data }));
+      Object.keys(localStorage).filter(k => k.startsWith('mlb_team_impact_')).forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(key, JSON.stringify({ expiry: getCacheExpiry(), storedAt: Date.now(), data }));
     } catch(e2) {}
   }
 }
@@ -837,7 +843,7 @@ async function renderStandings() {
       if (mn === 'E') {
         mnHtml = `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--loss);font-weight:700">ELIM</span>`;
       } else if (!isNaN(mnNum) && mnNum <= 50) {
-        mnHtml = `<span style="display:inline-block;background:rgba(26,86,219,.1);color:var(--accent);border:1px solid rgba(26,86,219,.25);font-family:'Barlow Condensed';font-size:11px;font-weight:700;padding:1px 6px;min-width:22px;text-align:center">${mnNum}</span>`;
+        mnHtml = `<span style="display:inline-block;background:rgba(21,101,216,.1);color:var(--accent);border:1px solid rgba(21,101,216,.25);font-family:'Barlow Condensed';font-size:11px;font-weight:700;padding:1px 6px;min-width:22px;text-align:center">${mnNum}</span>`;
       } else if (!isNaN(mnNum) && mnNum === 0) {
         mnHtml = `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--win);font-weight:700">CLINCH</span>`;
       }
@@ -1138,7 +1144,7 @@ let wcTrackerData = {};
 let wcTrackerDates = [];
 let wcTrackerLoaded = false;
 let wcTrackerHoverIdx = null;
-const WC_LEAGUE_COLORS = { 103: '#1a56db', 104: '#e05a2b' };
+const WC_LEAGUE_COLORS = { 103: '#1565d8', 104: '#e05a2b' };
 const WC_LEAGUE_LABELS = { 103: 'AL', 104: 'NL' };
 
 async function initWCTracker() {
@@ -1835,7 +1841,7 @@ function renderProjectedBracket() {
       const isDivW = typeof seed === 'number' && seed <= 3;
       const badge = isDivW
         ? `<span style="font-size:8px;font-weight:700;padding:1px 3px;background:rgba(22,163,74,.12);color:var(--win);border-radius:2px">D</span>`
-        : `<span style="font-size:8px;font-weight:700;padding:1px 3px;background:rgba(26,86,219,.1);color:var(--accent);border-radius:2px">WC</span>`;
+        : `<span style="font-size:8px;font-weight:700;padding:1px 3px;background:rgba(21,101,216,.1);color:var(--accent);border-radius:2px">WC</span>`;
       return `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:var(--bg);border-radius:4px;">
         <span style="font-family:'Barlow Condensed';font-weight:800;font-size:11px;color:var(--muted);width:14px">${seed}</span>
         <img src="https://www.mlbstatic.com/team-logos/${t.team.id}.svg" style="width:18px;height:18px;object-fit:contain" onerror="this.style.display='none'" alt="">
@@ -2091,18 +2097,42 @@ let selectedDiamondKey = null;
 function getDiamondPlayerColor(value, type) {
   if (type === 'hitter') {
     if (!value || value <= 0) return '#9ca3af';
-    if (value >= 0.900) return '#16a34a';
-    if (value >= 0.750) return '#1a56db';
-    if (value >= 0.650) return '#94a3b8';
-    return '#dc2626';
+    if (value >= 0.900) return '#16a34a';   // verde: elite
+    if (value >= 0.750) return '#b1c882';   // verde claro
+    if (value >= 0.600) return '#ffc000';   // amarillo
+    if (value >= 0.450) return '#ff8100';   // naranja
+    return '#ff2200';                        // rojo
   } else {
     // FORMA 0-100. Media MLB ≈ 51. ≥75 élite, ≥60 bueno, ≥40 medio, <40 malo
     if (value == null || value < 0) return '#9ca3af';
-    if (value >= 75) return '#16a34a';
-    if (value >= 60) return '#1a56db';
-    if (value >= 40) return '#94a3b8';
-    return '#dc2626';
+    if (value >= 75) return '#16a34a';   // verde: elite
+    if (value >= 60) return '#b1c882';   // verde claro
+    if (value >= 40) return '#ffc000';   // amarillo
+    if (value >= 25) return '#ff8100';   // naranja
+    return '#ff2200';                     // rojo
   }
+}
+
+function diamondTextColor(bg) {
+  return ['#16a34a', '#ff2200', '#ff8100'].includes(bg) ? '#fff' : '#1a1209';
+}
+
+function diamondColorLegendHTML() {
+  const tiers = [
+    ['#ff2200', 'POOR'],
+    ['#ff8100', 'BELOW AVG'],
+    ['#ffc000', 'AVERAGE'],
+    ['#b1c882', 'ABOVE AVG'],
+    ['#16a34a', 'ELITE'],
+  ];
+  return `<div style="margin:0 0 14px;max-width:420px">
+    <div style="display:flex;border-radius:999px;overflow:hidden;height:8px">${tiers.map(([c]) =>
+      `<div style="flex:1;background:${c}"></div>`
+    ).join('')}</div>
+    <div style="display:flex;margin-top:4px">${tiers.map(([, label]) =>
+      `<div style="flex:1;text-align:center;font-family:'Barlow Condensed';font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--muted)">${label}</div>`
+    ).join('')}</div>
+  </div>`;
 }
 
 // ── FORMA score system (0–100, never exceeds 100) ─────────────────────────
@@ -2260,7 +2290,7 @@ async function selectTeam(teamId) {
   if (selEl) selEl.classList.add('active');
 
   // Update selector label to show selected team name
-  const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1a56db' };
+  const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1565d8' };
   const label = document.getElementById('teamSelectorLabel');
   if (label) label.textContent = meta.abbr || meta.name;
 
@@ -2276,6 +2306,9 @@ async function selectTeam(teamId) {
 
   selectedTeamId = teamId;
   selectedDiamondKey = null;
+
+  const abbrSlug = (meta.abbr || '').toLowerCase();
+  if (abbrSlug && abbrSlug !== '?') history.replaceState(null, '', `#rosters/${abbrSlug}`);
 
   // Breadcrumb: show "← Clasificaciones" if arrived from standings
   const breadcrumbEl = document.getElementById('rosterBreadcrumb');
@@ -2301,6 +2334,21 @@ async function selectTeam(teamId) {
 
   try {
     let impact = teamsImpactCache[teamId];
+    let fromStorage = false;
+    if (!impact) {
+      // Try localStorage bundle: impact + per-player caches, saved with daily expiry
+      const stored = cacheGet(`mlb_team_impact_${teamId}`);
+      if (stored?.impact) {
+        impact = stored.impact;
+        teamsImpactCache[teamId] = impact;
+        Object.assign(careerStatsCache, stored.career || {});
+        Object.assign(awardsCache, stored.awards || {});
+        Object.assign(recentPitchingCache, stored.recentP || {});
+        Object.assign(recentHittingCache, stored.recentH || {});
+        Object.assign(seasonHistoryCache, stored.seasonHist || {});
+        fromStorage = true;
+      }
+    }
     if (!impact) {
       impact = await fetchTeamImpact(teamId);
       teamsImpactCache[teamId] = impact;
@@ -2337,6 +2385,23 @@ async function selectTeam(teamId) {
       p.score = calcPitcherScoreWithRecent(p.stats || {}, p.id) ?? 0;
     });
     renderDiamondPanel(teamId, impact);
+
+    if (!fromStorage) {
+      // Persist bundle so revisits (even after reload) skip all fetches today
+      const pick = src => {
+        const o = {};
+        uniquePids.forEach(pid => { if (pid in src) o[pid] = src[pid]; });
+        return o;
+      };
+      cacheSet(`mlb_team_impact_${teamId}`, {
+        impact,
+        career: pick(careerStatsCache),
+        awards: pick(awardsCache),
+        recentP: pick(recentPitchingCache),
+        recentH: pick(recentHittingCache),
+        seasonHist: pick(seasonHistoryCache),
+      });
+    }
   } catch(e) {
     panel.innerHTML += `<div class="error-box">Error loading impact: ${e.message}</div>`;
   }
@@ -2941,7 +3006,7 @@ const AWARD_SVGS = {
   // MVP: amber circle + white trophy
   mvp: () => `<svg width="16" height="16" viewBox="-16 -16 32 32"><circle r="15" fill="#f59e0b"/><rect x="-9" y="4" width="18" height="4" rx="1" fill="white"/><polyline points="-9,4 -9,-7 -4,0 0,-9 4,0 9,-7 9,4" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/><circle cx="-4" cy="6" r="1.2" fill="white"/><circle cx="0" cy="6" r="1.2" fill="white"/><circle cx="4" cy="6" r="1.2" fill="white"/></svg>`,
   // Cy Young: blue circle + white "C"
-  cyYoung: () => `<svg width="16" height="16" viewBox="-16 -16 32 32"><circle r="15" fill="#1a56db"/><text x="0" y="6" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="900" font-size="17" fill="white">C</text></svg>`,
+  cyYoung: () => `<svg width="16" height="16" viewBox="-16 -16 32 32"><circle r="15" fill="#1565d8"/><text x="0" y="6" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="900" font-size="17" fill="white">C</text></svg>`,
 };
 
 // Positions around the circle for each award
@@ -3183,7 +3248,7 @@ function playerDetailHTML(p, type, roleOrPos) {
       const style = isNative
         ? 'background:rgba(22,163,74,.12);color:var(--win);border-color:rgba(22,163,74,.3);'
         : isCurrent
-          ? 'background:rgba(26,86,219,.1);color:var(--accent);border-color:rgba(26,86,219,.25);'
+          ? 'background:rgba(21,101,216,.1);color:var(--accent);border-color:rgba(21,101,216,.25);'
           : '';
       return `<span class="sec-pos-badge" style="${style}">${pos}</span>`;
     }).join('');
@@ -3229,12 +3294,12 @@ function playerDetailHTML(p, type, roleOrPos) {
         ${narrativeHTML}
       </div>
     </div>
-    <div class="impact-bar-block">
-      <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
-    </div>
     <div class="impact-bar-val-wrap">
       <span class="impact-bar-label">${barLabel}</span>
       <span class="impact-bar-val" style="color:${color}">${barDisp}</span>
+      <div class="impact-bar-block">
+        <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
+      </div>
       ${trendBadge ? `<div style="margin-top:3px;text-align:right">${trendBadge}</div>` : ''}
       ${seasonDotsHTML(p.id, isHitter ? 'hitter' : 'pitcher')}
     </div>
@@ -3338,7 +3403,7 @@ function renderTeamStatsPanel(teamId, impact) {
     if (r.rank === '—') return '#94a3b8';
     const rk = r.rank;
     if (rk <= 6) return 'var(--win)';         // green
-    if (rk <= 12) return '#1a56db';             // blue
+    if (rk <= 12) return '#1565d8';             // blue
     if (rk <= 22) return '#94a3b8';            // grey
     return 'var(--loss)';                      // red
   }
@@ -3429,7 +3494,7 @@ function renderTeamStatsPanel(teamId, impact) {
 function renderDiamondPanel(teamId, impact) {
 
   const panel = document.getElementById('diamondPanel');
-  const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1a56db' };
+  const meta = TEAM_META[teamId] || { name: `Team ${teamId}`, abbr: '?', logo: `https://www.mlbstatic.com/team-logos/${teamId}.svg`, color: '#1565d8' };
   const { hittersByPos, spList, clList, rpList, ilPlayers = [] } = impact;
 
   const DPOS = {
@@ -3450,6 +3515,7 @@ function renderDiamondPanel(teamId, impact) {
     const p = players[0];
     const ops = p ? p.ops : 0;
     const color = p ? getDiamondPlayerColor(ops, 'hitter') : '#9ca3af';
+    const txtColor = diamondTextColor(color);
     const nameLabel = p ? p.name : '—';
     const rookieStar = p?.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
     const pips = (p && !p.isRookie) ? awardPipsHTML(p.id) : '';
@@ -3458,7 +3524,7 @@ function renderDiamondPanel(teamId, impact) {
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
       onclick="selectDiamondKey('${key}',${teamId})">
-      <div class="dfield-circle" style="background:${color};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
+      <div class="dfield-circle" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
       <div class="dfield-pill">${nameLabel}</div>
     </button>`;
   }
@@ -3473,6 +3539,7 @@ function renderDiamondPanel(teamId, impact) {
     const circles = shown.map((p, i) => {
       const key   = `p-${role}-${i}`;
       const color = getDiamondPlayerColor(p.score, 'pitcher');
+      const txtColor = diamondTextColor(color);
       const label = p.throws !== '?' ? p.throws : role;
       const rookieStar = p.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
       const pips = p.isRookie ? '' : awardPipsHTML(p.id);
@@ -3481,7 +3548,7 @@ function renderDiamondPanel(teamId, impact) {
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
         onclick="selectDiamondKey('${key}',${teamId})">
-        <div class="dfield-circle" style="background:${color};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
+        <div class="dfield-circle" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
         <div class="dfield-pill">${p.name}</div>
         ${extras}
       </button>`;
@@ -3601,6 +3668,7 @@ function renderDiamondPanel(teamId, impact) {
 
     <div class="diamond-box">
       <div class="diamond-section-label">Last Lineup</div>
+      ${diamondColorLegendHTML()}
       <div class="dfield-container">
         <div class="dfield-rombo"></div>
         <div class="dfield-homeplate"></div>
@@ -4224,7 +4292,9 @@ function switchTab(tab) {
     if (panel) panel.classList.add('active');
     if (tab === 'standings') startStandingsAutoRefresh();
     else stopStandingsAutoRefresh();
-    history.replaceState(null, '', `#${tab}`);
+    const rosterAbbr = (tab === 'rosters' && selectedTeamId && TEAM_META[selectedTeamId]?.abbr)
+      ? TEAM_META[selectedTeamId].abbr.toLowerCase() : '';
+    history.replaceState(null, '', rosterAbbr ? `#rosters/${rosterAbbr}` : `#${tab}`);
     if (tab !== 'rosters') window._fromStandings = false;
     if (tab !== 'topgames') {
       window._fromStandingsTopGames = false;
@@ -4297,7 +4367,7 @@ function topGameCardHTML(game, gameScore, rank) {
         <span style="font-family:'Bebas Neue';font-size:18px;letter-spacing:2px;color:var(--accent)">${rankLabel} Game of the Day</span>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-family:'Barlow Condensed';font-size:12px;color:var(--muted);letter-spacing:1px">${gameTime}</span>
-          <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;background:rgba(26,86,219,.08);color:var(--accent);border:1px solid rgba(26,86,219,.2);padding:2px 8px;border-radius:4px">SCORE ${scoreRound}</span>
+          <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;background:rgba(21,101,216,.08);color:var(--accent);border:1px solid rgba(21,101,216,.2);padding:2px 8px;border-radius:4px">SCORE ${scoreRound}</span>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px">
@@ -4544,8 +4614,15 @@ async function loadTopGamesDay(day) {
   const dateD   = dateMap[day];
   const dateStr = dateD.toISOString().split('T')[0];
 
-  // Check cache
-  const cached = window._tgDayCache[day];
+  // Check cache (memory first; 'ayer' is final data, so it also persists in localStorage)
+  let cached = window._tgDayCache[day];
+  if (!cached && day === 'ayer') {
+    const stored = cacheGet('mlb_tg_day_ayer');
+    if (stored && stored.dateKey === dateStr) {
+      window._tgDayCache[day] = stored;
+      cached = stored;
+    }
+  }
   if (cached && cached.dateKey === dateStr &&
       !(hasCompleteMvpLists() && !cached.hadMvpLists)) {
     contentEl.innerHTML = cached.html;
@@ -4689,7 +4766,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       let bg = 'var(--surface2)', bdr = 'var(--border)', lc = 'var(--muted)';
       if (pid) {
         if      (forma >= 75) { bg='rgba(22,163,74,.09)';   bdr='rgba(22,163,74,.28)';   lc='var(--win)'; }
-        else if (forma >= 60) { bg='rgba(26,86,219,.08)';   bdr='rgba(26,86,219,.22)';   lc='var(--accent)'; }
+        else if (forma >= 60) { bg='rgba(21,101,216,.08)';   bdr='rgba(21,101,216,.22)';   lc='var(--accent)'; }
         else if (forma >= 40) { bg='rgba(148,163,184,.12)'; bdr='rgba(148,163,184,.35)'; lc='var(--muted)'; }
         else                  { bg='rgba(220,38,38,.07)';   bdr='rgba(220,38,38,.22)';   lc='var(--loss)'; }
       }
@@ -5193,6 +5270,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
       html: contentEl.innerHTML,
       hadMvpLists: !!window._mvpLists
     };
+    cacheSet('mlb_tg_day_ayer', window._tgDayCache['ayer']);
   } catch(e) {
     contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error loading yesterday's games.</p>`;
     console.error('_tgLoadAyer error:', e);
@@ -5951,7 +6029,7 @@ async function _OLD_loadTopGames() {
       // Tier badges on the row
       let tierBadge = '';
       if (tier === 'green') tierBadge = `<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(22,163,74,.15);color:#16a34a;border:1px solid rgba(22,163,74,.3);letter-spacing:.5px">TOP MATCH</span>`;
-      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(26,86,219,.15);color:#1a56db;border:1px solid rgba(26,86,219,.3);letter-spacing:.5px">TOP MATCH</span>`;
+      else if (tier === 'blue') tierBadge = `<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(21,101,216,.15);color:#1565d8;border:1px solid rgba(21,101,216,.3);letter-spacing:.5px">TOP MATCH</span>`;
 
       // Detail panel
       const awayPid = away.probablePitcher?.id;
@@ -5989,7 +6067,7 @@ async function _OLD_loadTopGames() {
         let bg = 'var(--surface2)', border = 'var(--border)', labelColor = 'var(--muted)';
         if (!isTBD && forma !== null) {
           if      (forma >= 75) { bg='rgba(22,163,74,.09)';   border='rgba(22,163,74,.28)';   labelColor='var(--win)'; }
-          else if (forma >= 60) { bg='rgba(26,86,219,.08)';   border='rgba(26,86,219,.22)';   labelColor='var(--accent)'; }
+          else if (forma >= 60) { bg='rgba(21,101,216,.08)';   border='rgba(21,101,216,.22)';   labelColor='var(--accent)'; }
           else if (forma >= 40) { bg='rgba(148,163,184,.12)'; border='rgba(148,163,184,.35)'; labelColor='var(--muted)'; }
           else                  { bg='rgba(220,38,38,.07)';   border='rgba(220,38,38,.22)';   labelColor='var(--loss)'; }
         }
@@ -6919,7 +6997,7 @@ async function _loadMVPTracker() {
   }
   function saveCache(data) {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ expiry: getCacheExpiry(), data }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ expiry: getCacheExpiry(), storedAt: Date.now(), data }));
     } catch(e) {}
   }
 
@@ -7776,11 +7854,15 @@ function getTeamLeagueId(teamId) {
   el.textContent = 'Stats update daily by 10:00 Amsterdam time';
 })();
 
-// On load, jump to the tab specified in the URL hash (e.g. #mvp, #players)
+// On load, jump to the tab specified in the URL hash (e.g. #mvp, #rosters/nyy)
 const VALID_TABS = new Set(['standings','topgames','rosters','mvp']);
-const hashTab = window.location.hash.replace('#', '');
+const [hashTab, hashParam] = window.location.hash.replace('#', '').split('/');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
+if (startTab === 'rosters' && hashParam) {
+  const tid = Object.keys(TEAM_META).find(id => (TEAM_META[id].abbr || '').toLowerCase() === hashParam.toLowerCase());
+  if (tid) selectTeam(parseInt(tid));
+}
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
   refreshSmartCacheExpiry();
@@ -7788,3 +7870,17 @@ document.addEventListener('visibilitychange', () => {
 });
 refreshSmartCacheExpiry();
 init();
+
+// Background prefetch: warm MVP + Top Games while the user browses standings,
+// so those tabs render instantly on first click. Skipped if already visited.
+setTimeout(() => {
+  const prefetchTopGames = () => {
+    if (!loaded.topgames) { loaded.topgames = true; try { loadTopGames(); } catch(e) {} }
+  };
+  if (!loaded.mvp) {
+    loaded.mvp = true;
+    loadMVPTracker().catch(()=>{}).finally(prefetchTopGames);
+  } else {
+    prefetchTopGames();
+  }
+}, 2500);

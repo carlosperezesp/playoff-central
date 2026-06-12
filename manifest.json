@@ -1,0 +1,21 @@
+{
+  "name": "Baseball Lens",
+  "short_name": "Baseball Lens",
+  "description": "MLB playoff race, standings, top games and MVP tracker.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#0d2016",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
