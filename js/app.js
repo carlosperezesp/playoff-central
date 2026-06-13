@@ -4779,10 +4779,9 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const color = getDiamondPlayerColor(forma, 'pitcher');
       let bg = 'var(--surface2)', bdr = 'var(--border)', lc = 'var(--muted)';
       if (pid) {
-        if      (forma >= 75) { bg='rgba(22,163,74,.09)';   bdr='rgba(22,163,74,.28)';   lc='var(--win)'; }
-        else if (forma >= 60) { bg='rgba(21,101,216,.08)';   bdr='rgba(21,101,216,.22)';   lc='var(--accent)'; }
-        else if (forma >= 40) { bg='rgba(148,163,184,.12)'; bdr='rgba(148,163,184,.35)'; lc='var(--muted)'; }
-        else                  { bg='rgba(220,38,38,.07)';   bdr='rgba(220,38,38,.22)';   lc='var(--loss)'; }
+        bg  = `${color}17`;            // ~9% tint of the form color
+        bdr = `${color}47`;            // ~28% border of the form color
+        lc  = statTextColor(color);    // readable label matching the form value
       }
       const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
       const barW = Math.min(100, Math.round((forma/100)*100));
@@ -6080,10 +6079,9 @@ async function _OLD_loadTopGames() {
         const color = forma !== null ? getDiamondPlayerColor(forma, 'pitcher') : 'var(--muted)';
         let bg = 'var(--surface2)', border = 'var(--border)', labelColor = 'var(--muted)';
         if (!isTBD && forma !== null) {
-          if      (forma >= 75) { bg='rgba(22,163,74,.09)';   border='rgba(22,163,74,.28)';   labelColor='var(--win)'; }
-          else if (forma >= 60) { bg='rgba(21,101,216,.08)';   border='rgba(21,101,216,.22)';   labelColor='var(--accent)'; }
-          else if (forma >= 40) { bg='rgba(148,163,184,.12)'; border='rgba(148,163,184,.35)'; labelColor='var(--muted)'; }
-          else                  { bg='rgba(220,38,38,.07)';   border='rgba(220,38,38,.22)';   labelColor='var(--loss)'; }
+          bg         = `${color}17`;            // ~9% tint of the form color
+          border     = `${color}47`;            // ~28% border of the form color
+          labelColor = statTextColor(color);    // readable label matching the form value
         }
         // Team pill
         const teamPill = teamMeta ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
