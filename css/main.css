@@ -737,10 +737,7 @@
     font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700; letter-spacing: .5px;
     padding: 2px 6px; border-radius: 3px; white-space: nowrap;
   }
-  .team-stat-rank.top      { background: rgba(22,163,74,.12);  color: var(--win); }
-  .team-stat-rank.mid-blue { background: rgba(21,101,216,.10);  color: #1565d8; font-weight: 700; }
   .team-stat-rank.mid      { background: rgba(107,114,128,.1); color: var(--muted); }
-  .team-stat-rank.bot      { background: rgba(220,38,38,.10);  color: var(--loss); }
   .team-stat-bar-wrap { position: relative; height: 5px; background: var(--border); border-radius: 999px; overflow: visible; }
   .team-stat-bar-fill { height: 100%; border-radius: 999px; transition: width .4s ease; }
   .team-stat-bar-dots {
@@ -763,7 +760,7 @@
     min-width: 0;
   }
   .innings-bar-rp {
-    background: #94a3b8; flex: 1; display: flex; align-items: center; justify-content: flex-end;
+    background: #7aa9e6; flex: 1; display: flex; align-items: center; justify-content: flex-end;
     padding-right: 6px; font-family: 'Barlow Condensed'; font-size: 11px; font-weight: 700; color: #fff;
     letter-spacing: .5px; white-space: nowrap; overflow: hidden; min-width: 0;
   }

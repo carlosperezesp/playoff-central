@@ -2117,6 +2117,20 @@ function diamondTextColor(bg) {
   return ['#16a34a', '#ff2200', '#ff8100'].includes(bg) ? '#fff' : '#1a1209';
 }
 
+// Map a bright scale color to a darkened variant readable as text on white.
+// Bright colors (yellow/light-green) wash out as text; these match the
+// "Team Stats vs League" rank colors.
+function statTextColor(scaleColor) {
+  return {
+    '#16a34a': '#16a34a',  // verde
+    '#b1c882': '#7d9440',  // verde claro
+    '#ffc000': '#c29200',  // amarillo
+    '#ff8100': '#e06f00',  // naranja
+    '#ff2200': '#e51f00',  // rojo
+    '#9ca3af': '#6b7280',  // sin datos
+  }[scaleColor] || scaleColor;
+}
+
 function diamondColorLegendHTML() {
   const tiers = [
     ['#ff2200', 'POOR'],
@@ -3296,7 +3310,7 @@ function playerDetailHTML(p, type, roleOrPos) {
     </div>
     <div class="impact-bar-val-wrap">
       <span class="impact-bar-label">${barLabel}</span>
-      <span class="impact-bar-val" style="color:${color}">${barDisp}</span>
+      <span class="impact-bar-val" style="color:${statTextColor(color)}">${barDisp}</span>
       <div class="impact-bar-block">
         <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
       </div>
@@ -3367,11 +3381,8 @@ function renderTeamStatsPanel(teamId, impact) {
 
   function rankBadge(r) {
     if (r.rank === '—') return '<span class="team-stat-rank mid">—</span>';
-    const label = `#${r.rank} / ${r.total}`;
-    // Same thresholds as rankColor: 1-6 green, 7-12 blue, 13-22 grey, 23-30 red
-    const rk = r.rank;
-    const cls = rk <= 6 ? 'top' : rk <= 12 ? 'mid-blue' : rk <= 22 ? 'mid' : 'bot';
-    return `<span class="team-stat-rank ${cls}">${label}</span>`;
+    const t = rankTier(r);
+    return `<span class="team-stat-rank" style="background:${t.bar}26;color:${t.text}">#${r.rank} / ${r.total}</span>`;
   }
 
   function leagueBar(key, lowerBetter = false, color, rankObj) {
@@ -3398,23 +3409,26 @@ function renderTeamStatsPanel(teamId, impact) {
   }
 
 
-  // New color scheme: rank 1-6 green, 7-12 blue, 13-22 grey, 23-30 red
-  function rankColor(r, total) {
-    if (r.rank === '—') return '#94a3b8';
+  // Player color scale by rank quintile: 1-6 green, 7-12 light green,
+  // 13-18 yellow, 19-24 orange, 25-30 red. `bar` is the exact scale color
+  // (fills/badges); `text` is a darkened variant readable on white.
+  function rankTier(r) {
+    if (r.rank === '—') return { bar: '#9ca3af', text: '#6b7280' };
     const rk = r.rank;
-    if (rk <= 6) return 'var(--win)';         // green
-    if (rk <= 12) return '#1565d8';             // blue
-    if (rk <= 22) return '#94a3b8';            // grey
-    return 'var(--loss)';                      // red
+    if (rk <= 6)  return { bar: '#16a34a', text: '#16a34a' };
+    if (rk <= 12) return { bar: '#b1c882', text: '#7d9440' };
+    if (rk <= 18) return { bar: '#ffc000', text: '#c29200' };
+    if (rk <= 24) return { bar: '#ff8100', text: '#e06f00' };
+    return { bar: '#ff2200', text: '#e51f00' };
   }
 
   const avgR  = rank('avg');  const opsR  = rank('ops');
   const eraR  = rank('era', true); const whipR = rank('whip', true);
 
-  const avgColor  = rankColor(avgR);
-  const opsColor  = rankColor(opsR);
-  const eraColor  = rankColor(eraR);
-  const whipColor = rankColor(whipR);
+  const avgT  = rankTier(avgR);
+  const opsT  = rankTier(opsR);
+  const eraT  = rankTier(eraR);
+  const whipT = rankTier(whipR);
 
   // Innings split — use SP/RP breakdown calculated from classified pitchers' season stats
   const spSeasonIp    = impact?.spSeasonIp    || 0;
@@ -3435,21 +3449,21 @@ function renderTeamStatsPanel(teamId, impact) {
           <div class="team-stat-header">
             <span class="team-stat-label">AVG</span>
             <div style="display:flex;align-items:center;gap:5px">
-              <span class="team-stat-val" style="color:${avgColor}">${mine.avg ? mine.avg.toFixed(3).replace(/^0/,'') : '—'}</span>
+              <span class="team-stat-val" style="color:${avgT.text}">${mine.avg ? mine.avg.toFixed(3).replace(/^0/,'') : '—'}</span>
               ${rankBadge(avgR)}
             </div>
           </div>
-          ${leagueBar('avg', false, avgColor, avgR)}
+          ${leagueBar('avg', false, avgT.bar, avgR)}
         </div>
         <div class="team-stat-row">
           <div class="team-stat-header">
             <span class="team-stat-label">OPS</span>
             <div style="display:flex;align-items:center;gap:5px">
-              <span class="team-stat-val" style="color:${opsColor}">${mine.ops ? mine.ops.toFixed(3).replace(/^0/,'') : '—'}</span>
+              <span class="team-stat-val" style="color:${opsT.text}">${mine.ops ? mine.ops.toFixed(3).replace(/^0/,'') : '—'}</span>
               ${rankBadge(opsR)}
             </div>
           </div>
-          ${leagueBar('ops', false, opsColor, opsR)}
+          ${leagueBar('ops', false, opsT.bar, opsR)}
         </div>
       </div>
       <div style="grid-column:2;display:flex;flex-direction:column;gap:8px">
@@ -3458,21 +3472,21 @@ function renderTeamStatsPanel(teamId, impact) {
           <div class="team-stat-header">
             <span class="team-stat-label">ERA</span>
             <div style="display:flex;align-items:center;gap:5px">
-              <span class="team-stat-val" style="color:${eraColor}">${mine.era ? mine.era.toFixed(2) : '—'}</span>
+              <span class="team-stat-val" style="color:${eraT.text}">${mine.era ? mine.era.toFixed(2) : '—'}</span>
               ${rankBadge(eraR)}
             </div>
           </div>
-          ${leagueBar('era', true, eraColor, eraR)}
+          ${leagueBar('era', true, eraT.bar, eraR)}
         </div>
         <div class="team-stat-row">
           <div class="team-stat-header">
             <span class="team-stat-label">WHIP</span>
             <div style="display:flex;align-items:center;gap:5px">
-              <span class="team-stat-val" style="color:${whipColor}">${mine.whip ? mine.whip.toFixed(2) : '—'}</span>
+              <span class="team-stat-val" style="color:${whipT.text}">${mine.whip ? mine.whip.toFixed(2) : '—'}</span>
               ${rankBadge(whipR)}
             </div>
           </div>
-          ${leagueBar('whip', true, whipColor, whipR)}
+          ${leagueBar('whip', true, whipT.bar, whipR)}
         </div>
       </div>
       ${totalSeasonIp > 0 ? `
@@ -3484,7 +3498,7 @@ function renderTeamStatsPanel(teamId, impact) {
         </div>
         <div class="innings-legend">
           <div class="innings-legend-item"><div class="innings-legend-dot" style="background:var(--accent-blue)"></div>Starters ${spInnings} inn (${spPct}%)</div>
-          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:#94a3b8"></div>Bullpen ${rpInnings} inn (${rpPct}%)</div>
+          <div class="innings-legend-item"><div class="innings-legend-dot" style="background:#7aa9e6"></div>Bullpen ${rpInnings} inn (${rpPct}%)</div>
         </div>
       </div>` : ''}
     </div>
@@ -3615,7 +3629,7 @@ function renderDiamondPanel(teamId, impact) {
         </div>
         <div class="impact-bar-val-wrap" style="grid-column:2;grid-row:2;align-self:start">
           <span class="impact-bar-label">${barLabel}</span>
-          <span class="impact-bar-val" style="color:${color};opacity:.7">${val}</span>
+          <span class="impact-bar-val" style="color:${statTextColor(color)};opacity:.7">${val}</span>
           ${ilTrend ? `<div style="margin-top:3px;text-align:right">${ilTrend}</div>` : ''}
           ${seasonDotsHTML(p.id, p.isPitcher ? 'pitcher' : 'hitter')}
         </div>
@@ -4792,7 +4806,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
           </div>
           <div class="impact-bar-val-wrap">
             <span class="impact-bar-label">FORM</span>
-            <span class="impact-bar-val" style="color:${color};font-size:20px">${Math.round(Math.max(0,forma))}</span>
+            <span class="impact-bar-val" style="color:${statTextColor(color)};font-size:20px">${Math.round(Math.max(0,forma))}</span>
             <div class="impact-bar-block" style="grid-column:auto;grid-row:auto;height:4px;width:100%;margin:3px 0 0 auto">
               <div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div>
             </div>
@@ -6105,7 +6119,7 @@ async function _OLD_loadTopGames() {
             </div>
             <div class="impact-bar-val-wrap">
               <span class="impact-bar-label">FORM</span>
-              <span class="impact-bar-val" style="color:${color};font-size:20px">${Math.max(0,forma??0)}</span>
+              <span class="impact-bar-val" style="color:${statTextColor(color)};font-size:20px">${Math.max(0,forma??0)}</span>
               <div class="impact-bar-block" style="grid-column:auto;grid-row:auto;height:4px;width:100%;margin:3px 0 0 auto"><div class="impact-bar-bg"><div class="impact-bar-fill" style="width:${barW}%;background:${color}"></div></div></div>
               ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
@@ -6170,7 +6184,7 @@ async function _OLD_loadTopGames() {
             </div>
             <div class="impact-bar-val-wrap">
               <span class="impact-bar-label">FORM</span>
-              <span class="impact-bar-val" style="color:${color}">${forma}</span>
+              <span class="impact-bar-val" style="color:${statTextColor(color)}">${forma}</span>
               ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
           </div>`;
@@ -6198,7 +6212,7 @@ async function _OLD_loadTopGames() {
             </div>
             <div class="impact-bar-val-wrap">
               <span class="impact-bar-label">OPS</span>
-              <span class="impact-bar-val" style="color:${color}">${ops>0?ops.toFixed(3):'—'}</span>
+              <span class="impact-bar-val" style="color:${statTextColor(color)}">${ops>0?ops.toFixed(3):'—'}</span>
               ${trendHtml ? `<div style="margin-top:3px;text-align:right">${trendHtml}</div>` : ''}
             </div>
           </div>`;
@@ -7549,7 +7563,7 @@ async function _loadMVPTracker() {
           </div>
           <div class="impact-bar-val-wrap">
             <span class="impact-bar-label">${barLabel}</span>
-            <span class="impact-bar-val" style="color:${color}">${barValue}</span>
+            <span class="impact-bar-val" style="color:${statTextColor(color)}">${barValue}</span>
             ${trendBadge ? `<div style="margin-top:3px;text-align:right">${trendBadge}</div>` : ''}
             ${seasonDots}
           </div>
