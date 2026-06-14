@@ -256,6 +256,24 @@ function fetchWithTimeout(url, ms = 12000) {
     .finally(() => clearTimeout(timer));
 }
 
+// Consistent, friendly error state for any tab/panel. `retryCall` is a JS
+// snippet run on the RETRY button (omit to hide it). Detects offline.
+function errorStateHTML(retryCall, opts = {}) {
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  const title = offline ? "You're offline" : (opts.title || "Couldn't load this");
+  const sub = offline
+    ? 'Check your connection and try again.'
+    : (opts.sub || 'The MLB data service may be busy. Give it a moment.');
+  const retry = retryCall
+    ? `<button class="retry-btn" onclick="${retryCall}">RETRY</button>`
+    : '';
+  return `<div class="error-box" style="padding:24px;text-align:center">
+    <strong style="font-size:15px">${title}</strong>
+    <div style="color:var(--muted);font-size:13px;margin-top:6px">${sub}</div>
+    ${retry}
+  </div>`;
+}
+
 async function refreshSmartCacheExpiry() {
   try {
     const dateKey = dateKeyInTimeZone();
@@ -315,11 +333,11 @@ async function init() {
     console.error(e);
     // If we have cached data that might be corrupt, clear it and offer retry
     clearAllCache();
-    el.innerHTML = `<div class="error-box" style="padding:24px">
-      <strong>Error connecting to MLB API</strong><br><br>
-      ${e.name === 'AbortError' ? 'Request timed out.' : e.message}<br><br>
-      <button onclick="init()" style="margin-top:8px;padding:6px 16px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:'Barlow Condensed';font-size:14px;letter-spacing:1px">RETRY</button>
-    </div>`;
+    el.innerHTML = errorStateHTML('init()', {
+      sub: e.name === 'AbortError'
+        ? 'The request timed out. The MLB data service may be slow right now.'
+        : undefined,
+    });
   }
 }
 
@@ -1802,7 +1820,7 @@ async function loadBracket() {
     }
     el.innerHTML = renderPlayoffBracket(allData.playoffs);
   } catch(e) {
-    el.innerHTML = `<div class="error-box">Bracket unavailable: ${e.message}</div>`;
+    el.innerHTML = errorStateHTML('loadBracket()');
   }
 }
 
@@ -2086,7 +2104,7 @@ async function loadSchedule() {
     html += `</div>`;
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = `<div class="error-box">Schedule error: ${e.message}</div>`;
+    el.innerHTML = errorStateHTML('loadSchedule()');
   }
 }
 
@@ -2413,7 +2431,7 @@ async function selectTeam(teamId) {
       });
     }
   } catch(e) {
-    panel.innerHTML += `<div class="error-box">Error loading impact: ${e.message}</div>`;
+    panel.innerHTML = errorStateHTML(`selectTeam(${teamId})`);
   }
 }
 
@@ -4648,7 +4666,8 @@ async function loadTopGamesDay(day) {
 
 // ── HOY / MAÑANA loader ─────────────────────────────────────────────────────────
 async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
-  contentEl.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING ${day.toUpperCase()}...</div></div>`;
+  const dayLabel = { ayer: 'YESTERDAY', hoy: 'TODAY', manana: 'TOMORROW' }[day] || day.toUpperCase();
+  contentEl.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING ${dayLabel}...</div></div>`;
   try {
     if (!hasCompleteMvpLists()) {
       ensureMvpLists().catch(e => console.warn('MVP lists for Top Games failed:', e));
@@ -4967,7 +4986,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
     // If MVP data wasn't loaded yet, schedule a refresh for when it arrives
     if (!hasCompleteMvpLists()) window._tgNeedsRefresh = true;
   } catch(e) {
-    contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error loading games.</p>`;
+    contentEl.innerHTML = errorStateHTML(`loadTopGamesDay('${day}')`);
     console.error('_tgLoadFuture error:', e);
   }
 }
@@ -5281,7 +5300,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     };
     cacheSet('mlb_tg_day_ayer', window._tgDayCache['ayer']);
   } catch(e) {
-    contentEl.innerHTML = `<p style="color:var(--error,#ef4444);padding:20px;text-align:center">Error loading yesterday's games.</p>`;
+    contentEl.innerHTML = errorStateHTML("loadTopGamesDay('ayer')");
     console.error('_tgLoadAyer error:', e);
   }
 }
@@ -6333,7 +6352,7 @@ async function _OLD_loadTopGames() {
     window._topGamesCache = { html: el.innerHTML, dateKey: todayKey, hadMvpLists: !!window._mvpLists };
 
   } catch(e) {
-    el.innerHTML = `<div class="error-box">Error loading top games: ${e.message}</div>`;
+    el.innerHTML = errorStateHTML('loadTopGames()');
   }
 }
 
@@ -6918,7 +6937,7 @@ async function loadPlayers() {
     </div>`;
 
   } catch(e) {
-    el.innerHTML = `<div class="error-box">Error loading players: ${e.message}</div>`;
+    el.innerHTML = errorStateHTML('loadPlayers()');
   }
 }
 
@@ -7847,7 +7866,7 @@ async function _loadMVPTracker() {
 
   } catch(e) {
     document.getElementById('mvpContent').innerHTML =
-      `<div class="error-box">Error loading MVP Tracker: ${e.message}</div>`;
+      errorStateHTML('mvpTrackerPromise=null;loadMVPTracker()');
   }
 }
 
