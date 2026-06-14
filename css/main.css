@@ -491,7 +491,6 @@
     .standings-date-info { font-size: 15px; }
 
     /* Teams / roster panel */
-    .team-selector-list { max-height: 220px; }
     .diamond-panel { padding: 14px 12px; }
     .dfield-container { height: 360px; }
     .dfield-circle { width: 36px; height: 36px; font-size: 10px; }
@@ -522,7 +521,6 @@
     font-family: 'Inter'; font-weight: 700; font-size: 11px; letter-spacing: 1px;
     color: var(--muted); text-transform: uppercase;
   }
-  .team-selector-list { max-height: 540px; overflow-y: auto; }
   .team-selector-item {
     display: flex; align-items: center; gap: 10px; padding: 8px 14px;
     cursor: pointer; border-bottom: 1px solid var(--border); transition: background .12s;
@@ -544,6 +542,18 @@
     font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 700; color: var(--muted);
     width: 14px; text-align: center; flex-shrink: 0;
   }
+  .team-logo-grid {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 8px 14px; padding: 10px 10px 14px;
+  }
+  .team-logo-btn {
+    background: none; border: 1.5px solid transparent; border-radius: 8px;
+    padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .12s, border-color .12s; -webkit-tap-highlight-color: transparent;
+  }
+  .team-logo-btn:hover { background: var(--surface2); }
+  .team-logo-btn.active { background: rgba(21,101,216,.08); border-color: #1565d8; }
+  .team-logo-btn img { width: 34px; height: 34px; object-fit: contain; display: block; }
 
   /* Badges — LHB gets blue like LHP */
   .hand-badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;

@@ -2235,24 +2235,20 @@ async function loadRosters() {
     const teams = divMap[divId];
     if (!teams?.length) return;
     html += `<div class="team-div-group">
-      <div class="team-div-label">${DIV_LABELS[divId] || ''}</div>`;
-    teams.forEach((tr, i) => {
+      <div class="team-div-label">${DIV_LABELS[divId] || ''}</div>
+      <div class="team-logo-grid">`;
+    teams.forEach(tr => {
       const tid = tr.team.id;
       const meta = TEAM_META[tid] || {
         name: tr.team.name,
         abbr: tr.team.abbreviation || String(tid),
         logo: `https://www.mlbstatic.com/team-logos/${tid}.svg`,
       };
-      const pos = i + 1;
-      const wl = `${tr.wins}-${tr.losses}`;
-      html += `<div class="team-selector-item" id="ts-${tid}" onclick="selectTeam(${tid})">
-        <span class="team-div-pos">${pos}</span>
-        <img src="${meta.logo}" alt="${meta.abbr}" onerror="this.style.display='none'" width="24" height="24">
-        <span class="team-selector-name">${meta.name}</span>
-        <span class="team-selector-wl">${wl}</span>
-      </div>`;
+      html += `<button class="team-logo-btn" id="ts-${tid}" onclick="selectTeam(${tid})" title="${meta.name}" aria-label="${meta.name}">
+        <img src="${meta.logo}" alt="${meta.abbr}" onerror="this.style.display='none'">
+      </button>`;
     });
-    html += `</div>`;
+    html += `</div></div>`;
   });
   listEl.innerHTML = html;
 }
@@ -2299,7 +2295,7 @@ function goToTeam(teamId) {
 }
 
 async function selectTeam(teamId) {
-  document.querySelectorAll('.team-selector-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.team-logo-btn').forEach(el => el.classList.remove('active'));
   const selEl = document.getElementById(`ts-${teamId}`);
   if (selEl) selEl.classList.add('active');
 
@@ -4340,7 +4336,7 @@ function switchTab(tab) {
     } else if (tab === 'rosters') {
       // Re-render team list if it's empty (standings may have loaded after first visit)
       const listEl = document.getElementById('teamSelectorList');
-      if (listEl && !listEl.querySelector('.team-selector-item')) loadRosters();
+      if (listEl && !listEl.querySelector('.team-logo-btn')) loadRosters();
     } else if (tab === 'topgames' && window._topGamesTarget) {
       setTimeout(() => focusTopGameTarget(), 50);
     }
