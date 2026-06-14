@@ -539,7 +539,7 @@ async function ensureStandingsNextGames(teamIds) {
       (dateObj.games || []).forEach(game => {
         const gameTime = game.gameDate ? new Date(game.gameDate) : null;
         const timeStr = gameTime
-          ? gameTime.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' })
+          ? gameTime.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
           : null;
         const away = game.teams?.away;
         const home = game.teams?.home;
@@ -4377,7 +4377,7 @@ function topGameCardHTML(game, gameScore, rank) {
   const awayRec = (() => { const r = game.teams.away.leagueRecord; return r ? `${r.wins}-${r.losses}` : ''; })();
   const homeRec = (() => { const r = game.teams.home.leagueRecord; return r ? `${r.wins}-${r.losses}` : ''; })();
 
-  const gameTime = new Date(game.gameDate).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  const gameTime = new Date(game.gameDate).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
 
   function spBlock(side) {
     const pp = game.teams?.[side]?.probablePitcher;
@@ -4597,7 +4597,7 @@ async function loadTopGames() {
   const tomorrowD  = new Date(todayD); tomorrowD.setDate(todayD.getDate() + 1);
 
   function fmtDate(d) {
-    return d.toLocaleDateString('es-ES', { day:'2-digit', month:'short' }).toUpperCase();
+    return d.toLocaleDateString('en-US', { day:'2-digit', month:'short' }).toUpperCase();
   }
 
   el.innerHTML = `
@@ -4898,7 +4898,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const state = g.status?.abstractGameState;
       const isPostponed = isPostponedLikeGame(g);
       const gdate = new Date(g.gameDate);
-      const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+      const timeStr = gdate.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
       const inningLabel = g.linescore?.currentInningOrdinal || 'LIVE';
       const statusText  = isPostponed ? 'POSTPONED' : state==='Live' ? `● ${inningLabel}` : state==='Final' ? 'FINAL' : timeStr;
       const statusStyle = isPostponed
@@ -6035,7 +6035,7 @@ async function _OLD_loadTopGames() {
       const awayMeta = TEAM_META[away.team.id] || { abbr: away.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${away.team.id}.svg` };
       const homeMeta = TEAM_META[home.team.id] || { abbr: home.team.abbreviation||'?', logo:`https://www.mlbstatic.com/team-logos/${home.team.id}.svg` };
       const gdate = new Date(g.gameDate);
-      const timeStr = gdate.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+      const timeStr = gdate.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
       const dotColor = DOT_COLOR[tier];
       const gameId = `${dayKey}-${gIdx}`;
 
@@ -6407,7 +6407,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'power', label: 'Power Hitter',
-    desc: 'Batea para poder',
+    desc: 'Hits for power',
     type: 'hitter', statColor: BADGE_SKILL_COLOR,
     displayStat: s => `${s.homeRuns ?? '—'} HR · ${ratePct(parseInt(s.homeRuns)||0, parseInt(s.plateAppearances||s.atBats)||0)} HR/PA`,
     filter: (s, lg) => {
@@ -6424,7 +6424,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'contact', label: 'Contact Hitter',
-    desc: 'Batea para contacto',
+    desc: 'Hits for contact',
     type: 'hitter', statColor: BADGE_SKILL_COLOR,
     displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · ${s.hits ?? '—'} H`,
     filter: (s, lg) => {
@@ -6437,7 +6437,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'patient', label: 'Patient Hitter',
-    desc: 'Disciplina en el plato',
+    desc: 'Plate discipline',
     type: 'hitter', statColor: BADGE_SKILL_COLOR,
     displayStat: s => `${ratePct(parseInt(s.walks ?? s.baseOnBalls)||0, parseInt(s.plateAppearances||s.atBats)||0)} BB/PA · .${(parseFloat(s.obp)||0).toFixed(3).slice(2)} OBP`,
     filter: (s, lg) => {
@@ -6455,7 +6455,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'basestealer', label: 'Base Stealer',
-    desc: 'Roba bases eficientemente',
+    desc: 'Steals bases efficiently',
     type: 'hitter', statColor: BADGE_SKILL_COLOR,
     displayStat: s => `${s.stolenBases ?? '—'} SB · ${s.caughtStealing ?? '—'} CS`,
     filter: (s, lg) => {
@@ -6474,7 +6474,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'speed', label: 'Speed Threat',
-    desc: 'Amenaza constante en bases',
+    desc: 'A constant threat on the bases',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${(parseInt(s.stolenBases)||0) + (parseInt(s.caughtStealing)||0)} ATT · ${s.stolenBases ?? '—'} SB`,
     filter: (s, lg) => {
@@ -6490,7 +6490,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'tablesetter', label: 'Table Setter',
-    desc: 'Genera tráfico ofensivo',
+    desc: 'Sets the table on offense',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => `.${(parseFloat(s.obp)||0).toFixed(3).slice(2)} OBP · ${s.walks ?? s.baseOnBalls ?? '—'} BB`,
     filter: (s, lg) => {
@@ -6504,7 +6504,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'allornothing', label: 'All-or-Nothing',
-    desc: 'Resultados extremos: jonrón o ponche',
+    desc: 'Extreme outcomes: homer or strikeout',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.homeRuns ?? '—'} HR · ${s.strikeOuts ?? '—'} K`,
     filter: (s, lg) => {
@@ -6523,7 +6523,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'complete', label: 'Complete Hitter',
-    desc: 'Combina contacto, poder y disciplina',
+    desc: 'Combines contact, power and discipline',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · .${(parseFloat(s.ops)||0).toFixed(3).slice(2)} OPS`,
     filter: (s, lg) => {
@@ -6541,7 +6541,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'emptyavg', label: 'Empty Average',
-    desc: 'Promedio alto sin impacto',
+    desc: 'High average, little impact',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => `.${(parseFloat(s.avg)||0).toFixed(3).slice(2)} AVG · .${(parseFloat(s.slg)||0).toFixed(3).slice(2)} SLG`,
     filter: (s, lg) => {
@@ -6555,7 +6555,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'undisciplined', label: 'Undisciplined',
-    desc: 'Mal control del turno',
+    desc: 'Poor control at the plate',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => {
       const bb = parseInt(s.baseOnBalls||s.walks)||0;
@@ -6580,7 +6580,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'clutch', label: 'Clutch Hitter',
-    desc: 'Rinde mejor en momentos clave',
+    desc: 'Steps up in key moments',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: s => {
       const risp = parseFloat(s.avgWithRISP||s.rISP||0)||0;
@@ -6602,7 +6602,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'onfire', label: 'On Fire',
-    desc: 'En racha ofensiva reciente',
+    desc: 'On a recent hot streak',
     type: 'hitter', statColor: BADGE_DESC_COLOR,
     displayStat: (s, p) => {
       const recentOps = p?.recentOps;
@@ -6623,7 +6623,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'strikeoutartist', label: 'Strikeout Artist',
-    desc: 'Genera muchos strikeouts',
+    desc: 'Racks up strikeouts',
     type: 'pitcher', statColor: BADGE_SKILL_COLOR,
     displayStat: s => {
       const ip = parseFloat(s.inningsPitched)||1;
@@ -6643,7 +6643,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'control', label: 'Control Specialist',
-    desc: 'Limita las bases por bolas',
+    desc: 'Limits walks',
     type: 'pitcher', statColor: BADGE_SKILL_COLOR,
     displayStat: s => {
       const ip = parseFloat(s.inningsPitched)||1;
@@ -6663,7 +6663,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'ace', label: 'Ace',
-    desc: 'Starter élite en rendimiento y volumen',
+    desc: 'Elite starter in performance and volume',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
     filter: (s, lg) => {
@@ -6682,7 +6682,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'qualitystarter', label: 'Quality Starter',
-    desc: 'Starter sólido por encima de la media',
+    desc: 'Solid starter, above average',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
     filter: (s, lg) => {
@@ -6701,7 +6701,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'workhorse', label: 'Workhorse',
-    desc: 'Lanza muchas entradas por salida',
+    desc: 'Pitches deep into games',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.inningsPitched ?? '—'} IP · ${s.gamesStarted ?? '—'} GS`,
     filter: (s, lg) => {
@@ -6714,7 +6714,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'elitecloser', label: 'Elite Closer',
-    desc: 'Cerrador dominante',
+    desc: 'Dominant closer',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.saves ?? '—'} SV · ${s.saveOpportunities ?? '—'} SVO · ${s.era ?? '—'} ERA`,
     filter: (s, lg) => {
@@ -6730,7 +6730,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'reliablecloser', label: 'Reliable Closer',
-    desc: 'Cerrador consistente',
+    desc: 'Consistent closer',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.saves ?? '—'} SV · ${s.saveOpportunities ?? '—'} SVO · ${s.era ?? '—'} ERA`,
     filter: (s, lg) => {
@@ -6750,7 +6750,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'lockdowncloser', label: 'Lockdown Closer',
-    desc: 'Cerrador muy dominante',
+    desc: 'Highly dominant closer',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
     filter: (s, lg) => {
@@ -6767,7 +6767,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'setupman', label: 'Setup Man',
-    desc: 'Relevista de alto nivel previo al cierre',
+    desc: 'High-end setup reliever',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.holds ?? '—'} HLD · ${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
     filter: (s, lg) => {
@@ -6781,7 +6781,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'swingman', label: 'Swing Man',
-    desc: 'Relevista versátil multi-inning',
+    desc: 'Versatile multi-inning reliever',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.inningsPitched ?? '—'} IP · ${s.gamesPitched ?? '—'} GP`,
     filter: (s, lg) => {
@@ -6799,7 +6799,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'vulnerable', label: 'Vulnerable',
-    desc: 'Permite muchas carreras',
+    desc: 'Allows too many runs',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
     filter: (s, lg) => {
@@ -6814,7 +6814,7 @@ const PLAYER_CATEGORIES = [
 
   {
     key: 'shaky', label: 'Shaky',
-    desc: 'Poco fiable como relevista',
+    desc: 'Unreliable in relief',
     type: 'pitcher', statColor: BADGE_DESC_COLOR,
     displayStat: s => `${s.era ?? '—'} ERA · ${s.whip ?? '—'} WHIP`,
     filter: (s, lg) => {
@@ -6936,7 +6936,7 @@ async function loadPlayers() {
     const pitcherSections = pitcherCats.map(c => sectionHTML(c, buildCategory(c))).filter(Boolean).join('');
 
     el.innerHTML = `<div class="players-layout">
-      <div class="section-title">⚾ BATEADORES</div>
+      <div class="section-title">⚾ HITTERS</div>
       ${hitterSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">Not enough data yet.</div>'}
       <div class="section-title">🎯 PITCHERS</div>
       ${pitcherSections || '<div style="color:var(--muted);font-family:Barlow Condensed;padding:20px 0">Not enough data yet.</div>'}
