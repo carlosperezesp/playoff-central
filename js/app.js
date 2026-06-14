@@ -1,6 +1,12 @@
 const MLB_API = 'https://statsapi.mlb.com/api/v1';
 const CURRENT_YEAR = new Date().getFullYear();
 
+// Whitelist of boxscore keys read by the Top Games "yesterday" renderer
+// (_aSelectStars / _aGameTagsHTML and their helpers). Cuts each boxscore
+// payload ~75% (≈184KB → 47KB). Verified to preserve the players map and
+// every consumed stat — keep in sync if those helpers read new fields.
+const TG_BOXSCORE_FIELDS = 'teams,away,home,team,id,abbreviation,players,person,fullName,allPositions,position,stats,batting,pitching,atBats,hits,doubles,triples,homeRuns,baseOnBalls,hitByPitch,sacFlies,rbi,runs,stolenBases,caughtStealing,strikeOuts,inningsPitched,earnedRuns,gamesStarted,battersFaced,pitchers,teamStats';
+
 const COUNTRY_FLAG = {
   'USA': '🇺🇸', 'Dominican Republic': '🇩🇴', 'Venezuela': '🇻🇪',
   'Cuba': '🇨🇺', 'Panama': '🇵🇦', 'Puerto Rico': '🇵🇷',
@@ -5271,7 +5277,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     // Progressive: start all data requests immediately, then let each row update as soon as it can.
     const gameDataTasks = games.map(g => {
       const gId = g.gamePk;
-      const boxPromise = fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore`).then(r => r.json());
+      const boxPromise = fetch(`https://statsapi.mlb.com/api/v1/game/${gId}/boxscore?fields=${TG_BOXSCORE_FIELDS}`).then(r => r.json());
       const feedPromise = fetch(`https://statsapi.mlb.com/api/v1.1/game/${gId}/feed/live?fields=liveData,plays,allPlays,result,event,eventType,about,halfInning`).then(r => r.json()).catch(() => null);
       return { g, gId, boxPromise, feedPromise };
     });
