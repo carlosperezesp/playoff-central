@@ -1,0 +1,8 @@
+# macOS folder metadata
+.DS_Store
+
+# Claude Code local config (machine-specific paths, not for the repo)
+.claude/
+
+# Source asset for the OG image — only og-image.png is shipped
+og-source.png
