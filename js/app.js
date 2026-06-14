@@ -7163,6 +7163,15 @@ async function _loadMVPTracker() {
       return `${n}th`;
     }
 
+    // League-wide stat rank → player color scale (readable text variants).
+    // Thresholds tuned for "how notable", not 1-30: top 10 elite, etc.
+    function rankSummaryColor(rank) {
+      if (rank <= 10) return '#16a34a';   // verde: elite
+      if (rank <= 30) return '#7d9440';   // verde claro
+      if (rank <= 75) return '#c29200';   // amarillo
+      return '#e06f00';                    // naranja
+    }
+
     function buildRankMap(players, valueFn, { desc = true, filter = () => true } = {}) {
       const ranked = players
         .filter(filter)
@@ -7204,10 +7213,9 @@ async function _loadMVPTracker() {
           .filter(x => x.ok && x.rank)
           .sort((a, b) => a.rank - b.rank)
           .slice(0, 3);
-        return candidates.length ? candidates.map(x => {
-          const c = x.rank <= 10 ? 'var(--win)' : x.rank <= 20 ? 'var(--accent-blue)' : '';
-          return c ? `<span style="color:${c}">${ordinal(x.rank)} in ${x.label}</span>` : `${ordinal(x.rank)} in ${x.label}`;
-        }).join(' · ') : '';
+        return candidates.length ? candidates.map(x =>
+          `<span style="color:${rankSummaryColor(x.rank)}">${ordinal(x.rank)} in ${x.label}</span>`
+        ).join(' · ') : '';
       }
       const candidates = [
         { label: 'OPS', rank: hitterRankMaps.ops[p.pid], ok: (((parseFloat(p.s?.obp) || 0) + (parseFloat(p.s?.slg) || 0)) > 0) },
@@ -7218,10 +7226,9 @@ async function _loadMVPTracker() {
         .filter(x => x.ok && x.rank)
         .sort((a, b) => a.rank - b.rank)
         .slice(0, 3);
-      return candidates.length ? candidates.map(x => {
-        const c = x.rank <= 10 ? 'var(--win)' : x.rank <= 20 ? 'var(--accent-blue)' : '';
-        return c ? `<span style="color:${c}">${ordinal(x.rank)} in ${x.label}</span>` : `${ordinal(x.rank)} in ${x.label}`;
-      }).join(' · ') : '';
+      return candidates.length ? candidates.map(x =>
+        `<span style="color:${rankSummaryColor(x.rank)}">${ordinal(x.rank)} in ${x.label}</span>`
+      ).join(' · ') : '';
     }
 
     // --- Helper: normalize a stat value vs league average (returns index 0–200)
