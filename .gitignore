@@ -6,3 +6,6 @@
 
 # Source asset for the OG image — only og-image.png is shipped
 og-source.png
+
+# Local working/handover doc
+HANDOVER.md
