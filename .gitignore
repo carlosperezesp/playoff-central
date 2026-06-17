@@ -9,3 +9,8 @@ og-source.png
 
 # Local working/handover doc
 HANDOVER.md
+
+# Secrets — API keys etc. Never commit these.
+.env
+*.env
+tools/.env

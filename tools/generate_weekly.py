@@ -191,30 +191,98 @@ def build_facts(season):
             "elite_hitters": elite_hitters, "aces": aces}
 
 
-def render_prose(f):
+# ── Phase 2: LLM writes the prose around the computed facts ─────────────────
+# The numbers/lists are rendered deterministically (no hallucinated stats); the
+# LLM only writes the headline, intro, and each section's lead sentence. Falls
+# back to the templates below if tools/.env / the SDK / the API call is missing.
+LLM_SYSTEM = (
+    "You write the weekly recap for Baseball Lens, an MLB site that turns the season into "
+    "color (green = elite, red = struggling). Voice: sharp, confident, plain American English, "
+    "a little punchy, no clichés, no hype, no emoji. CRITICAL: use ONLY the names and numbers in "
+    "the provided data — never invent or estimate a stat. Each 'lead' is 1-2 sentences that set up "
+    "the list that follows; name a standout or two, but do NOT list every player (the page renders "
+    "the full list below your lead). Return ONLY raw JSON (no markdown fences) with string keys: "
+    "title, intro, hottest_lead, coldest_lead, hitters_lead, pitchers_lead."
+)
+
+
+def load_env():
+    """Load KEY=VALUE pairs from tools/.env into os.environ (gitignored, local)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if not os.path.exists(path):
+        return
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+def facts_for_llm(f):
+    return json.dumps({
+        "hottest_teams": [{"name": t["name"], "streak": t["streak"], "last10": t["l10"],
+                           "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"]}
+                          for t in f["hottest"]],
+        "coldest_teams": [{"name": t["name"], "streak": t["streak"], "last10": t["l10"],
+                           "record": f'{t["wins"]}-{t["losses"]}'} for t in f["coldest"]],
+        "elite_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
+                           "historic_pace": h["historic"]} for h in f["elite_hitters"]],
+        "elite_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"],
+                            "whip": p["whip"], "historic_pace": p["historic"]} for p in f["aces"]],
+    }, indent=2)
+
+
+def llm_narration(f):
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-opus-4-8",
+            max_tokens=1500,
+            system=LLM_SYSTEM,
+            messages=[{"role": "user", "content":
+                       "Write this week's recap from these facts:\n\n" + facts_for_llm(f)}],
+        )
+        text = next(b.text for b in resp.content if b.type == "text")
+        return json.loads(text[text.find("{"): text.rfind("}") + 1])
+    except Exception as e:
+        print(f"  LLM narration unavailable ({e}); using template prose")
+        return None
+
+
+def render_prose(f, n=None):
+    def lead(key, fallback):
+        return f'<p>{escape(n[key])}</p>' if n and n.get(key) else fallback
     parts = []
+    if n and n.get("intro"):
+        parts.append(f'<p class="bl-intro">{escape(n["intro"])}</p>')
+
     h = f["hottest"][0]
-    lead = (f'<p>The hottest team in baseball right now is the <strong>{escape(h["name"])}</strong>, '
-            f'riding a <strong>{escape(h["streak"])}</strong> streak with a {escape(h["l10"])} mark '
-            f'over their last ten ({"+" if h["runDiff"] >= 0 else ""}{h["runDiff"]} run differential).</p>')
-    parts.append('<h2>Hottest teams</h2>' + lead +
+    default = (f'<p>The hottest team in baseball right now is the <strong>{escape(h["name"])}</strong>, '
+               f'riding a <strong>{escape(h["streak"])}</strong> streak with a {escape(h["l10"])} mark '
+               f'over their last ten ({"+" if h["runDiff"] >= 0 else ""}{h["runDiff"]} run differential).</p>')
+    parts.append('<h2>Hottest teams</h2>' + lead("hottest_lead", default) +
                  '<ul class="bl-list">' + "".join(team_row(t, True) for t in f["hottest"]) + '</ul>')
 
-    parts.append('<h2>Cooling off</h2>'
-                 '<p>The other end of the thermometer — teams trying to find their footing:</p>'
+    parts.append('<h2>Cooling off</h2>' +
+                 lead("coldest_lead", '<p>The other end of the thermometer — teams trying to find their footing:</p>') +
                  '<ul class="bl-list">' + "".join(team_row(t, False) for t in f["coldest"]) + '</ul>')
 
     if f["elite_hitters"]:
-        parts.append('<h2>Swinging a green bat</h2>'
-                     '<p>On the Baseball Lens scale, an OPS of .900 or better is '
-                     f'<span style="color:{TEXT["green"]};font-weight:700">elite</span> — green. '
-                     'A shimmer means a historic pace (OPS ≥ 1.000):</p>'
+        default = ('<p>On the Baseball Lens scale, an OPS of .900 or better is '
+                   f'<span style="color:{TEXT["green"]};font-weight:700">elite</span> — green. '
+                   'A shimmer means a historic pace (OPS ≥ 1.000):</p>')
+        parts.append('<h2>Swinging a green bat</h2>' + lead("hitters_lead", default) +
                      '<ul class="bl-list">' + "".join(hitter_row(h) for h in f["elite_hitters"]) + '</ul>')
 
     if f["aces"]:
-        parts.append('<h2>Green on the mound</h2>'
-                     '<p>Form — our 0–100 pitcher score from ERA &amp; WHIP — puts these arms firmly '
-                     'in the green. A shimmer means a historic pace (ERA ≤ 2.00 &amp; WHIP ≤ 1.00):</p>'
+        default = ('<p>Form — our 0–100 pitcher score from ERA &amp; WHIP — puts these arms firmly '
+                   'in the green. A shimmer means a historic pace (ERA ≤ 2.00 &amp; WHIP ≤ 1.00):</p>')
+        parts.append('<h2>Green on the mound</h2>' + lead("pitchers_lead", default) +
                      '<ul class="bl-list">' + "".join(pitcher_row(p) for p in f["aces"]) + '</ul>')
 
     return "\n".join(parts)
@@ -233,6 +301,7 @@ STYLE = """
   .bl-date { color:var(--muted); font-size:13px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; margin-bottom:22px; }
   .bl-article h2 { font-family:'Barlow Condensed','Inter',sans-serif; font-size:14px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); margin:28px 0 10px; }
   .bl-article p { font-size:15px; line-height:1.6; margin-bottom:6px; }
+  .bl-intro { font-size:16px; color:var(--muted); margin-bottom:18px; }
   .bl-list { list-style:none; display:flex; flex-direction:column; gap:10px; margin:14px 0; }
   .bl-muted { color:var(--muted); font-weight:500; }
 
@@ -389,14 +458,16 @@ def main():
     ap.add_argument("--date", default=dt.date.today().isoformat())
     args = ap.parse_args()
 
+    load_env()
     date_iso = args.date
     pretty = dt.date.fromisoformat(date_iso).strftime("%B %-d, %Y")
-    title = f"MLB Weekly — {pretty}"
     desc = ("Hottest and coldest MLB teams, elite hitters and dominant pitchers this week, "
             "seen through the Baseball Lens color scale.")
 
     facts = build_facts(args.season)
-    body = render_prose(facts)
+    narration = llm_narration(facts)
+    title = (narration or {}).get("title") or f"MLB Weekly — {pretty}"
+    body = render_prose(facts, narration)
 
     os.makedirs(BLOG_DIR, exist_ok=True)
     slug = f"weekly-{date_iso}.html"
