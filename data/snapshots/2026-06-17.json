@@ -53,49 +53,60 @@
   "elite_hitters": [
     {
       "name": "Yordan Alvarez",
-      "ops": 1.074
+      "ops": 1.074,
+      "tier": "green"
     },
     {
       "name": "Ben Rice",
-      "ops": 1.006
+      "ops": 1.006,
+      "tier": "green"
     },
     {
       "name": "Nick Kurtz",
-      "ops": 1.0
+      "ops": 1.0,
+      "tier": "green"
     },
     {
       "name": "James Wood",
-      "ops": 0.967
+      "ops": 0.967,
+      "tier": "green"
     },
     {
       "name": "Shohei Ohtani",
-      "ops": 0.966
+      "ops": 0.966,
+      "tier": "green"
     },
     {
       "name": "Willson Contreras",
-      "ops": 0.945
+      "ops": 0.945,
+      "tier": "green"
     }
   ],
   "aces": [
     {
       "name": "Jacob Misiorowski",
-      "forma": 100.0
+      "forma": 100.0,
+      "tier": "green"
     },
     {
       "name": "Cristopher S\u00e1nchez",
-      "forma": 84.4
+      "forma": 84.4,
+      "tier": "green"
     },
     {
       "name": "Cam Schlittler",
-      "forma": 91.9
+      "forma": 91.9,
+      "tier": "green"
     },
     {
       "name": "Chase Burns",
-      "forma": 85.2
+      "forma": 85.2,
+      "tier": "green"
     },
     {
       "name": "Chris Sale",
-      "forma": 80.7
+      "forma": 80.7,
+      "tier": "green"
     }
   ]
 }
