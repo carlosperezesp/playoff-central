@@ -411,7 +411,7 @@ def sec_rookies(f, n):
     rows = "".join(rookie_row(h, "hit") for h in rk.get("hitters", [])[:5])
     rows += "".join(rookie_row(p, "pit") for p in rk.get("pitchers", [])[:3])
     d = '<p>The first-year players forcing their way into the conversation (min. real innings/at-bats):</p>'
-    return _section("The kids are alright", _lead(n, "rookies_lead", d), rows)
+    return _section("The rookie class", _lead(n, "rookies_lead", d), rows)
 
 
 def _by_league(items):
@@ -497,7 +497,7 @@ THEME_CALENDAR = {
     2: ("Hitting Report", ["offense", "bats", "hr"]),
     3: ("Award Races", ["mvp", "cy", "roy"]),
     4: ("Risers & Fallers", ["risers", "fallers", "colors"]),
-    5: ("The Kids", ["rookies"]),
+    5: ("Rookie Report", ["rookies"]),
     6: ("Around the League", ["power", "offense", "staffs"]),
 }
 THEME_BY_KEY = {  # --theme override
@@ -505,7 +505,7 @@ THEME_BY_KEY = {  # --theme override
     "pitching": ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
     "hitting": ("Hitting Report", ["offense", "bats", "hr"]),
     "races": ("Award Races", ["mvp", "cy", "roy"]),
-    "rookies": ("The Kids", ["rookies"]),
+    "rookies": ("Rookie Report", ["rookies"]),
     "movers": ("Risers & Fallers", ["risers", "fallers", "colors"]),
     "league": ("Around the League", ["power", "offense", "staffs"]),
 }
@@ -538,8 +538,8 @@ LLM_SYSTEM = (
     "respect for the reader.\n"
     "- Sense of occasion: when a number is genuinely special, find the image that makes it land — "
     "but never inflate. Admiration without honesty is just hype. Measure every claim against the data.\n"
-    "- Dry wit is welcome; clichés, hype and emoji are not. Be fair to the teams and players "
-    "struggling, never cruel.\n"
+    "- Dry wit is welcome; clichés, hype and emoji are not. Banned outright: 'the kids are alright' "
+    "and any pun on it. Be fair to the teams and players struggling, never cruel.\n"
     "- A feel for the season's arc — who's rising, who's sliding, where this is heading.\n"
     "- Never lie to the reader: use ONLY the names and numbers in the data provided; never invent, "
     "round differently, or estimate a stat.\n\n"
