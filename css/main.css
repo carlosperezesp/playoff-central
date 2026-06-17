@@ -930,11 +930,14 @@
     letter-spacing: .2px; white-space: normal; word-break: break-word;
     margin-top: 3px; line-height: 1.2;
   }
-  .trend-up-strong { background: rgba(22,163,74,.15);  color: var(--win); }
-  .trend-up        { background: rgba(22,163,74,.10);  color: var(--win); font-weight: 700; }
-  .trend-flat      { background: rgba(107,114,128,.1); color: var(--muted); }
-  .trend-down      { background: rgba(220,38,38,.10);  color: var(--loss); }
-  .trend-down-strong { background: rgba(220,38,38,.18); color: var(--loss); }
+  /* 5-tier scale (matches statTextColor): green / light-green / yellow / orange / red.
+     The badge is relative to the player's own career, so a near-zero delta = yellow
+     (≈ career), a big drop = red even if the absolute form is still green. */
+  .trend-up-strong   { background: rgba(22,163,74,.15);  color: #16a34a; font-weight: 700; }
+  .trend-up          { background: rgba(125,148,64,.15);  color: #7d9440; font-weight: 700; }
+  .trend-flat        { background: rgba(194,146,0,.13);   color: #c29200; font-weight: 700; }
+  .trend-down        { background: rgba(224,111,0,.13);   color: #e06f00; font-weight: 700; }
+  .trend-down-strong { background: rgba(229,31,0,.15);    color: #e51f00; font-weight: 700; }
   .trend-badge svg { flex-shrink: 0; }
 
   /* IL section */

@@ -4282,6 +4282,19 @@ function seasonDotsHTML(pid, type) {
   </div>`;
 }
 
+// "≈ career" badge: no meaningful trend, so color it by the player's absolute
+// level (same 5-tier scale as their FORM/OPS chip). Maps a scale color onto the
+// trend tier classes, which already carry those exact colors.
+function absLevelTrendClass(scaleColor) {
+  return {
+    '#16a34a': 'trend-up-strong',   // elite — green
+    '#b1c882': 'trend-up',          // above avg — light green
+    '#ffc000': 'trend-flat',        // average — yellow
+    '#ff8100': 'trend-down',        // below avg — orange
+    '#ff2200': 'trend-down-strong', // poor — red
+  }[scaleColor] || 'trend-flat';
+}
+
 function trendBadgeHTML(current, career, metric) {
   if (!career || !current || career === 0) return '';
   const lowerBetter = metric === 'era' || metric === 'whip';
@@ -4299,7 +4312,8 @@ function trendBadgeHTML(current, career, metric) {
     const cls = pct > 0.15 ? 'trend-down-strong' : 'trend-down';
     return `<span class="trend-badge ${cls}">▼ ${absDelta.toFixed(decimals)}<br>vs career</span>`;
   } else {
-    return `<span class="trend-badge trend-flat">≈ career</span>`;
+    const cls = absLevelTrendClass(getDiamondPlayerColor(current, 'hitter'));
+    return `<span class="trend-badge ${cls}">≈ career</span>`;
   }
 }
 
@@ -4308,12 +4322,15 @@ function trendFormaHTML(currentScore, careerScore) {
   if (currentScore == null || careerScore == null) return '';
   const delta = currentScore - careerScore;
   const abs = Math.abs(delta);
-  if (abs < 3) return `<span class="trend-badge trend-flat">≈ career</span>`;
+  if (abs < 5) {
+    const cls = absLevelTrendClass(getDiamondPlayerColor(currentScore, 'pitcher'));
+    return `<span class="trend-badge ${cls}">≈ career</span>`;
+  }
   if (delta > 0) {
-    const cls = abs >= 10 ? 'trend-up-strong' : 'trend-up';
+    const cls = abs >= 12 ? 'trend-up-strong' : 'trend-up';
     return `<span class="trend-badge ${cls}">▲ ${abs}<br>vs career</span>`;
   } else {
-    const cls = abs >= 10 ? 'trend-down-strong' : 'trend-down';
+    const cls = abs >= 12 ? 'trend-down-strong' : 'trend-down';
     return `<span class="trend-badge ${cls}">▼ ${abs}<br>vs career</span>`;
   }
 }
