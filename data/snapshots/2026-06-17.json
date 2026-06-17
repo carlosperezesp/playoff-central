@@ -26,15 +26,15 @@
       "rank": 6
     },
     {
-      "name": "Chicago White Sox",
+      "name": "Miami Marlins",
       "rank": 7
     },
     {
-      "name": "Philadelphia Phillies",
+      "name": "Chicago White Sox",
       "rank": 8
     },
     {
-      "name": "Miami Marlins",
+      "name": "Philadelphia Phillies",
       "rank": 9
     },
     {
@@ -125,7 +125,7 @@
   "hitters": [
     {
       "name": "Yordan Alvarez",
-      "ops": 1.074,
+      "ops": 1.07,
       "hr": 24
     },
     {
@@ -145,7 +145,7 @@
     },
     {
       "name": "James Wood",
-      "ops": 0.957,
+      "ops": 0.954,
       "hr": 20
     },
     {
@@ -174,13 +174,23 @@
       "hr": 25
     },
     {
+      "name": "Corbin Carroll",
+      "ops": 0.914,
+      "hr": 13
+    },
+    {
       "name": "Aaron Judge",
       "ops": 0.908,
       "hr": 17
     },
     {
-      "name": "Corbin Carroll",
-      "ops": 0.902,
+      "name": "Matt Olson",
+      "ops": 0.894,
+      "hr": 20
+    },
+    {
+      "name": "Yandy D\u00edaz",
+      "ops": 0.891,
       "hr": 12
     },
     {
@@ -189,28 +199,18 @@
       "hr": 16
     },
     {
-      "name": "Matt Olson",
-      "ops": 0.89,
-      "hr": 20
-    },
-    {
-      "name": "Yandy D\u00edaz",
-      "ops": 0.889,
-      "hr": 12
-    },
-    {
       "name": "Jake Bauers",
       "ops": 0.888,
       "hr": 13
     },
     {
       "name": "Jordan Walker",
-      "ops": 0.884,
+      "ops": 0.881,
       "hr": 18
     },
     {
       "name": "CJ Abrams",
-      "ops": 0.877,
+      "ops": 0.875,
       "hr": 14
     },
     {
@@ -225,18 +225,13 @@
     },
     {
       "name": "Mike Trout",
-      "ops": 0.866,
+      "ops": 0.87,
       "hr": 17
     },
     {
       "name": "Junior Caminero",
-      "ops": 0.864,
+      "ops": 0.861,
       "hr": 15
-    },
-    {
-      "name": "Dillon Dingler",
-      "ops": 0.858,
-      "hr": 16
     },
     {
       "name": "Brandon Marsh",
@@ -252,6 +247,11 @@
       "name": "Brice Turang",
       "ops": 0.855,
       "hr": 11
+    },
+    {
+      "name": "Dillon Dingler",
+      "ops": 0.854,
+      "hr": 16
     },
     {
       "name": "Michael Harris II",
@@ -279,18 +279,23 @@
       "hr": 15
     },
     {
-      "name": "Liam Hicks",
-      "ops": 0.842,
-      "hr": 13
-    },
-    {
       "name": "Otto Lopez",
       "ops": 0.841,
       "hr": 5
     },
     {
-      "name": "Freddie Freeman",
+      "name": "Liam Hicks",
       "ops": 0.839,
+      "hr": 13
+    },
+    {
+      "name": "Alec Burleson",
+      "ops": 0.837,
+      "hr": 13
+    },
+    {
+      "name": "Freddie Freeman",
+      "ops": 0.835,
       "hr": 11
     },
     {
@@ -299,19 +304,14 @@
       "hr": 10
     },
     {
-      "name": "Alec Burleson",
-      "ops": 0.833,
-      "hr": 13
-    },
-    {
-      "name": "Riley Greene",
-      "ops": 0.833,
-      "hr": 8
-    },
-    {
       "name": "Brandon Lowe",
       "ops": 0.832,
       "hr": 18
+    },
+    {
+      "name": "Riley Greene",
+      "ops": 0.831,
+      "hr": 8
     },
     {
       "name": "Spencer Horwitz",
@@ -356,14 +356,14 @@
       "forma": 87.0
     },
     {
-      "name": "Eduardo Rodriguez",
-      "era": 2.55,
-      "forma": 70.4
-    },
-    {
       "name": "Drew Rasmussen",
       "era": 2.59,
       "forma": 84.6
+    },
+    {
+      "name": "Eduardo Rodriguez",
+      "era": 2.59,
+      "forma": 70.4
     },
     {
       "name": "Nick Martinez",

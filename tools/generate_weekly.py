@@ -109,46 +109,84 @@ def compute_power(teams):
     return ranked
 
 
-def get_hitters(season, limit=50):
-    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=hitting"
-              f"&gameType=R&playerPool=qualified&sortStat=onBasePlusSlugging&limit={limit}&hydrate=team")
+def _league(s):
+    return (s.get("team", {}) or {}).get("league", {}).get("id")   # 103 AL, 104 NL
+
+
+def get_hitters(season, limit=60, pool="qualified"):
+    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=hitting&gameType=R"
+              f"&playerPool={pool}&sortStat=onBasePlusSlugging&limit={limit}&hydrate=team(league)")
     out = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s["stat"]
         ops = float(st.get("ops", 0) or 0)
         out.append({"id": s["player"]["id"], "name": s["player"]["fullName"],
-                    "team": s.get("team", {}).get("name", ""),
+                    "team": s.get("team", {}).get("name", ""), "lg": _league(s),
                     "ops": ops, "hr": int(st.get("homeRuns", 0) or 0),
+                    "ab": int(st.get("atBats", 0) or 0),
                     "tier": hitter_tier(ops), "historic": ops >= 1.000})
     return out
 
 
-def get_pitchers(season, limit=40):
-    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=pitching"
-              f"&gameType=R&playerPool=qualified&sortStat=earnedRunAverage&limit={limit}&hydrate=team")
+def get_pitchers(season, limit=40, pool="qualified"):
+    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=pitching&gameType=R"
+              f"&playerPool={pool}&sortStat=earnedRunAverage&limit={limit}&hydrate=team(league)")
     out = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s["stat"]
         era, whip = float(st.get("era", 99)), float(st.get("whip", 9))
         forma = forma_score(era, whip)
         out.append({"id": s["player"]["id"], "name": s["player"]["fullName"],
-                    "team": s.get("team", {}).get("name", ""),
+                    "team": s.get("team", {}).get("name", ""), "lg": _league(s),
                     "era": era, "whip": whip, "forma": forma,
+                    "ip": float(st.get("inningsPitched", 0) or 0),
                     "tier": pitcher_tier(forma), "historic": era <= 2.00 and whip <= 1.00})
     return out
 
 
-def get_team_pitching(season, top=5):
-    d = fetch(f"{API}/teams/stats?stats=season&group=pitching&season={season}&sportId=1&gameType=R")
+def get_rookies(season):
+    """Rookie standouts — filter out tiny samples so it's real risers, not 2-PA noise."""
+    hit = [h for h in get_hitters(season, 60, pool="rookies") if h["ab"] >= 70]
+    pit = [p for p in get_pitchers(season, 40, pool="rookies") if p["ip"] >= 30]
+    hit.sort(key=lambda h: h["ops"], reverse=True)
+    pit.sort(key=lambda p: p["forma"], reverse=True)
+    return {"hitters": hit, "pitchers": pit}
+
+
+def _team_stat_rows(url, key, lower_better, top):
+    d = fetch(url)
     rows = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         t, st = s.get("team") or {}, s.get("stat", {})
-        if t and st.get("era") is not None:
-            era, whip = float(st["era"]), float(st.get("whip", 0) or 0)
-            rows.append({"id": t.get("id"), "name": t.get("name", ""), "era": era, "whip": whip,
-                         "tier": pitcher_tier(forma_score(era, whip))})
-    rows.sort(key=lambda r: r["era"])
+        if t and st.get(key) is not None:
+            rows.append({"id": t.get("id"), "name": t.get("name", ""),
+                         "val": float(st[key]), "whip": float(st.get("whip", 0) or 0)})
+    rows.sort(key=lambda r: r["val"], reverse=not lower_better)
     return rows[:top]
+
+
+def get_team_pitching(season, top=5):
+    rows = _team_stat_rows(f"{API}/teams/stats?stats=season&group=pitching&season={season}"
+                           f"&sportId=1&gameType=R", "era", True, top)
+    for r in rows:
+        r["tier"] = pitcher_tier(forma_score(r["val"], r["whip"]))
+    return rows
+
+
+def get_team_bullpen(season, top=5):
+    rows = _team_stat_rows(f"{API}/teams/stats?stats=statSplits&sitCodes=rp&group=pitching"
+                           f"&season={season}&sportId=1&gameType=R", "era", True, top)
+    for r in rows:
+        r["tier"] = pitcher_tier(forma_score(r["val"], r["whip"]))
+    return rows
+
+
+def get_team_offense(season, top=5):
+    rows = _team_stat_rows(f"{API}/teams/stats?stats=season&group=hitting&season={season}"
+                           f"&sportId=1&gameType=R", "ops", False, top)
+    for r in rows:
+        r["tier"] = hitter_tier(r["val"])
+    return rows
 
 
 # ── Movers (week-over-week, vs the snapshot closest to ~7 days back) ─────────
@@ -244,12 +282,20 @@ def power_row(t, show_mv):
             f'<span class="bl-muted">{driver}</span></span></li>')
 
 
-def staff_row(s, i):
+def team_stat_row(i, r, value, unit, sub):
     return (f'<li class="bl-rankrow"><span class="bl-rank">{i}</span>'
-            f'<img class="bl-team-logo" src="{logo_url(s["id"])}" alt="" loading="lazy">'
-            f'<span class="bl-team-info"><strong>{escape(s["name"])}</strong>'
-            f'<span class="bl-muted">{s["whip"]:.2f} WHIP</span></span>'
-            f'<span class="bl-stat" style="color:{TEXT[s["tier"]]}">{s["era"]:.2f}<small>ERA</small></span></li>')
+            f'<img class="bl-team-logo" src="{logo_url(r["id"])}" alt="" loading="lazy">'
+            f'<span class="bl-team-info"><strong>{escape(r["name"])}</strong>'
+            f'<span class="bl-muted">{sub}</span></span>'
+            f'<span class="bl-stat" style="color:{TEXT[r["tier"]]}">{value}<small>{unit}</small></span></li>')
+
+
+def rookie_row(p, kind):
+    if kind == "hit":
+        stat = f'<span class="bl-stat" style="color:{TEXT[p["tier"]]}">{p["ops"]:.3f}<small>OPS</small></span>'
+    else:
+        stat = f'<span class="bl-stat" style="color:{TEXT[p["tier"]]}">{p["era"]:.2f}<small>ERA</small></span>'
+    return _player_row(p, stat, ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>')
 
 
 def _player_row(p, stat_html, extra=""):
@@ -315,9 +361,62 @@ def sec_power(f, n, limit=10):
 
 
 def sec_staffs(f, n, limit=5):
-    rows = "".join(staff_row(s, i) for i, s in enumerate(f["staffs"][:limit], 1))
+    rows = "".join(team_stat_row(i, r, f'{r["val"]:.2f}', "ERA", f'{r["whip"]:.2f} WHIP')
+                   for i, r in enumerate(f["staffs"][:limit], 1))
     d = '<p>Team ERA — rotation and bullpen together. The run-prevention leaders:</p>'
     return _section("Best staffs on the mound", _lead(n, "staff_lead", d), rows)
+
+
+def sec_bullpen(f, n, limit=5):
+    rows = "".join(team_stat_row(i, r, f'{r["val"]:.2f}', "ERA", f'{r["whip"]:.2f} WHIP')
+                   for i, r in enumerate(f.get("bullpen", [])[:limit], 1))
+    d = '<p>Bullpen ERA — who you trust to hold a lead in the seventh, eighth and ninth:</p>'
+    return _section("Best bullpens", _lead(n, "bullpen_lead", d), rows)
+
+
+def sec_offense(f, n, limit=5):
+    rows = "".join(team_stat_row(i, r, f'{r["val"]:.3f}', "OPS", "team OPS")
+                   for i, r in enumerate(f.get("offense", [])[:limit], 1))
+    d = '<p>Team OPS — the lineups doing the most damage, top to bottom:</p>'
+    return _section("Best offenses", _lead(n, "offense_lead", d), rows)
+
+
+def sec_rookies(f, n):
+    rk = f.get("rookies", {})
+    rows = "".join(rookie_row(h, "hit") for h in rk.get("hitters", [])[:5])
+    rows += "".join(rookie_row(p, "pit") for p in rk.get("pitchers", [])[:3])
+    d = '<p>The first-year players forcing their way into the conversation (min. real innings/at-bats):</p>'
+    return _section("The kids are alright", _lead(n, "rookies_lead", d), rows)
+
+
+def _by_league(items):
+    return [x for x in items if x.get("lg") == 103], [x for x in items if x.get("lg") == 104]
+
+
+def _race(heading, lead, items, row_fn, each=3):
+    al, nl = _by_league(items)
+
+    def block(label, lst):
+        return (f'<div class="bl-subhead">{label}</div><ul class="bl-list">'
+                + "".join(row_fn(x) for x in lst[:each]) + '</ul>') if lst else ""
+    body = block("American League", al) + block("National League", nl)
+    return f'<h2>{heading}</h2>{lead}{body}' if body else ""
+
+
+def sec_mvp(f, n):
+    d = '<p>Our quick MVP read — the best bat in each league by OPS right now:</p>'
+    return _race("MVP watch", _lead(n, "mvp_lead", d), f["hitters_all"], hitter_row)
+
+
+def sec_cy(f, n):
+    d = '<p>The Cy Young picture — the arms with the best form (ERA &amp; WHIP) in each league:</p>'
+    return _race("Cy Young watch", _lead(n, "cy_lead", d), f["pitchers_all"], pitcher_row)
+
+
+def sec_roy(f, n):
+    d = '<p>Rookie of the Year — the freshmen bats leading each league:</p>'
+    return _race("Rookie of the Year watch", _lead(n, "roy_lead", d),
+                 f.get("rookies", {}).get("hitters", []), lambda h: rookie_row(h, "hit"))
 
 
 def sec_bats(f, n, limit=8):
@@ -359,25 +458,31 @@ def sec_colors(f, n, limit=6):
     return _section("Changing colors", _lead(n, "colors_lead", d), rows)
 
 
-SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bats": sec_bats, "arms": sec_arms,
-            "hr": sec_hr, "risers": sec_risers, "fallers": sec_fallers, "colors": sec_colors}
+SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "offense": sec_offense,
+            "bats": sec_bats, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
+            "fallers": sec_fallers, "colors": sec_colors, "rookies": sec_rookies,
+            "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy}
+ROOKIE_SECTIONS = {"rookies", "roy"}
+TEAMSTAT_SECTIONS = {"bullpen", "offense"}
 
 # Weekday (0=Mon) → (edition title, [section ids])
 THEME_CALENDAR = {
     0: ("Power Rankings", ["power"]),
-    1: ("Pitching Report", ["staffs", "arms", "risers"]),
-    2: ("Hitting Report", ["bats", "hr"]),
-    3: ("Risers & Fallers", ["risers", "fallers", "colors"]),
-    4: ("Midweek Check", ["power", "staffs"]),
-    5: ("Bats & Arms", ["bats", "arms"]),
-    6: ("Around the League", ["power", "bats", "arms"]),
+    1: ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
+    2: ("Hitting Report", ["offense", "bats", "hr"]),
+    3: ("Award Races", ["mvp", "cy", "roy"]),
+    4: ("Risers & Fallers", ["risers", "fallers", "colors"]),
+    5: ("The Kids", ["rookies"]),
+    6: ("Around the League", ["power", "offense", "staffs"]),
 }
 THEME_BY_KEY = {  # --theme override
     "power": ("Power Rankings", ["power"]),
-    "pitching": ("Pitching Report", ["staffs", "arms", "risers"]),
-    "hitting": ("Hitting Report", ["bats", "hr"]),
+    "pitching": ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
+    "hitting": ("Hitting Report", ["offense", "bats", "hr"]),
+    "races": ("Award Races", ["mvp", "cy", "roy"]),
+    "rookies": ("The Kids", ["rookies"]),
     "movers": ("Risers & Fallers", ["risers", "fallers", "colors"]),
-    "league": ("Around the League", ["power", "bats", "arms"]),
+    "league": ("Around the League", ["power", "offense", "staffs"]),
 }
 FALLBACK_SECTIONS = ["power", "bats", "arms"]   # if a theme's sections are all empty
 
@@ -418,8 +523,9 @@ LLM_SYSTEM = (
     "3-4 sentences picking out the day's real storyline(s). Each lead is 1-3 sentences setting up its "
     "list; name a standout or two but do NOT enumerate the whole list (the page renders it). Return "
     "ONLY raw JSON (no markdown) with string keys from: title, intro, power_lead, staff_lead, "
-    "hitters_lead, pitchers_lead, hr_lead, risers_lead, fallers_lead, colors_lead — include title, "
-    "intro, and a lead for each section in sections_today."
+    "bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, risers_lead, fallers_lead, "
+    "colors_lead, rookies_lead, mvp_lead, cy_lead, roy_lead — include title, intro, and a lead for "
+    "each section in sections_today."
 )
 
 
@@ -443,13 +549,27 @@ def facts_for_llm(f, theme_title, section_ids):
         "power_rankings_top": [{"rank": t["rank"], "name": t["name"],
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
                                 "last10": t["l10"]} for t in f["power_top"]],
-        "best_staffs_by_team_era": [{"rank": i, "name": s["name"], "era": s["era"], "whip": s["whip"]}
+        "best_staffs_by_team_era": [{"rank": i, "name": s["name"], "era": s["val"], "whip": s["whip"]}
                                     for i, s in enumerate(f["staffs"], 1)],
         "elite_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
                            "hr": h["hr"], "historic_pace": h["historic"]} for h in f["elite_hitters"]],
         "elite_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"], "whip": p["whip"],
                             "historic_pace": p["historic"]} for p in f["aces"]],
     }
+    if f.get("bullpen"):
+        payload["best_bullpens_reliever_era"] = [{"rank": i, "name": r["name"], "era": r["val"]}
+                                                 for i, r in enumerate(f["bullpen"], 1)]
+    if f.get("offense"):
+        payload["best_offenses_team_ops"] = [{"rank": i, "name": r["name"], "ops": round(r["val"], 3)}
+                                             for i, r in enumerate(f["offense"], 1)]
+    rk = f.get("rookies", {})
+    if rk.get("hitters") or rk.get("pitchers"):
+        payload["rookie_standouts"] = {
+            "hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3), "hr": h["hr"]}
+                        for h in rk.get("hitters", [])[:6]],
+            "pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"]}
+                         for p in rk.get("pitchers", [])[:4]],
+        }
     if m:
         payload["movers_vs_last_week"] = {
             "hr_climbers": [{"name": x["p"]["name"], "hr_now": x["p"]["hr"], "hr_gained": x["d"]} for x in m.get("hr", [])],
@@ -478,19 +598,27 @@ def llm_narration(f, theme_title, section_ids):
         return None
 
 
-def build_facts(season, prev_rank):
+def build_facts(season, prev_rank, need_rookies=False, need_teamstats=False):
     ranked = compute_power(get_teams(season))
     for t in ranked:
         t["movement"] = (prev_rank[t["name"]] - t["rank"]) if t["name"] in prev_rank else None
-    hitters = get_hitters(season, 50)
+    hitters = get_hitters(season, 60)
     pitchers = get_pitchers(season, 40)
-    return {
+    f = {
         "power_all": ranked, "power_top": ranked[:10], "has_movement": bool(prev_rank),
         "staffs": get_team_pitching(season, 5),
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
         "aces": [p for p in pitchers if p["tier"] == "green"][:6],
+        "rookies": {"hitters": [], "pitchers": []},
+        "bullpen": [], "offense": [],
     }
+    if need_rookies:
+        f["rookies"] = get_rookies(season)
+    if need_teamstats:
+        f["bullpen"] = get_team_bullpen(season, 5)
+        f["offense"] = get_team_offense(season, 5)
+    return f
 
 
 STYLE = """
@@ -519,6 +647,7 @@ STYLE = """
   .bl-team-info { display:flex; flex-direction:column; line-height:1.25; flex:1; min-width:0; }
   .bl-team-info strong { font-size:14.5px; }
   .bl-team-info .bl-muted { font-size:12.5px; }
+  .bl-subhead { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:700; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin:14px 0 2px; }
 
   .bl-player { display:flex; align-items:center; gap:12px; }
   .bl-face-wrap { position:relative; flex-shrink:0; display:inline-block; line-height:0; }
@@ -680,7 +809,10 @@ def main():
 
     baseline = load_baseline(date_iso)
     prev_rank = {r["name"]: r["rank"] for r in baseline.get("power_ranking", [])} if baseline else {}
-    facts = build_facts(args.season, prev_rank)
+    sids = set(section_ids) | set(FALLBACK_SECTIONS)
+    facts = build_facts(args.season, prev_rank,
+                        need_rookies=bool(sids & ROOKIE_SECTIONS),
+                        need_teamstats=bool(sids & TEAMSTAT_SECTIONS))
     facts["movers"] = compute_movers(facts, baseline)
 
     narration = llm_narration(facts, kicker, section_ids)

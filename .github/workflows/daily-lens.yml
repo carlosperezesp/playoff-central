@@ -1,0 +1,47 @@
+name: Daily Lens
+
+# Publishes "The Lens" — the daily MLB column. The edition's theme rotates by
+# weekday inside the generator. Needs the repo secret ANTHROPIC_API_KEY for the
+# AI prose (without it the generator falls back to template prose).
+
+on:
+  schedule:
+    - cron: "0 12 * * *"      # 12:00 UTC daily (~8am ET / 2pm Amsterdam)
+  workflow_dispatch:           # also runnable manually from the Actions tab
+
+permissions:
+  contents: write              # lets the job commit & push the new article
+
+concurrency:
+  group: daily-lens
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r tools/requirements.txt
+
+      - name: Generate today's edition
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python tools/generate_weekly.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "Baseball Lens Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add blog/ data/ sitemap.xml
+          if git diff --staged --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "The Lens: daily edition $(date -u +%F)"
+            git push
+          fi
