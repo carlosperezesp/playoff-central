@@ -7,8 +7,9 @@
 # Source asset for the OG image — only og-image.png is shipped
 og-source.png
 
-# Local working/handover doc
+# Local working/handover docs
 HANDOVER.md
+El_cronista_de_beisbol_definitivo.md
 
 # Secrets — API keys etc. Never commit these.
 .env
