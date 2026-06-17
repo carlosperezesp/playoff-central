@@ -2141,6 +2141,28 @@ function diamondTextColor(bg) {
   return ['#16a34a', '#ff2200', '#ff8100'].includes(bg) ? '#fff' : '#1a1209';
 }
 
+// ── "Shiny" historic-season flag ──────────────────────────────────────────
+// True only for a genuinely historic, qualified season — strict & conservative
+// so it lights up rarely (0–3 players league-wide). Hitters: OPS ≥ 1.000.
+// Pitchers: ERA ≤ 2.00 AND WHIP ≤ 1.00. Volume floors keep out small samples
+// (and, for pitchers, relievers — sub-2 ERA is routine in short relief stints).
+// When true the player is always already in the elite-green tier. Tunable.
+const HISTORIC_MIN_PA = 150;   // hitter qualification guard
+const HISTORIC_MIN_IP = 60;    // pitcher guard (also excludes relievers)
+function isHistoricSeason(type, p) {
+  if (!p) return false;
+  if (type === 'hitter') {
+    const ops = p.ops || 0;
+    const pa  = parseInt(p.stats?.plateAppearances || p.stats?.atBats || 0);
+    return ops >= 1.000 && pa >= HISTORIC_MIN_PA;
+  }
+  const s    = p.stats || {};
+  const era  = parseFloat(s.era);
+  const whip = parseFloat(s.whip);
+  const ip   = parseFloat(s.inningsPitched) || 0;
+  return !isNaN(era) && !isNaN(whip) && era <= 2.00 && whip <= 1.00 && ip >= HISTORIC_MIN_IP;
+}
+
 // Map a bright scale color to a darkened variant readable as text on white.
 // Bright colors (yellow/light-green) wash out as text; these match the
 // "Team Stats vs League" rank colors.
@@ -3549,6 +3571,7 @@ function renderDiamondPanel(teamId, impact) {
     const p = players[0];
     const ops = p ? p.ops : 0;
     const color = p ? getDiamondPlayerColor(ops, 'hitter') : '#9ca3af';
+    const shiny = isHistoricSeason('hitter', p) ? ' dfield-shiny' : '';
     const txtColor = diamondTextColor(color);
     const nameLabel = p ? p.name : '—';
     const rookieStar = p?.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
@@ -3558,7 +3581,7 @@ function renderDiamondPanel(teamId, impact) {
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
       onclick="selectDiamondKey('${key}',${teamId})">
-      <div class="dfield-circle" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
+      <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
       <div class="dfield-pill">${nameLabel}</div>
     </button>`;
   }
@@ -3573,6 +3596,7 @@ function renderDiamondPanel(teamId, impact) {
     const circles = shown.map((p, i) => {
       const key   = `p-${role}-${i}`;
       const color = getDiamondPlayerColor(p.score, 'pitcher');
+      const shiny = isHistoricSeason('pitcher', p) ? ' dfield-shiny' : '';
       const txtColor = diamondTextColor(color);
       const label = p.throws !== '?' ? p.throws : role;
       const rookieStar = p.isRookie ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#b45309;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;line-height:1">R</span>` : '';
@@ -3582,7 +3606,7 @@ function renderDiamondPanel(teamId, impact) {
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
         onclick="selectDiamondKey('${key}',${teamId})">
-        <div class="dfield-circle" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
+        <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
         <div class="dfield-pill">${p.name}</div>
         ${extras}
       </button>`;

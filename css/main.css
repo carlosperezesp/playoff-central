@@ -634,6 +634,29 @@
     border: 3px solid rgba(255,255,255,.95);
     box-shadow: 0 8px 20px rgba(0,66,117,.22);
   }
+  /* Historic-season "shiny": animated gold sheen sweeping the elite-green
+     circle. Added via .dfield-shiny when isHistoricSeason() is true. The
+     ::after clips its own gradient to the circle (border-radius), so the
+     corner award pips / rookie star stay visible. */
+  .dfield-shiny::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: linear-gradient(115deg,
+      transparent 38%,
+      rgba(255,226,160,.55) 47%,
+      rgba(255,255,255,.95) 50%,
+      rgba(255,226,160,.55) 53%,
+      transparent 62%);
+    background-size: 250% 100%; background-position: 150% 0;
+    mix-blend-mode: screen; pointer-events: none;
+    animation: dfieldSheen 3.4s ease-in-out infinite;
+  }
+  @keyframes dfieldSheen {
+    0%       { background-position: 150% 0; }
+    55%,100% { background-position: -50% 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dfield-shiny::after { animation: none; background-position: 50% 0; opacity: .5; }
+  }
   .dfield-pill {
     font-size: 12px; font-weight: 600; color: var(--text);
     background: rgba(252,252,248,.92);
