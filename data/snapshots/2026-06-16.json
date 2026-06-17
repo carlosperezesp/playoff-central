@@ -1,5 +1,5 @@
 {
-  "date": "2026-06-17",
+  "date": "2026-06-16",
   "power_ranking": [
     {
       "name": "New York Yankees",
@@ -26,15 +26,15 @@
       "rank": 6
     },
     {
-      "name": "Miami Marlins",
+      "name": "Chicago White Sox",
       "rank": 7
     },
     {
-      "name": "Chicago White Sox",
+      "name": "Philadelphia Phillies",
       "rank": 8
     },
     {
-      "name": "Philadelphia Phillies",
+      "name": "Miami Marlins",
       "rank": 9
     },
     {
@@ -66,27 +66,27 @@
       "rank": 16
     },
     {
-      "name": "New York Mets",
+      "name": "Minnesota Twins",
       "rank": 17
     },
     {
-      "name": "Minnesota Twins",
+      "name": "Texas Rangers",
       "rank": 18
     },
     {
-      "name": "Texas Rangers",
+      "name": "Arizona Diamondbacks",
       "rank": 19
     },
     {
-      "name": "Arizona Diamondbacks",
+      "name": "Los Angeles Angels",
       "rank": 20
     },
     {
-      "name": "Los Angeles Angels",
+      "name": "Pittsburgh Pirates",
       "rank": 21
     },
     {
-      "name": "Pittsburgh Pirates",
+      "name": "Detroit Tigers",
       "rank": 22
     },
     {
@@ -94,11 +94,11 @@
       "rank": 23
     },
     {
-      "name": "Detroit Tigers",
+      "name": "Cincinnati Reds",
       "rank": 24
     },
     {
-      "name": "Cincinnati Reds",
+      "name": "New York Mets",
       "rank": 25
     },
     {
@@ -125,7 +125,7 @@
   "hitters": [
     {
       "name": "Yordan Alvarez",
-      "ops": 1.07,
+      "ops": 1.074,
       "hr": 24
     },
     {
@@ -139,24 +139,29 @@
       "hr": 18
     },
     {
-      "name": "Shohei Ohtani",
-      "ops": 0.966,
-      "hr": 15
-    },
-    {
       "name": "James Wood",
-      "ops": 0.954,
+      "ops": 0.967,
       "hr": 20
     },
     {
-      "name": "Juan Soto",
-      "ops": 0.948,
+      "name": "Shohei Ohtani",
+      "ops": 0.966,
       "hr": 15
     },
     {
       "name": "Willson Contreras",
       "ops": 0.945,
       "hr": 16
+    },
+    {
+      "name": "Kyle Schwarber",
+      "ops": 0.942,
+      "hr": 25
+    },
+    {
+      "name": "Juan Soto",
+      "ops": 0.938,
+      "hr": 15
     },
     {
       "name": "Munetaka Murakami",
@@ -169,23 +174,13 @@
       "hr": 23
     },
     {
-      "name": "Kyle Schwarber",
-      "ops": 0.929,
-      "hr": 25
-    },
-    {
-      "name": "Corbin Carroll",
-      "ops": 0.91,
-      "hr": 13
-    },
-    {
       "name": "Aaron Judge",
       "ops": 0.908,
       "hr": 17
     },
     {
-      "name": "Yandy D\u00edaz",
-      "ops": 0.895,
+      "name": "Corbin Carroll",
+      "ops": 0.902,
       "hr": 12
     },
     {
@@ -194,9 +189,19 @@
       "hr": 20
     },
     {
+      "name": "Yandy D\u00edaz",
+      "ops": 0.892,
+      "hr": 12
+    },
+    {
       "name": "Max Muncy",
       "ops": 0.891,
       "hr": 16
+    },
+    {
+      "name": "Jordan Walker",
+      "ops": 0.891,
+      "hr": 18
     },
     {
       "name": "Jake Bauers",
@@ -204,13 +209,8 @@
       "hr": 13
     },
     {
-      "name": "Jordan Walker",
-      "ops": 0.878,
-      "hr": 18
-    },
-    {
       "name": "CJ Abrams",
-      "ops": 0.875,
+      "ops": 0.876,
       "hr": 14
     },
     {
@@ -229,14 +229,19 @@
       "hr": 17
     },
     {
+      "name": "Brandon Marsh",
+      "ops": 0.863,
+      "hr": 9
+    },
+    {
       "name": "Junior Caminero",
-      "ops": 0.858,
+      "ops": 0.86,
       "hr": 15
     },
     {
-      "name": "Brandon Marsh",
+      "name": "Dillon Dingler",
       "ops": 0.857,
-      "hr": 9
+      "hr": 16
     },
     {
       "name": "Elly De La Cruz",
@@ -264,11 +269,6 @@
       "hr": 20
     },
     {
-      "name": "Dillon Dingler",
-      "ops": 0.851,
-      "hr": 16
-    },
-    {
       "name": "Pete Crow-Armstrong",
       "ops": 0.846,
       "hr": 14
@@ -280,22 +280,27 @@
     },
     {
       "name": "Otto Lopez",
-      "ops": 0.841,
+      "ops": 0.844,
       "hr": 5
     },
     {
       "name": "Liam Hicks",
-      "ops": 0.839,
+      "ops": 0.842,
       "hr": 13
     },
     {
       "name": "Freddie Freeman",
-      "ops": 0.837,
+      "ops": 0.842,
       "hr": 11
     },
     {
+      "name": "Riley Greene",
+      "ops": 0.84,
+      "hr": 8
+    },
+    {
       "name": "Alec Burleson",
-      "ops": 0.835,
+      "ops": 0.84,
       "hr": 13
     },
     {
@@ -314,14 +319,9 @@
       "hr": 9
     },
     {
-      "name": "Riley Greene",
-      "ops": 0.828,
-      "hr": 8
-    },
-    {
-      "name": "Jonathan Aranda",
+      "name": "Randy Arozarena",
       "ops": 0.825,
-      "hr": 11
+      "hr": 7
     }
   ],
   "pitchers": [
@@ -357,8 +357,8 @@
     },
     {
       "name": "Eduardo Rodriguez",
-      "era": 2.53,
-      "forma": 70.6
+      "era": 2.55,
+      "forma": 70.4
     },
     {
       "name": "Drew Rasmussen",
@@ -374,11 +374,6 @@
       "name": "Parker Messick",
       "era": 2.68,
       "forma": 74.8
-    },
-    {
-      "name": "Dylan Cease",
-      "era": 2.71,
-      "forma": 70.3
     },
     {
       "name": "Justin Wrobleski",
@@ -431,11 +426,6 @@
       "forma": 73.1
     },
     {
-      "name": "Ranger Suarez",
-      "era": 3.21,
-      "forma": 65.6
-    },
-    {
       "name": "Emerson Hancock",
       "era": 3.28,
       "forma": 71.1
@@ -476,29 +466,14 @@
       "forma": 63.6
     },
     {
-      "name": "Will Warren",
-      "era": 3.47,
-      "forma": 57.7
-    },
-    {
       "name": "Michael King",
       "era": 3.6,
       "forma": 60.4
     },
     {
-      "name": "Randy V\u00e1squez",
-      "era": 3.63,
-      "forma": 54.7
-    },
-    {
       "name": "Michael Wacha",
       "era": 3.64,
       "forma": 60.8
-    },
-    {
-      "name": "Nolan McLean",
-      "era": 3.67,
-      "forma": 63.8
     },
     {
       "name": "Reid Detmers",
@@ -524,6 +499,31 @@
       "name": "Seth Lugo",
       "era": 3.86,
       "forma": 50.9
+    },
+    {
+      "name": "Freddy Peralta",
+      "era": 3.9,
+      "forma": 52.5
+    },
+    {
+      "name": "Andrew Abbott",
+      "era": 3.95,
+      "forma": 47.4
+    },
+    {
+      "name": "Tanner Bibee",
+      "era": 3.96,
+      "forma": 56.8
+    },
+    {
+      "name": "Nolan McLean",
+      "era": 4.01,
+      "forma": 57.9
+    },
+    {
+      "name": "Shane Baz",
+      "era": 4.06,
+      "forma": 47.0
     }
   ]
 }

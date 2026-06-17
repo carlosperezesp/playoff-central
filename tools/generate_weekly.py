@@ -77,9 +77,10 @@ def fetch(url):
         return json.load(r)
 
 
-def get_teams(season):
+def get_teams(season, asof=None):
+    datep = f"&date={asof}" if asof else ""
     d = fetch(f"{API}/standings?leagueId=103,104&season={season}"
-              f"&standingsTypes=regularSeason&hydrate=team,division")
+              f"&standingsTypes=regularSeason{datep}&hydrate=team,division")
     out = []
     for rec in d.get("records", []):
         for tr in rec.get("teamRecords", []):
@@ -113,9 +114,17 @@ def _league(s):
     return (s.get("team", {}) or {}).get("league", {}).get("id")   # 103 AL, 104 NL
 
 
-def get_hitters(season, limit=60, pool="qualified"):
-    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=hitting&gameType=R"
-              f"&playerPool={pool}&sortStat=onBasePlusSlugging&limit={limit}&hydrate=team(league)")
+def _stats_url(season, group, sort, limit, pool, asof):
+    if asof:
+        span = f"stats=byDateRange&startDate={season}-01-01&endDate={asof}"
+    else:
+        span = "stats=season"
+    return (f"{API}/stats?{span}&season={season}&sportId=1&group={group}&gameType=R"
+            f"&playerPool={pool}&sortStat={sort}&limit={limit}&hydrate=team(league)")
+
+
+def get_hitters(season, limit=60, pool="qualified", asof=None):
+    d = fetch(_stats_url(season, "hitting", "onBasePlusSlugging", limit, pool, asof))
     out = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s["stat"]
@@ -125,12 +134,13 @@ def get_hitters(season, limit=60, pool="qualified"):
                     "ops": ops, "hr": int(st.get("homeRuns", 0) or 0),
                     "ab": int(st.get("atBats", 0) or 0),
                     "tier": hitter_tier(ops), "historic": ops >= 1.000})
+    if asof and pool == "qualified":   # byDateRange ignores the qualified pool — approximate it
+        out = [h for h in out if h["ab"] >= 120]
     return out
 
 
-def get_pitchers(season, limit=40, pool="qualified"):
-    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=pitching&gameType=R"
-              f"&playerPool={pool}&sortStat=earnedRunAverage&limit={limit}&hydrate=team(league)")
+def get_pitchers(season, limit=40, pool="qualified", asof=None):
+    d = fetch(_stats_url(season, "pitching", "earnedRunAverage", limit, pool, asof))
     out = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s["stat"]
@@ -141,20 +151,28 @@ def get_pitchers(season, limit=40, pool="qualified"):
                     "era": era, "whip": whip, "forma": forma,
                     "ip": float(st.get("inningsPitched", 0) or 0),
                     "tier": pitcher_tier(forma), "historic": era <= 2.00 and whip <= 1.00})
+    if asof and pool == "qualified":
+        out = [p for p in out if p["ip"] >= 50]
     return out
 
 
-def get_rookies(season):
+def get_rookies(season, asof=None):
     """Rookie standouts — filter out tiny samples so it's real risers, not 2-PA noise."""
-    hit = [h for h in get_hitters(season, 60, pool="rookies") if h["ab"] >= 70]
-    pit = [p for p in get_pitchers(season, 40, pool="rookies") if p["ip"] >= 30]
+    try:
+        hit = [h for h in get_hitters(season, 60, pool="rookies", asof=asof) if h["ab"] >= 70]
+        pit = [p for p in get_pitchers(season, 40, pool="rookies", asof=asof) if p["ip"] >= 30]
+    except Exception:
+        return {"hitters": [], "pitchers": []}
     hit.sort(key=lambda h: h["ops"], reverse=True)
     pit.sort(key=lambda p: p["forma"], reverse=True)
     return {"hitters": hit, "pitchers": pit}
 
 
 def _team_stat_rows(url, key, lower_better, top):
-    d = fetch(url)
+    try:
+        d = fetch(url)
+    except Exception:
+        return []
     rows = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         t, st = s.get("team") or {}, s.get("stat", {})
@@ -165,15 +183,22 @@ def _team_stat_rows(url, key, lower_better, top):
     return rows[:top]
 
 
-def get_team_pitching(season, top=5):
-    rows = _team_stat_rows(f"{API}/teams/stats?stats=season&group=pitching&season={season}"
-                           f"&sportId=1&gameType=R", "era", True, top)
+def _team_span(season, asof):
+    return (f"stats=byDateRange&startDate={season}-01-01&endDate={asof}" if asof else "stats=season")
+
+
+def get_team_pitching(season, top=5, asof=None):
+    rows = _team_stat_rows(f"{API}/teams/stats?{_team_span(season, asof)}&group=pitching"
+                           f"&season={season}&sportId=1&gameType=R", "era", True, top)
     for r in rows:
         r["tier"] = pitcher_tier(forma_score(r["val"], r["whip"]))
     return rows
 
 
-def get_team_bullpen(season, top=5):
+def get_team_bullpen(season, top=5, asof=None):
+    # Reliever split isn't available point-in-time; skip on past dates.
+    if asof:
+        return []
     rows = _team_stat_rows(f"{API}/teams/stats?stats=statSplits&sitCodes=rp&group=pitching"
                            f"&season={season}&sportId=1&gameType=R", "era", True, top)
     for r in rows:
@@ -181,9 +206,9 @@ def get_team_bullpen(season, top=5):
     return rows
 
 
-def get_team_offense(season, top=5):
-    rows = _team_stat_rows(f"{API}/teams/stats?stats=season&group=hitting&season={season}"
-                           f"&sportId=1&gameType=R", "ops", False, top)
+def get_team_offense(season, top=5, asof=None):
+    rows = _team_stat_rows(f"{API}/teams/stats?{_team_span(season, asof)}&group=hitting"
+                           f"&season={season}&sportId=1&gameType=R", "ops", False, top)
     for r in rows:
         r["tier"] = hitter_tier(r["val"])
     return rows
@@ -598,15 +623,15 @@ def llm_narration(f, theme_title, section_ids):
         return None
 
 
-def build_facts(season, prev_rank, need_rookies=False, need_teamstats=False):
-    ranked = compute_power(get_teams(season))
+def build_facts(season, prev_rank, asof=None, need_rookies=False, need_teamstats=False):
+    ranked = compute_power(get_teams(season, asof))
     for t in ranked:
         t["movement"] = (prev_rank[t["name"]] - t["rank"]) if t["name"] in prev_rank else None
-    hitters = get_hitters(season, 60)
-    pitchers = get_pitchers(season, 40)
+    hitters = get_hitters(season, 60, asof=asof)
+    pitchers = get_pitchers(season, 40, asof=asof)
     f = {
         "power_all": ranked, "power_top": ranked[:10], "has_movement": bool(prev_rank),
-        "staffs": get_team_pitching(season, 5),
+        "staffs": get_team_pitching(season, 5, asof=asof),
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
         "aces": [p for p in pitchers if p["tier"] == "green"][:6],
@@ -614,10 +639,10 @@ def build_facts(season, prev_rank, need_rookies=False, need_teamstats=False):
         "bullpen": [], "offense": [],
     }
     if need_rookies:
-        f["rookies"] = get_rookies(season)
+        f["rookies"] = get_rookies(season, asof=asof)
     if need_teamstats:
-        f["bullpen"] = get_team_bullpen(season, 5)
-        f["offense"] = get_team_offense(season, 5)
+        f["bullpen"] = get_team_bullpen(season, 5, asof=asof)
+        f["offense"] = get_team_offense(season, 5, asof=asof)
     return f
 
 
@@ -799,18 +824,29 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=dt.date.today().year)
     ap.add_argument("--date", default=dt.date.today().isoformat())
-    ap.add_argument("--theme", default="", help="override: power|pitching|hitting|movers|league")
+    ap.add_argument("--theme", default="", help="override: power|pitching|hitting|races|rookies|movers|league")
+    ap.add_argument("--snapshot-only", action="store_true",
+                    help="just save a dated snapshot (no article/LLM) — for building movers baselines")
     args = ap.parse_args()
 
     load_env()
     date_iso = args.date
+    # Past dates use point-in-time stats (real retrospective); today uses current season.
+    asof = date_iso if date_iso < dt.date.today().isoformat() else None
+
+    if args.snapshot_only:
+        facts = build_facts(args.season, {}, asof=asof)
+        write_snapshot(date_iso, facts)
+        print(f"Snapshot {date_iso} (as-of {asof or 'current'}) — no article")
+        return
+
     pretty = dt.date.fromisoformat(date_iso).strftime("%B %-d, %Y")
     kicker, section_ids = pick_theme(date_iso, args.theme)
 
     baseline = load_baseline(date_iso)
     prev_rank = {r["name"]: r["rank"] for r in baseline.get("power_ranking", [])} if baseline else {}
     sids = set(section_ids) | set(FALLBACK_SECTIONS)
-    facts = build_facts(args.season, prev_rank,
+    facts = build_facts(args.season, prev_rank, asof=asof,
                         need_rookies=bool(sids & ROOKIE_SECTIONS),
                         need_teamstats=bool(sids & TEAMSTAT_SECTIONS))
     facts["movers"] = compute_movers(facts, baseline)
