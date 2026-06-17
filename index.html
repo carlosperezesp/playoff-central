@@ -79,6 +79,7 @@
   <button class="tab-btn" onclick="switchTab('topgames')">TOP GAMES</button>
   <button class="tab-btn" onclick="switchTab('rosters')">TEAMS</button>
   <button class="tab-btn" onclick="switchTab('mvp')">MVP TRACKER</button>
+  <button class="tab-btn" onclick="switchTab('info')">INFO</button>
 </div>
 
 <main>
@@ -135,6 +136,156 @@
       </div>
     </div>
   </div>
+
+  <div id="tab-info" class="tab-panel">
+    <div class="info-screen">
+      <h1 class="info-title">How to read Baseball Lens</h1>
+      <p class="info-intro">New here? No baseball PhD required. This page explains everything you
+        see in the app — the colors, the stats, and the little badges.</p>
+
+      <!-- 1 · Anatomy of a player -->
+      <section class="info-section">
+        <h2 class="info-h2">Anatomy of a player</h2>
+        <p class="info-text">Every player appears as a colored circle. Tap any one for full
+          season stats. Here's what each part is telling you:</p>
+        <div class="info-dummy">
+          <div class="info-dummy-stage">
+            <button class="dfield-btn-inline" type="button" tabindex="-1" aria-hidden="true">
+              <div class="dfield-circle" style="background:#16a34a;color:#fff;position:relative;flex-direction:column;gap:1px">
+                <span class="award-pip" style="top:-5px;left:-5px"><svg width="16" height="16" viewBox="-16 -16 32 32"><circle r="15" fill="#f59e0b"/><polygon points="0,-9 2.5,-3.5 8.5,-3.5 4,0 5.5,6.5 0,3 -5.5,6.5 -4,0 -8.5,-3.5 -2.5,-3.5" fill="white"/></svg></span>
+                <span class="award-pip" style="bottom:-5px;right:-5px"><svg width="16" height="16" viewBox="-16 -16 32 32"><circle r="15" fill="#f59e0b"/><rect x="-9" y="4" width="18" height="4" rx="1" fill="white"/><polyline points="-9,4 -9,-7 -4,0 0,-9 4,0 9,-7 9,4" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/><circle cx="-4" cy="6" r="1.2" fill="white"/><circle cx="0" cy="6" r="1.2" fill="white"/><circle cx="4" cy="6" r="1.2" fill="white"/></svg></span>
+                <span style="font-size:12px;font-weight:800;line-height:1">CF</span>
+              </div>
+              <div class="dfield-pill">A. Player</div>
+            </button>
+          </div>
+          <ul class="info-callouts">
+            <li><span class="info-callout-key" style="background:#16a34a"></span>
+              <div><strong>The circle's color</strong> = how well the player is doing right now.
+              Green is great, red is cold — see the full scale below.</div></li>
+            <li><span class="info-callout-key info-callout-key--label">CF</span>
+              <div><strong>The label</strong> = field position for hitters (CF, SS, 1B…), or
+              throwing hand for pitchers (L / R).</div></li>
+            <li><span class="info-callout-key info-callout-key--pip"><svg width="14" height="14" viewBox="-16 -16 32 32"><circle r="15" fill="#f59e0b"/><polygon points="0,-9 2.5,-3.5 8.5,-3.5 4,0 5.5,6.5 0,3 -5.5,6.5 -4,0 -8.5,-3.5 -2.5,-3.5" fill="white"/></svg></span>
+              <div><strong>Corner pips</strong> = career awards (MVP, All-Star, Gold Glove…).
+              Full key below.</div></li>
+            <li><span class="info-callout-key info-callout-key--pill">A. Player</span>
+              <div><strong>The name tag</strong> = the player. Tap it to open full season stats.</div></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 2 · Color code -->
+      <section class="info-section">
+        <h2 class="info-h2">The color code</h2>
+        <p class="info-text">Color is the heart of the app: it turns a player's season into a
+          single glance. Same scale everywhere — the diamond, top games, MVP race and team stats.</p>
+        <div class="info-scale">
+          <div class="info-scale-bar">
+            <div style="flex:1;background:#ff2200"></div>
+            <div style="flex:1;background:#ff8100"></div>
+            <div style="flex:1;background:#ffc000"></div>
+            <div style="flex:1;background:#b1c882"></div>
+            <div style="flex:1;background:#16a34a"></div>
+          </div>
+          <div class="info-scale-labels">
+            <span>POOR</span><span>BELOW AVG</span><span>AVERAGE</span><span>ABOVE AVG</span><span>ELITE</span>
+          </div>
+        </div>
+        <ul class="info-extra-colors">
+          <li>
+            <span class="dfield-circle dfield-shiny info-mini-circle" style="background:#16a34a;color:#fff">★</span>
+            <div><strong>Shimmer</strong> — a bright animated shine marking a genuinely historic
+            season in progress. Reserved for the rare few (qualified OPS ≥ 1.000 hitters;
+            ERA ≤ 2.00 &amp; WHIP ≤ 1.00 pitchers).</div>
+          </li>
+          <li>
+            <span class="dfield-circle info-mini-circle" style="background:#9ca3af;color:#fff">?</span>
+            <div><strong>Gray</strong> — not enough data yet (hasn't played, or no season stats).</div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 3 · Stats glossary -->
+      <section class="info-section">
+        <h2 class="info-h2">Stats glossary</h2>
+        <h3 class="info-h3">Hitters</h3>
+        <dl class="info-glossary">
+          <dt>OPS</dt><dd>The headline hitting number (on-base % + slugging). ~.750 is average,
+            .900+ is elite. Drives a hitter's color.</dd>
+          <dt>AVG</dt><dd>Batting average — hits per at-bat.</dd>
+          <dt>OBP</dt><dd>On-base % — how often they reach base.</dd>
+          <dt>SLG</dt><dd>Slugging — total bases per at-bat (a power measure).</dd>
+          <dt>HR · RBI · SB</dt><dd>Home runs · runs batted in · stolen bases.</dd>
+          <dt>R · H · BB · SO</dt><dd>Runs · hits · walks · strikeouts.</dd>
+        </dl>
+        <h3 class="info-h3">Pitchers</h3>
+        <dl class="info-glossary">
+          <dt>FORM</dt><dd>Baseball Lens's 0–100 pitcher score, built from ERA &amp; WHIP. ~50 is
+            average, 75+ is elite. Drives a pitcher's color.</dd>
+          <dt>ERA</dt><dd>Earned runs allowed per 9 innings. Lower is better — ~4.00 average,
+            under 3.00 excellent.</dd>
+          <dt>WHIP</dt><dd>Walks + hits per inning — baserunners allowed. Under 1.00 is elite.</dd>
+          <dt>IP</dt><dd>Innings pitched.</dd>
+          <dt>GS · QS</dt><dd>Games started · quality starts (6+ IP, 3 earned runs or fewer).</dd>
+          <dt>HLD</dt><dd>Holds — a reliever protecting a lead without finishing the game.</dd>
+        </dl>
+      </section>
+
+      <!-- 4 · Badges & FAQ -->
+      <section class="info-section">
+        <h2 class="info-h2">Badges &amp; markers</h2>
+        <ul class="info-badges">
+          <li><span class="info-badge-ico"><svg width="20" height="20" viewBox="-16 -16 32 32"><circle r="15" fill="#f59e0b"/><polygon points="0,-9 2.5,-3.5 8.5,-3.5 4,0 5.5,6.5 0,3 -5.5,6.5 -4,0 -8.5,-3.5 -2.5,-3.5" fill="white"/></svg></span> <strong>All-Star</strong> — selected to an All-Star Game.</li>
+          <li><span class="info-badge-ico"><svg width="20" height="20" viewBox="-16 -16 32 32"><circle r="15" fill="#d97706"/><text x="0" y="6" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="900" font-size="17" fill="white">G</text></svg></span> <strong>Gold Glove</strong> — elite defender at their position.</li>
+          <li><span class="info-badge-ico"><svg width="20" height="20" viewBox="-16 -16 32 32"><circle r="15" fill="#94a3b8"/><text x="0" y="6" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="900" font-size="17" fill="white">S</text></svg></span> <strong>Silver Slugger</strong> — best hitter at their position.</li>
+          <li><span class="info-badge-ico"><svg width="20" height="20" viewBox="-16 -16 32 32"><circle r="15" fill="#f59e0b"/><rect x="-9" y="4" width="18" height="4" rx="1" fill="white"/><polyline points="-9,4 -9,-7 -4,0 0,-9 4,0 9,-7 9,4" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/><circle cx="-4" cy="6" r="1.2" fill="white"/><circle cx="0" cy="6" r="1.2" fill="white"/><circle cx="4" cy="6" r="1.2" fill="white"/></svg></span> <strong>MVP</strong> — a past Most Valuable Player.</li>
+          <li><span class="info-badge-ico"><svg width="20" height="20" viewBox="-16 -16 32 32"><circle r="15" fill="#1565d8"/><text x="0" y="6" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="900" font-size="17" fill="white">C</text></svg></span> <strong>Cy Young</strong> — a past best-pitcher award winner.</li>
+          <li><span class="info-badge-ico"><span class="info-rookie-r">R</span></span> <strong>Rookie</strong> — in their first MLB season.</li>
+        </ul>
+        <p class="info-text" style="margin-top:14px">On pitchers you'll also see a <strong>rest marker</strong>
+          — how many days since they last pitched:</p>
+        <div class="info-rest-row">
+          <span class="rest-dot rest-0">Pitched today</span>
+          <span class="rest-dot rest-1">1d rest</span>
+          <span class="rest-dot rest-2">2d rest</span>
+          <span class="rest-dot rest-3">3d+ rest</span>
+        </div>
+        <p class="info-text" style="margin-top:14px">A <strong>TOP MATCH</strong> tag flags a game
+          worth watching — a matchup with top pitchers and/or multiple candidates to win MVP,
+          Cy Young or Rookie of the Year.</p>
+      </section>
+
+      <!-- 5 · The MVP Race -->
+      <section class="info-section">
+        <h2 class="info-h2">The MVP Race</h2>
+        <p class="info-text">The <strong>MVP Race</strong> tab tracks the season's individual award
+          races — <strong>MVP</strong>, <strong>Cy Young</strong> (best pitcher) and
+          <strong>Rookie of the Year</strong> — for both the American and National League.</p>
+        <p class="info-text" style="margin-top:8px">Each race ranks the leading candidates by their
+          season, using a custom formula that measures their value from 0 to 100. Use the chips at the
+          top to focus on a single award, and tap any player to open their full stats.</p>
+      </section>
+
+      <!-- 6 · FAQ -->
+      <section class="info-section">
+        <h2 class="info-h2">FAQ</h2>
+        <details class="info-faq"><summary>What is Baseball Lens?</summary>
+          <p>A clean dashboard for MLB: the playoff race, the day's top games, team rosters and the
+            award races. It turns raw stats into color so you can see who's hot at a glance.</p></details>
+        <details class="info-faq"><summary>Where does the data come from?</summary>
+          <p>The official MLB Stats API. Standings and scores refresh through the day; player season
+            stats update daily.</p></details>
+        <details class="info-faq"><summary>Why is a player gray?</summary>
+          <p>There isn't enough data yet — they haven't played, or have no season stats to color.</p></details>
+        <details class="info-faq"><summary>Is this affiliated with MLB?</summary>
+          <p>No. It's an independent project that reads the public MLB Stats API.</p></details>
+        <details class="info-faq"><summary>Is it free?</summary>
+          <p>Yes, completely free.</p></details>
+      </section>
+    </div>
+  </div>
+
   <div class="app-footer">
   <div id="update-disclaimer" style="font-size:11px;color:var(--muted);opacity:.6;margin-bottom:8px;letter-spacing:.5px"></div>
   <div>Feedback? Bugs? Suggestions? Email me!</div>
@@ -160,6 +311,10 @@
   <button class="bnav-btn" onclick="switchTab('mvp')" data-tab="mvp">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
     <span>MVP RACE</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('info')" data-tab="info">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <span>INFO</span>
   </button>
 </nav>
 

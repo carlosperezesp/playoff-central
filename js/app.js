@@ -7919,7 +7919,7 @@ function getTeamLeagueId(teamId) {
 })();
 
 // On load, jump to the tab specified in the URL hash (e.g. #mvp, #rosters/nyy)
-const VALID_TABS = new Set(['standings','topgames','rosters','mvp']);
+const VALID_TABS = new Set(['standings','topgames','rosters','mvp','info']);
 const [hashTab, hashParam] = window.location.hash.replace('#', '').split('/');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
