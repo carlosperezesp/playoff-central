@@ -109,20 +109,34 @@ def compute_power(teams):
     return ranked
 
 
-def get_hitters(season, limit=14):
-    d = fetch(f"{API}/stats/leaders?leaderCategories=onBasePlusSlugging&season={season}"
-              f"&sportId=1&statGroup=hitting&limit={limit}&leaderGameTypes=R")
+def get_hitters(season, limit=50):
+    d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=hitting"
+              f"&gameType=R&playerPool=qualified&sortStat=onBasePlusSlugging&limit={limit}&hydrate=team")
     out = []
-    for cat in d.get("leagueLeaders", []):
-        for l in cat.get("leaders", []):
-            ops = float(l["value"])
-            out.append({"id": l["person"]["id"], "name": l["person"]["fullName"], "ops": ops,
-                        "team": l.get("team", {}).get("name", ""),
-                        "tier": hitter_tier(ops), "historic": ops >= 1.000})
+    for s in d.get("stats", [{}])[0].get("splits", []):
+        st = s["stat"]
+        ops = float(st.get("ops", 0) or 0)
+        out.append({"id": s["player"]["id"], "name": s["player"]["fullName"],
+                    "team": s.get("team", {}).get("name", ""),
+                    "ops": ops, "hr": int(st.get("homeRuns", 0) or 0),
+                    "tier": hitter_tier(ops), "historic": ops >= 1.000})
     return out
 
 
-def get_pitchers(season, limit=14):
+def get_team_pitching(season, top=5):
+    d = fetch(f"{API}/teams/stats?stats=season&group=pitching&season={season}&sportId=1&gameType=R")
+    rows = []
+    for s in d.get("stats", [{}])[0].get("splits", []):
+        t, st = s.get("team") or {}, s.get("stat", {})
+        if t and st.get("era") is not None:
+            era, whip = float(st["era"]), float(st.get("whip", 0) or 0)
+            rows.append({"id": t.get("id"), "name": t.get("name", ""), "era": era, "whip": whip,
+                         "tier": pitcher_tier(forma_score(era, whip))})
+    rows.sort(key=lambda r: r["era"])
+    return rows[:top]
+
+
+def get_pitchers(season, limit=40):
     d = fetch(f"{API}/stats?stats=season&season={season}&sportId=1&group=pitching"
               f"&gameType=R&playerPool=qualified&sortStat=earnedRunAverage&limit={limit}&hydrate=team")
     out = []
@@ -181,6 +195,14 @@ def power_row(t, show_mv):
             f'<span class="bl-muted">{driver}</span></span></li>')
 
 
+def staff_row(s, i):
+    return (f'<li class="bl-rankrow"><span class="bl-rank">{i}</span>'
+            f'<img class="bl-team-logo" src="{logo_url(s["id"])}" alt="" loading="lazy">'
+            f'<span class="bl-team-info"><strong>{escape(s["name"])}</strong>'
+            f'<span class="bl-muted">{s["whip"]:.2f} WHIP</span></span>'
+            f'<span class="bl-stat" style="color:{TEXT[s["tier"]]}">{s["era"]:.2f}<small>ERA</small></span></li>')
+
+
 def hitter_row(h):
     star = ' <span class="bl-shimmer-tag">historic</span>' if h["historic"] else ""
     return (f'<li class="bl-player">{face(h["id"], h["tier"], h["historic"])}'
@@ -204,10 +226,15 @@ def build_facts(season, prev_rank):
     has_movement = bool(prev_rank)
     for t in ranked:
         t["movement"] = (prev_rank[t["name"]] - t["rank"]) if t["name"] in prev_rank else None
-    elite_hitters = [h for h in get_hitters(season) if h["tier"] == "green"][:8]
-    aces = [p for p in get_pitchers(season) if p["tier"] == "green"][:6]
-    return {"power_all": ranked, "power_top": ranked[:10], "has_movement": has_movement,
-            "elite_hitters": elite_hitters, "aces": aces}
+    hitters = get_hitters(season, 50)
+    pitchers = get_pitchers(season, 40)
+    return {
+        "power_all": ranked, "power_top": ranked[:10], "has_movement": has_movement,
+        "staffs": get_team_pitching(season, 5),
+        "hitters_all": hitters, "pitchers_all": pitchers,
+        "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
+        "aces": [p for p in pitchers if p["tier"] == "green"][:6],
+    }
 
 
 # ── Phase 2: LLM writes the prose around the computed facts ─────────────────
@@ -226,10 +253,12 @@ LLM_SYSTEM = (
     "- A little warmth and a feel for the season's arc — streaks, where this is heading — is good.\n"
     "- Never lie to the reader: use ONLY the names and numbers in the data provided; never invent, "
     "round differently, or estimate a stat.\n\n"
-    "FORMAT: each 'lead' is 1-3 sentences that set up the list that follows; name a standout or two, "
-    "but do NOT enumerate the whole list (the page renders it below your lead). 'title' is a punchy "
-    "6-10 word headline. 'intro' is 2-3 sentences. Return ONLY raw JSON (no markdown fences) with "
-    "string keys: title, intro, power_lead, hitters_lead, pitchers_lead."
+    "FORMAT: 'title' is a punchy 6-10 word headline. 'intro' opens like a sports column — 3-4 "
+    "sentences that pick out the week's two or three real storylines (a surging team, a historic "
+    "pace, a staff carrying a club) and what they add up to; it should read as writing, not a "
+    "caption. Each 'lead' is 1-3 sentences setting up the list that follows; name a standout or two "
+    "but do NOT enumerate the whole list (the page renders it below). Return ONLY raw JSON (no "
+    "markdown fences) with string keys: title, intro, power_lead, staff_lead, hitters_lead, pitchers_lead."
 )
 
 
@@ -257,8 +286,10 @@ def facts_for_llm(f):
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
                                 "last10": t["l10"], "movement_vs_last_week": mv(t)}
                                for t in f["power_top"]],
+        "best_staffs_by_team_era": [{"rank": i, "name": s["name"], "era": s["era"], "whip": s["whip"]}
+                                    for i, s in enumerate(f["staffs"], 1)],
         "elite_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
-                           "historic_pace": h["historic"]} for h in f["elite_hitters"]],
+                           "hr": h["hr"], "historic_pace": h["historic"]} for h in f["elite_hitters"]],
         "elite_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"],
                             "whip": p["whip"], "historic_pace": p["historic"]} for p in f["aces"]],
     }, indent=2)
@@ -297,6 +328,13 @@ def render_prose(f, n=None):
     parts.append('<h2>Power Rankings</h2>' + lead("power_lead", default) +
                  '<ul class="bl-list">' +
                  "".join(power_row(t, f["has_movement"]) for t in f["power_top"]) + '</ul>')
+
+    if f.get("staffs"):
+        default = ('<p>Team ERA — the whole staff, rotation and bullpen together. '
+                   'The run-prevention leaders:</p>')
+        parts.append('<h2>Best staffs on the mound</h2>' + lead("staff_lead", default) +
+                     '<ul class="bl-list">' +
+                     "".join(staff_row(s, i) for i, s in enumerate(f["staffs"], 1)) + '</ul>')
 
     if f["elite_hitters"]:
         default = ('<p>On the Baseball Lens scale, an OPS of .900 or better is '
@@ -344,7 +382,7 @@ STYLE = """
   /* Player rows: headshot ringed in tier color + name + stat + chip */
   .bl-player { display:flex; align-items:center; gap:12px; }
   .bl-face-wrap { position:relative; flex-shrink:0; display:inline-block; line-height:0; }
-  .bl-face { width:46px; height:46px; border-radius:50%; object-fit:cover; object-position:top center;
+  .bl-face { width:52px; height:52px; border-radius:50%; object-fit:cover; object-position:center 28%;
     border:3px solid var(--ring,#9ca3af); background:var(--surface2); box-shadow:0 2px 8px rgba(22,28,39,.18); }
   .bl-face-wrap.shiny::after { content:''; position:absolute; inset:0; border-radius:50%;
     background:linear-gradient(115deg, transparent 38%, rgba(255,226,160,.5) 47%, rgba(255,255,255,.92) 50%, rgba(255,226,160,.5) 53%, transparent 62%);
@@ -458,8 +496,11 @@ def write_snapshot(date_iso, facts):
     snap = {
         "date": date_iso,
         "power_ranking": [{"name": t["name"], "rank": t["rank"]} for t in facts["power_all"]],
-        "elite_hitters": [{"name": h["name"], "ops": h["ops"]} for h in facts["elite_hitters"]],
-        "aces": [{"name": p["name"], "forma": round(p["forma"], 1)} for p in facts["aces"]],
+        # Broad baselines so next week can compute movers (HR surges, pitcher turnarounds, etc.)
+        "hitters": [{"name": h["name"], "ops": round(h["ops"], 3), "hr": h["hr"]}
+                    for h in facts["hitters_all"][:40]],
+        "pitchers": [{"name": p["name"], "era": p["era"], "forma": round(p["forma"], 1)}
+                     for p in facts["pitchers_all"][:40]],
     }
     with open(os.path.join(SNAP_DIR, f"{date_iso}.json"), "w") as fh:
         json.dump(snap, fh, indent=2)
