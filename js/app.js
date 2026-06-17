@@ -3099,6 +3099,32 @@ function restDotHTML(days) {
   return `<span class="rest-dot ${cls}">${label}</span>`;
 }
 
+// ── Affiliate links (brand-safe: tickets + team gear) ─────────────────────
+// Revenue plumbing. To monetize: create SeatGeek / Fanatics affiliate accounts
+// and replace the destination builders below with your tracking/deep links.
+// `q` is the URL-encoded team name. Set enabled:false to hide the row.
+const AFFILIATE = {
+  enabled: false,   // hidden for now — flip to true to bring the affiliate row back
+  tickets: q => `https://seatgeek.com/search?q=${q}`,
+  gear:    q => `https://www.fanatics.com/search?query=${q}`,
+};
+
+function affiliateRowHTML(meta) {
+  if (!AFFILIATE.enabled || !meta?.name) return '';
+  const q = encodeURIComponent(meta.name);
+  return `<div class="aff-row">
+    <a class="aff-link" href="${AFFILIATE.tickets(q)}" target="_blank" rel="sponsored noopener" aria-label="${meta.name} tickets">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>
+      Tickets
+    </a>
+    <a class="aff-link" href="${AFFILIATE.gear(q)}" target="_blank" rel="sponsored noopener" aria-label="Shop ${meta.name} gear">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/></svg>
+      Shop gear
+    </a>
+    <span class="aff-note">Sponsored</span>
+  </div>`;
+}
+
 // ── Narrative badges ────────────────────────────────────────────────────────
 function getNarrativeBadges(stats, lgAvg, pa, opsLast30) {
   if (!stats || !lgAvg || pa < 40) return [];
@@ -3722,6 +3748,7 @@ function renderDiamondPanel(teamId, impact) {
         <div class="dp-subtitle">SEASON IMPACT — ${CURRENT_YEAR}</div>
       </div>
     </div>
+    ${affiliateRowHTML(meta)}
     ${renderTeamStatsPanel(teamId, impact)}
 
     <div class="diamond-box">
