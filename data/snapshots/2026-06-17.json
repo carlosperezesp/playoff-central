@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-17",
+  "teams": [
+    {
+      "name": "Washington Nationals",
+      "wins": 39,
+      "losses": 35,
+      "streak": "W4",
+      "l10": "7-3",
+      "divRank": "3"
+    },
+    {
+      "name": "New York Yankees",
+      "wins": 44,
+      "losses": 27,
+      "streak": "W3",
+      "l10": "8-2",
+      "divRank": "1"
+    },
+    {
+      "name": "Minnesota Twins",
+      "wins": 35,
+      "losses": 40,
+      "streak": "W3",
+      "l10": "5-5",
+      "divRank": "3"
+    },
+    {
+      "name": "Baltimore Orioles",
+      "wins": 34,
+      "losses": 40,
+      "streak": "L3",
+      "l10": "3-7",
+      "divRank": "4"
+    },
+    {
+      "name": "Boston Red Sox",
+      "wins": 29,
+      "losses": 41,
+      "streak": "L2",
+      "l10": "3-7",
+      "divRank": "5"
+    },
+    {
+      "name": "Kansas City Royals",
+      "wins": 29,
+      "losses": 45,
+      "streak": "L2",
+      "l10": "4-6",
+      "divRank": "5"
+    }
+  ],
+  "elite_hitters": [
+    {
+      "name": "Yordan Alvarez",
+      "ops": 1.074
+    },
+    {
+      "name": "Ben Rice",
+      "ops": 1.006
+    },
+    {
+      "name": "Nick Kurtz",
+      "ops": 1.0
+    },
+    {
+      "name": "James Wood",
+      "ops": 0.967
+    },
+    {
+      "name": "Shohei Ohtani",
+      "ops": 0.966
+    },
+    {
+      "name": "Willson Contreras",
+      "ops": 0.945
+    }
+  ],
+  "aces": [
+    {
+      "name": "Jacob Misiorowski",
+      "forma": 100.0
+    },
+    {
+      "name": "Cristopher S\u00e1nchez",
+      "forma": 84.4
+    },
+    {
+      "name": "Cam Schlittler",
+      "forma": 91.9
+    },
+    {
+      "name": "Chase Burns",
+      "forma": 85.2
+    },
+    {
+      "name": "Chris Sale",
+      "forma": 80.7
+    }
+  ]
+}
