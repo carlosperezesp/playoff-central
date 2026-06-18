@@ -652,5 +652,12 @@
       "ops": 0.669,
       "hr": 8
     }
-  ]
+  ],
+  "narration": {
+    "title": "The Award Races Have Real Shape Now",
+    "intro": "Two-thirds of the season is still ahead, but the early ballots are filling in. Yordan Alvarez and Kyle Schwarber are pulling at the MVP debate from different angles, while a rookie has somehow climbed into the OPS leaderboard. Here's where the three big races stand.",
+    "mvp_lead": "Alvarez still leads all hitters at 1.066, a touch off his mark a week ago but still on a historic pace. Schwarber makes his case the loud way, with a league-best 24 home runs, and Ben Rice sits at 1.006 in his own breakout year.",
+    "cy_lead": "Jacob Misiorowski has the form number maxed out at 100, backed by a 1.50 ERA and a 0.81 WHIP that nobody else can match. Cristopher S\u00e1nchez is right there on run prevention at 1.54, but Misiorowski is the one setting the pace.",
+    "roy_lead": "Munetaka Murakami is doing rookie-of-the-year work that doesn't even look like a rookie season: a .938 OPS and 20 home runs. Behind him, Bryce Eldridge has snuck to .906, proof the freshman class runs deeper than one name."
+  }
 }

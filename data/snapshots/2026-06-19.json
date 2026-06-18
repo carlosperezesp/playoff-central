@@ -652,5 +652,13 @@
       "ops": 0.69,
       "hr": 5
     }
-  ]
+  ],
+  "narration": {
+    "title": "The Week Reshuffles The Mound And The Bats",
+    "intro": "This is a movers' edition, the day we track who climbed and who slipped over the past week. Dustin May had the loudest jump on the mound, while Bryce Harper led a quiet cooldown at the plate. Nobody fell off a cliff, but a few players changed color.",
+    "risers_lead": "Dustin May added 10 points of form to reach 61, the biggest weekly climb of any pitcher. Yamamoto kept rolling too, gaining five to 87, the only riser already living among the elite arms.",
+    "fallers_lead": "Bryce Harper's bat cooled by 38 points to a .844 OPS, the steepest of the week, with Jordan Walker just behind at .878 after a 36-point dip. Both are still comfortable numbers, just less hot than before.",
+    "rookie_surge_lead": "Kansas City's Carter Jensen led the rookie climbers, adding 48 points to reach a .718 OPS. The Athletics' Henry Bolte is the highest of the bunch at .801 after a 30-point week.",
+    "colors_lead": "Three bats slipped from elite to above-average, including Matt Olson and Jordan Walker. Going the other way, Justin Wrobleski climbed into the elite tier on the mound."
+  }
 }

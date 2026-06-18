@@ -652,5 +652,13 @@
       "ops": 0.671,
       "hr": 0
     }
-  ]
+  ],
+  "narration": {
+    "title": "Misiorowski's Numbers Don't Look Real",
+    "intro": "It's a pitching day, and the Yankees have quietly built the best staff in the game by ERA. But the loudest arm belongs to a Brewer with a WHIP under one and an ERA most pitchers would frame.",
+    "staff_lead": "The Yankees top the team-ERA ranking at 3.30, just ahead of the Dodgers at 3.32 and the Braves at 3.34. The Dodgers own the tightest WHIP of the bunch at 1.08, so the gap is razor-thin.",
+    "bullpen_lead": "Milwaukee's Jacob Misiorowski sits atop the elite-pitcher board with a 1.34 ERA and a 0.74 WHIP, a full step clear of Cam Schlittler's 1.82 and 0.91 in New York.",
+    "arms_lead": "Yoshinobu Yamamoto has worked his way to a 2.52 ERA and a 0.84 WHIP, the kind of season that hides behind the headliners until you check the leaderboard.",
+    "risers_lead": "Three pitchers gained five points of form this week, with Yamamoto the headliner at 87. Michael Soroka and Kevin Gausman climbed alongside him to 71 and 69."
+  }
 }

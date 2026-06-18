@@ -652,5 +652,12 @@
       "ops": 0.671,
       "hr": 0
     }
-  ]
+  ],
+  "narration": {
+    "title": "The Marlins Surge, And A Crowded Top Five",
+    "intro": "The Marlins jumped eleven spots in the power ranking on the back of an 8-2 run, even at a 36-36 record. Up top, the Yankees climbed back to first while the Braves slid three to fourth. Plenty moving this week.",
+    "power_lead": "New York sits first at 43-27 with a plus-107 run differential, but the real mover is Miami, up eleven spots to sixth on the strength of going 8-2 over their last ten. The Cardinals quietly snuck into fifth too.",
+    "offense_lead": "The Dodgers lead the team OPS ranking at .788, with the Yankees right behind at .763. Below them the Athletics, Nationals and Braves are packed within a point of each other.",
+    "staff_lead": "Atlanta tops the team-ERA ranking at 3.29, a hair ahead of the Yankees at 3.32. The Dodgers sit third at 3.37 but own the best WHIP of the group at 1.09."
+  }
 }

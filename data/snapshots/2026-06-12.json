@@ -652,5 +652,13 @@
       "ops": 0.663,
       "hr": 1
     }
-  ]
+  ],
+  "narration": {
+    "title": "Kurtz Keeps Climbing, Rice Cools Off",
+    "intro": "This is the week's hot-and-cold ledger. Nick Kurtz added five home runs and kept rising, while Ben Rice slid back from where he sat seven days ago. Same league, two directions.",
+    "risers_lead": "Nick Kurtz led all home-run climbers with five gained, up to 16 and a .976 OPS. Behind him, Yordan Alvarez, Shohei Ohtani and Byron Buxton each added three over the week.",
+    "fallers_lead": "Casey Schmitt took the biggest step back, down 74 points to an .810 OPS, while Ben Rice slipped 52 points but still sits at a healthy .998.",
+    "rookie_surge_lead": "Bryce Eldridge leads the freshman bats at .959, and Munetaka Murakami keeps doing veteran work with a .938 OPS and 20 home runs.",
+    "colors_lead": "Byron Buxton, Matt Olson and Jake Bauers all jumped from above-average to elite this week. The other way, CJ Abrams, Shea Langeliers and Junior Caminero each cooled from elite back to above-average."
+  }
 }

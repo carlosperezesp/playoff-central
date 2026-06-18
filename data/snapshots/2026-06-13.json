@@ -652,5 +652,11 @@
       "ops": 0.657,
       "hr": 1
     }
-  ]
+  ],
+  "narration": {
+    "title": "The Freshman Class Runs Deeper Than One Bat",
+    "intro": "Today belongs to the rookies. A few are doing veteran work, one is hiding in plain sight on a contender, and a pair of arms is quietly keeping runs off the board. Here's the class so far.",
+    "rookies_lead": "Bryce Eldridge leads the freshman bats at .956, but the steadiest name is Munetaka Murakami at .938 with 20 home runs. On the mound, Bradgley Rodriguez has a tidy 2.23 ERA, with Walbert Ure\u00f1a close behind at 2.44.",
+    "rookie_surge_lead": "No fresh rookie breakouts to report this week, which says less about the talent than the timing. The names already on the board are doing the carrying for now."
+  }
 }

@@ -499,7 +499,8 @@ def sec_mvp(f, n):
 
 def sec_cy(f, n):
     g = "Best starters by form — our 0–100 pitching score from ERA &amp; WHIP — in each league."
-    return _race("Cy Young watch", g, _lead(n, "cy_lead"), f["pitchers_all"], pitcher_row)
+    by_form = sorted(f["pitchers_all"], key=lambda p: p["forma"], reverse=True)  # match the "by form" gloss
+    return _race("Cy Young watch", g, _lead(n, "cy_lead"), by_form, pitcher_row)
 
 
 def sec_roy(f, n):
@@ -529,7 +530,7 @@ def sec_hr(f, n, limit=5):
 
 def sec_risers(f, n, limit=5):
     rows = "".join(form_row(m) for m in f["movers"].get("form", [])[:limit])
-    g = "Pitchers whose form climbed most this week."
+    g = "Pitchers whose form — our 0–100 score from ERA &amp; WHIP — climbed most this week."
     return _section("Turning it around", g, _lead(n, "risers_lead"), rows)
 
 
@@ -601,6 +602,18 @@ THEME_BY_KEY = {  # --theme override
 }
 FALLBACK_SECTIONS = ["power", "bats", "arms"]   # if a theme's sections are all empty
 
+# Deterministic one-line standfirst per edition — a newcomer is oriented BEFORE the
+# LLM intro runs, so it never matters if the model opens its intro in jargon.
+EDITION_DEK = {
+    "Power Rankings": "Our team power ranking — record, run differential and recent form in one order.",
+    "Pitching Report": "The best staffs and arms in the game right now, by team ERA and our form score.",
+    "Hitting Report": "The league's hottest offenses and hitters, by OPS and home runs.",
+    "Award Races": "Where the MVP, Cy Young and Rookie of the Year races stand right now.",
+    "Risers & Fallers": "Who climbed and who cooled over the past week.",
+    "Rookie Report": "The first-year players worth watching.",
+    "Around the League": "A quick lap of the standings, offenses and pitching staffs.",
+}
+
 
 def pick_theme(date_iso, override):
     if override and override in THEME_BY_KEY:
@@ -635,7 +648,8 @@ LLM_SYSTEM = (
     "HARD RULES:\n"
     "1. Use ONLY the names and numbers in the data — never invent, re-round or estimate. Never "
     "contradict the lists: they are PRE-SORTED, so the first name in a list is the leader. Don't "
-    "claim a different leader or a number the list doesn't show.\n"
+    "claim a different leader or a number the list doesn't show. Only name players who appear in a "
+    "section shown today (sections_today) — never reference one that isn't on the page.\n"
     "2. Color words (green, yellow, red, 'elite', 'above average') are TIERS — fixed levels, never "
     "directions. When something improves or declines, say it rose/fell or name the tiers it moved "
     "between (e.g. 'from elite to above-average'). Never call a player 'red' unless the data says red.\n"
@@ -653,9 +667,13 @@ LLM_SYSTEM = (
     "real change; a 1.000 OPS that was 1.100 is a cold week, not a hot streak.\n"
     "8. READ THE GAMES. When a player has a 'where' breakdown (HRs by opponent/date), use it ('two "
     "in a weekend at Kansas City'), not just '+3 homers'.\n"
-    "9. DON'T REPEAT YOURSELF across editions. You're given recent_headlines — do not echo their "
-    "angle or phrasing, and never reuse the same image or a player's signature joke (e.g. a WHIP that "
-    "'looks like a typo') two days running. Find a fresh picture.\n\n"
+    "9. DON'T REPEAT YOURSELF across editions. You're given recent_headlines and avoid_reusing_lines "
+    "(recent intros and leads). Don't echo their angle, phrasing or imagery; never reuse a player's "
+    "signature line (e.g. a WHIP that 'looks like a typo'); and never flip a framing you used days ago. "
+    "Find a fresh picture.\n"
+    "10. HOUSE STYLE for numbers and names in prose: write run differential as 'plus-142' / 'minus-16'; "
+    "name teams exactly as the data does (e.g. 'Athletics', not 'Oakland'); write last-10 as '7-3 over "
+    "their last ten'. Never reformat or re-round a number the lists already show.\n\n"
     "FORMAT: 'title' = a punchy 6–10 word headline, true to today's theme and fresh vs the recent "
     "headlines. 'intro' = 2–3 short sentences on the day's one real storyline. Each section 'lead' "
     "(only for sections_today) = 1–2 sentences of color — name a standout, don't restate the whole "
@@ -691,6 +709,7 @@ def facts_for_llm(f, theme_title, section_ids):
         "edition_theme": theme_title,
         "sections_today": section_ids,
         "recent_headlines": f.get("recent_headlines", []),
+        "avoid_reusing_lines": f.get("recent_prose", []),
         "week_window": {"from": f.get("baseline_date"), "to": f.get("asof") or dt.date.today().isoformat()},
         "power_rankings_top": [{"rank": t["rank"], "name": t["name"],
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
@@ -718,8 +737,9 @@ def facts_for_llm(f, theme_title, section_ids):
         payload["rookie_standouts"] = {
             "hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3), "hr": h["hr"]}
                         for h in rk.get("hitters", [])[:6]],
-            "pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"]}
-                         for p in rk.get("pitchers", [])[:4]],
+            # rookie pitchers only render in the Rookie Report — don't dangle them in the ROY race
+            "pitchers": ([{"name": p["name"], "team": p["team"], "era": p["era"]}
+                          for p in rk.get("pitchers", [])[:4]] if "rookies" in section_ids else []),
         }
     if m:
         payload["movers_vs_last_week"] = {
@@ -784,7 +804,8 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
         "staffs": get_team_pitching(season, 5, asof=asof),
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
-        "aces": [p for p in pitchers if p["tier"] == "green"][:6],
+        "aces": sorted([p for p in pitchers if p["tier"] == "green"],
+                       key=lambda p: p["forma"], reverse=True)[:6],   # by form, to match the gloss
         "rookies": get_rookies(season, asof=asof),   # always — also feeds the snapshot baseline
         "bullpen": [], "offense": [],
     }
@@ -825,6 +846,7 @@ STYLE = """
   .bl-article p { font-size:15px; line-height:1.6; margin-bottom:6px; }
   .bl-intro { font-size:16px; color:var(--muted); margin-bottom:18px; }
   .bl-gloss { font-size:12.5px; color:var(--muted); margin:0 0 8px; }
+  .bl-dek { font-size:14.5px; color:var(--muted); margin:-4px 0 18px; line-height:1.5; }
   .bl-list { list-style:none; display:flex; flex-direction:column; gap:12px; margin:14px 0; }
   .bl-muted { color:var(--muted); font-weight:500; }
 
@@ -891,6 +913,7 @@ PAGE = """<!DOCTYPE html>
       <div class="bl-kicker">The Lens · {kicker}</div>
       <h1>{title}</h1>
       <div class="bl-date">{datestr}</div>
+      {dek}
       {body}
       <div class="bl-foot"><a class="bl-cta" href="{rel}">See the full picture →</a></div>
       <p class="bl-note">Stats via the MLB Stats API. Colors, form scores and power rankings are Baseball Lens's own.</p>
@@ -941,7 +964,7 @@ INDEX_PAGE = """<!DOCTYPE html>
 """
 
 
-def write_snapshot(date_iso, facts):
+def write_snapshot(date_iso, facts, narration=None):
     os.makedirs(SNAP_DIR, exist_ok=True)
     snap = {
         "date": date_iso,
@@ -953,6 +976,8 @@ def write_snapshot(date_iso, facts):
         "rookies": [{"name": h["name"], "ops": round(h["ops"], 3), "hr": h["hr"]}
                     for h in facts.get("rookies", {}).get("hitters", [])[:25]],
     }
+    if narration:   # keep the prose so later editions can avoid reusing its imagery
+        snap["narration"] = narration
     with open(os.path.join(SNAP_DIR, f"{date_iso}.json"), "w") as fh:
         json.dump(snap, fh, indent=2)
 
@@ -1012,6 +1037,26 @@ def recent_headlines(date_iso, n=3):
     return out
 
 
+def recent_prose(date_iso, n=3):
+    """Intros + leads from the last few editions (saved in their snapshots), so the LLM
+    can be told what imagery/framings to avoid — not just the headlines."""
+    if not os.path.isdir(SNAP_DIR):
+        return []
+    files = sorted((f for f in os.listdir(SNAP_DIR)
+                    if f.endswith(".json") and f[:-5] < date_iso), reverse=True)
+    out = []
+    for fn in files[:n]:
+        try:
+            with open(os.path.join(SNAP_DIR, fn)) as fh:
+                nar = json.load(fh).get("narration") or {}
+        except Exception:
+            continue
+        if nar.get("intro"):
+            out.append(nar["intro"])
+        out.extend(v for k, v in nar.items() if k.endswith("_lead") and v)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=dt.date.today().year)
@@ -1051,6 +1096,7 @@ def main():
     if monthly:
         facts.update(build_month_facts(args.season, m_start.isoformat(), m_end.isoformat(), m_label))
     facts["recent_headlines"] = recent_headlines(date_iso)
+    facts["recent_prose"] = recent_prose(date_iso)
     if "hr" in section_ids and facts["movers"].get("hr"):
         attach_hr_games(facts["movers"]["hr"], args.season,
                         facts.get("baseline_date") or date_iso, asof, facts["team_abbr"])
@@ -1058,6 +1104,9 @@ def main():
     narration = llm_narration(facts, kicker, section_ids)
     title = (narration or {}).get("title") or f"{kicker} — {pretty}"
     body = render_article(section_ids, facts, narration)
+    dek_text = (f"The hitters, sluggers and arms who owned {m_label}." if monthly
+                else EDITION_DEK.get(kicker, ""))
+    dek = f'<p class="bl-dek">{escape(dek_text)}</p>' if dek_text else ""
     desc = (f"{kicker}: MLB through the Baseball Lens color scale — power rankings, elite hitters "
             "and pitchers, and week-over-week movers.")
 
@@ -1068,9 +1117,9 @@ def main():
     with open(os.path.join(BLOG_DIR, slug), "w") as fh:
         fh.write(PAGE.format(title=escape(title), desc=escape(desc), kicker=escape(kicker),
                              canonical=canonical, site=SITE, rel="../", datestr=pretty.upper(),
-                             body=body, style=STYLE, jsonld=jsonld))
+                             dek=dek, body=body, style=STYLE, jsonld=jsonld))
 
-    write_snapshot(date_iso, facts)
+    write_snapshot(date_iso, facts, narration)
     rebuild_index()
     rebuild_sitemap(date_iso)
     print(f"Wrote blog/{slug} [{kicker}: {', '.join(section_ids)}], "

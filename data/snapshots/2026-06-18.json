@@ -652,5 +652,12 @@
       "ops": 0.69,
       "hr": 5
     }
-  ]
+  ],
+  "narration": {
+    "title": "The Award Races Get Crowded At The Top",
+    "intro": "It's award season at the halfway pole, and three races have clear front-runners with company gaining. Houston's Yordan Alvarez owns the bat, a Brewers rookie owns the mound, and the rookie field is finally sorting itself out.",
+    "mvp_lead": "Alvarez sits a step clear at a 1.070 OPS with 24 homers, two of them added this week. Ben Rice keeps pace at 1.001, and Nick Kurtz pushed his way up to .993 on the back of three new homers.",
+    "cy_lead": "Jacob Misiorowski heads the field with a 1.34 ERA and a 0.74 WHIP, the kind of line that draws double-takes. Yoshinobu Yamamoto is the one closing ground, gaining five points of form to 87 with a 2.52 ERA underneath.",
+    "roy_lead": "Bryce Eldridge leads the rookie hitters at a .963 OPS, and he earned it this week, climbing 57 points. Munetaka Murakami's 20 homers keep him in the chase, with Colt Emerson and Kevin McGonigle a tier back."
+  }
 }

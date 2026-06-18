@@ -652,5 +652,12 @@
       "ops": 0.69,
       "hr": 5
     }
-  ]
+  ],
+  "narration": {
+    "title": "Alvarez Leads The Bats, Contreras Crashes The Top",
+    "intro": "It's a hitting day, and Houston's Yordan Alvarez is out in front of everyone at the plate. Behind him, a few new faces are climbing into the conversation. Plenty of homers changed hands this week too.",
+    "offense_lead": "The Dodgers top the team OPS ranking at .786, with the Yankees close behind at .775. The surprise of the group is Pittsburgh, sitting fourth at .745 with the Athletics and Nationals packed around them.",
+    "bats_lead": "Alvarez heads the elite-hitter board at a 1.070 OPS and 24 homers, a step clear of the Yankees' Ben Rice at 1.001. Willson Contreras was the week's mover, jumping from above-average to elite on a hot stretch that pushed his OPS to .940 and added three homers, two of them against Texas.",
+    "hr_lead": "Five sluggers added three homers apiece, but Byron Buxton's stand out: a pair in St. Louis and one against Texas to reach 23. Shohei Ohtani spread his three across Pittsburgh, the White Sox and Tampa Bay to get to 15."
+  }
 }

@@ -652,5 +652,12 @@
       "ops": 0.668,
       "hr": 8
     }
-  ]
+  ],
+  "narration": {
+    "title": "Kurtz Catches Fire, Schwarber Keeps Counting",
+    "intro": "The bats are doing the talking this week. Yordan Alvarez still owns the top OPS in the game, but the loudest week belonged to a few sluggers who spent the weekend rounding the bases. Here's who's hot and who cooled off.",
+    "offense_lead": "The Dodgers lead the league in team OPS at .789, with the Yankees and Braves right behind. The Nationals sneak into fourth, proof that James Wood isn't doing it alone.",
+    "bats_lead": "Alvarez sits atop the OPS list at 1.066, a hair off where he was a week ago. Behind him, Nick Kurtz climbed to .967 with a four-homer week, while Kyle Schwarber quietly piled up to a league-best 24 home runs.",
+    "hr_lead": "Kurtz did his damage in a hurry: one against Houston, then three across two days against Milwaukee. Byron Buxton matched the pace with three of his own, including a back-to-back finish against Detroit, while Brandon Marsh homered on three straight days against the White Sox."
+  }
 }
