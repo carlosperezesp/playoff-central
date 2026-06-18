@@ -6468,8 +6468,8 @@ async function _OLD_loadTopGames() {
 
 const playersCache = {};  // category → [{player, teamId, statVal}]
 
-const BADGE_SKILL_COLOR = '#f59e0b';
-const BADGE_DESC_COLOR = '#7c3aed';
+const BADGE_SKILL_COLOR = '#2563eb';
+const BADGE_DESC_COLOR = '#db2777';
 const HITTER_BADGE_TONES = {
   'Power Hitter': 'skill',
   'Contact Hitter': 'skill',
