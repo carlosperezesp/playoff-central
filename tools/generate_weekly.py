@@ -427,7 +427,9 @@ def player_card(season, week=None):
         l2 = f'{season.get("rbi", 0)} RBI · {season.get("sb", 0)} SB'
         meter = _meter("OPS", f'{season["ops"]:.3f}', season["ops"] / 1.2 * 100, tier)
     wk = f'<div class="bl-card-week">This week: {_week_line(week)}</div>' if week else ""
-    return (f'<div class="bl-card" hidden><div class="bl-card-body">'
+    tint = BRIGHT[tier]   # card follows the player's tier color
+    return (f'<div class="bl-card" hidden style="background:{tint}1a;border-color:{tint}59">'
+            f'<div class="bl-card-body">'
             f'<img class="bl-card-face" loading="lazy" alt="" src="{headshot(season["id"])}" '
             f'onerror="this.onerror=null;this.src=\'{headshot(0)}\'">'
             f'<div class="bl-card-main"><div class="bl-card-stats">{l1}</div>'
@@ -1046,7 +1048,7 @@ STYLE = """
   .bl-stat small { font-size:9px; font-weight:700; letter-spacing:.5px; opacity:.8; }
   .bl-chip { font-size:9px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; padding:2px 7px; border-radius:4px; flex-shrink:0; }
   .bl-shimmer-tag { font-size:9px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:#b8860b; }
-  .bl-delta { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:800; font-size:15px; flex-shrink:0; text-align:right; white-space:nowrap; }
+  .bl-delta { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:800; font-size:18px; flex-shrink:0; text-align:right; white-space:nowrap; }
   .bl-why { font-family:'Inter',sans-serif; font-weight:700; font-size:11.5px; color:var(--muted); }
   .bl-dot { display:inline-block; width:9px; height:9px; border-radius:50%; vertical-align:middle; margin:0 3px 1px 0; }
 
