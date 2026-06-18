@@ -133,7 +133,8 @@ def get_hitters(season, limit=60, pool="qualified", asof=None, start=None, min_a
         out.append({"id": s["player"]["id"], "name": s["player"]["fullName"],
                     "team": s.get("team", {}).get("name", ""), "lg": _league(s),
                     "ops": ops, "hr": int(st.get("homeRuns", 0) or 0),
-                    "ab": int(st.get("atBats", 0) or 0),
+                    "ab": int(st.get("atBats", 0) or 0), "avg": st.get("avg", ".000"),
+                    "rbi": int(st.get("rbi", 0) or 0), "sb": int(st.get("stolenBases", 0) or 0),
                     "tier": hitter_tier(ops), "historic": ops >= 1.000})
     if asof and pool == "qualified":   # byDateRange ignores the qualified pool — approximate it
         out = [h for h in out if h["ab"] >= min_ab]
@@ -151,6 +152,8 @@ def get_pitchers(season, limit=40, pool="qualified", asof=None, start=None, min_
                     "team": s.get("team", {}).get("name", ""), "lg": _league(s),
                     "era": era, "whip": whip, "forma": forma,
                     "ip": float(st.get("inningsPitched", 0) or 0),
+                    "gs": int(st.get("gamesStarted", 0) or 0), "w": int(st.get("wins", 0) or 0),
+                    "so": int(st.get("strikeOuts", 0) or 0),
                     "tier": pitcher_tier(forma), "historic": era <= 2.00 and whip <= 1.00})
     if asof and pool == "qualified":
         out = [p for p in out if p["ip"] >= min_ip]
@@ -401,19 +404,49 @@ def _logo_sm(p):
             if p.get("team_id") else "")
 
 
-def _prow_link(p, inner):
-    """Wrap face+info so a click deep-links into the app and opens that player's roster card."""
-    abbr = (p.get("abbr") or "").lower()
-    if abbr:
-        return f'<a class="bl-prow-link" href="/#rosters/{abbr}/{p["id"]}">{inner}</a>'
-    return f'<span class="bl-prow-link">{inner}</span>'
+def _meter(label, value, pct, tier):
+    pct = max(4, min(100, pct))
+    return (f'<div class="bl-meter"><div class="bl-meter-top"><span class="bl-meter-label">{label}</span>'
+            f'<span class="bl-meter-val" style="color:{TEXT[tier]}">{value}</span></div>'
+            f'<div class="bl-meter-bar"><span style="width:{pct:.0f}%;background:{BRIGHT[tier]}"></span></div>'
+            f'<div class="bl-meter-tier" style="color:{TEXT[tier]}">{TIER_LABEL[tier]}</div></div>')
 
 
-def _player_row(p, stat_html, extra=""):
+def player_card(season, week=None):
+    """Essential inline card (photo + season line + form/OPS meter) — expands on click,
+    right inside the article. No navigation, no extra API calls."""
+    if not season:
+        return ""
+    tier = season["tier"]
+    if "era" in season:   # pitcher
+        l1 = f'ERA {season["era"]:.2f} · WHIP {season["whip"]:.2f} · IP {season["ip"]:g}'
+        l2 = f'GS {season.get("gs", 0)} · {season.get("w", 0)} W · {season.get("so", 0)} K'
+        meter = _meter("FORM", f'{season["forma"]:.0f}', season["forma"], tier)
+    else:                 # hitter
+        l1 = f'AVG {season.get("avg", ".000")} · HR {season["hr"]} · OPS {season["ops"]:.3f}'
+        l2 = f'{season.get("rbi", 0)} RBI · {season.get("sb", 0)} SB'
+        meter = _meter("OPS", f'{season["ops"]:.3f}', season["ops"] / 1.2 * 100, tier)
+    wk = f'<div class="bl-card-week">This week: {_week_line(week)}</div>' if week else ""
+    return (f'<div class="bl-card" hidden><div class="bl-card-body">'
+            f'<img class="bl-card-face" loading="lazy" alt="" src="{headshot(season["id"])}" '
+            f'onerror="this.onerror=null;this.src=\'{headshot(0)}\'">'
+            f'<div class="bl-card-main"><div class="bl-card-stats">{l1}</div>'
+            f'<div class="bl-card-stats2">{l2}</div>{wk}</div>{meter}</div></div>')
+
+
+def _pwrap(inner, card):
+    """A player row + its hidden inline card; clickable only when there's a card to open."""
+    if not card:
+        return f'<li class="bl-pwrap"><div class="bl-player">{inner}</div></li>'
+    return (f'<li class="bl-pwrap"><div class="bl-player bl-clickable" onclick="blToggleCard(this)">'
+            f'{inner}<span class="bl-chev">&rsaquo;</span></div>{card}</li>')
+
+
+def _player_row(p, stat_html, extra="", card=None):
     info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
-    inner = _prow_link(p, face(p["id"], p["tier"], p.get("historic")) + info)
-    return f'<li class="bl-player">{inner}{stat_html}{extra}</li>'
+    inner = f'{face(p["id"], p["tier"], p.get("historic"))}{info}{stat_html}{extra}'
+    return _pwrap(inner, player_card(p) if card is None else card)
 
 
 def hitter_row(h):
@@ -434,9 +467,9 @@ def hr_row(m):
     sub = " · ".join(f'{g["hr"]} vs {escape(g["opp"])}' for g in games) if games else f'{h["hr"]} HR total'
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
-    inner = _prow_link(h, face(h["id"], h["tier"], h.get("historic")) + info)
-    delta = f'<span class="bl-delta" style="color:{TEXT["green"]}">+{d} HR</span>'
-    return f'<li class="bl-player">{inner}{delta}</li>'
+    inner = (f'{face(h["id"], h["tier"], h.get("historic"))}{info}'
+             f'<span class="bl-delta" style="color:{TEXT["green"]}">+{d} HR</span>')
+    return _pwrap(inner, player_card(h))
 
 
 def form_row(m):
@@ -467,9 +500,9 @@ def cool_row(m, wk=None):
         sub, right = escape(h["team"]), f'OPS {b["ops"]:.3f}&rarr;{h["ops"]:.3f} ({d:.3f})'
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
-    inner = _prow_link(h, face(h["id"], h["tier"], h.get("historic")) + info)
-    return (f'<li class="bl-player">{inner}'
-            f'<span class="bl-delta" style="color:{TEXT["red"]}">{right}</span></li>')
+    inner = (f'{face(h["id"], h["tier"], h.get("historic"))}{info}'
+             f'<span class="bl-delta" style="color:{TEXT["red"]}">{right}</span>')
+    return _pwrap(inner, player_card(h, week=wk))
 
 
 def color_row(c):
@@ -491,22 +524,22 @@ def rookie_surge_row(m):
     return _player_row(h, delta, ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>')
 
 
-def hweek_row(h):   # best hitters of the week — show their 7-day game line
+def hweek_row(h, season=None):   # best hitters of the week — show their 7-day game line
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{_week_line(h)}</span></span>')
-    inner = _prow_link(h, face(h["id"], h["tier"]) + info)
-    stat = f'<span class="bl-stat" style="color:{TEXT[h["tier"]]}">{h["ops"]:.3f}<small>OPS&middot;WK</small></span>'
-    return f'<li class="bl-player">{inner}{stat}</li>'
+    inner = (f'{face(h["id"], h["tier"])}{info}'
+             f'<span class="bl-stat" style="color:{TEXT[h["tier"]]}">{h["ops"]:.3f}<small>OPS&middot;WK</small></span>')
+    return _pwrap(inner, player_card(season, week=h))
 
 
 def pfaller_row(m):   # strong arm losing form
     p, b, d = m["p"], m["base"], m["d"]
     info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
-    inner = _prow_link(p, face(p["id"], p["tier"]) + info)
-    delta = (f'<span class="bl-delta" style="color:{TEXT["red"]}">'
+    inner = (f'{face(p["id"], p["tier"])}{info}'
+             f'<span class="bl-delta" style="color:{TEXT["red"]}">'
              f'form {b["forma"]:.0f}&rarr;{p["forma"]:.0f} ({d:.0f})</span>')
-    return f'<li class="bl-player">{inner}{delta}</li>'
+    return _pwrap(inner, player_card(p))
 
 
 # ── Sections (each returns full HTML or "" if empty) ────────────────────────
@@ -629,7 +662,8 @@ def sec_pfallers(f, n, limit=3):
 
 
 def sec_hweek(f, n, limit=5):
-    rows = "".join(hweek_row(h) for h in f.get("week_hot", [])[:limit])
+    hb = f.get("hit_by_id", {})
+    rows = "".join(hweek_row(h, hb.get(h["id"])) for h in f.get("week_hot", [])[:limit])
     g = "The week's hottest hitters — top OPS over the last 7 days (min at-bats), with their game line."
     return _section("Hot at the plate", g, _lead(n, "hweek_lead"), rows)
 
@@ -896,8 +930,8 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
     prev_rank = {r["name"]: r["rank"] for r in baseline.get("power_ranking", [])} if baseline else {}
     for t in ranked:
         t["movement"] = (prev_rank[t["name"]] - t["rank"]) if t["name"] in prev_rank else None
-    hitters = get_hitters(season, 60, asof=asof)
-    pitchers = get_pitchers(season, 40, asof=asof)
+    hitters = get_hitters(season, 200, asof=asof)
+    pitchers = get_pitchers(season, 120, asof=asof)
     id_by_name = {t["name"]: t["id"] for t in teams}
     abbr_by_name = {t["name"]: t.get("abbr", "") for t in teams}
     rookies = get_rookies(season, asof=asof)   # always — also feeds the snapshot baseline
@@ -912,6 +946,7 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
     f = {
         "power_all": ranked, "power_top": ranked[:10], "has_movement": bool(prev_rank),
         "team_abbr": abbr_by_name, "team_id_by_name": id_by_name,
+        "hit_by_id": {h["id"]: h for h in hitters}, "pit_by_id": {p["id"]: p for p in pitchers},
         "baseline_date": baseline.get("date") if baseline else None, "asof": asof,
         "staffs": get_team_pitching(season, 5, asof=asof),
         "hitters_all": hitters, "pitchers_all": pitchers,
@@ -973,10 +1008,28 @@ STYLE = """
   .bl-subhead { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:700; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin:14px 0 2px; }
 
   .bl-player { display:flex; align-items:center; gap:12px; }
-  .bl-prow-link { display:flex; align-items:center; gap:12px; flex:1; min-width:0; text-decoration:none; color:inherit; border-radius:10px; }
-  a.bl-prow-link:hover .bl-player-info strong { color:var(--accent-blue); }
-  a.bl-prow-link:hover .bl-face { border-color:var(--accent-blue); }
+  .bl-pwrap { list-style:none; }
+  .bl-clickable { cursor:pointer; }
+  .bl-clickable:hover .bl-player-info strong { color:var(--accent-blue); }
+  .bl-clickable:hover .bl-face { border-color:var(--accent-blue); }
+  .bl-chev { margin-left:4px; color:var(--muted); font-size:20px; font-weight:700; line-height:1; transition:transform .15s; flex-shrink:0; }
+  .bl-open .bl-chev { transform:rotate(90deg); }
   .bl-prow-logo { width:15px; height:15px; object-fit:contain; vertical-align:-3px; margin-right:5px; }
+  .bl-card { margin:10px 0 2px; background:var(--surface2,#eef1ee); border:1px solid var(--border); border-radius:12px; }
+  .bl-card[hidden] { display:none; }
+  .bl-card-body { display:flex; align-items:center; gap:14px; padding:14px 16px; }
+  .bl-card-face { width:64px; height:64px; border-radius:50%; object-fit:cover; object-position:center 28%; border:3px solid var(--border); background:var(--surface); flex-shrink:0; }
+  .bl-card-main { flex:1; min-width:0; }
+  .bl-card-stats { font-weight:800; font-size:15px; }
+  .bl-card-stats2 { color:var(--muted); font-weight:600; font-size:13px; margin-top:3px; }
+  .bl-card-week { color:var(--muted); font-size:12.5px; margin-top:5px; }
+  .bl-meter { width:118px; flex-shrink:0; }
+  .bl-meter-top { display:flex; justify-content:space-between; align-items:baseline; }
+  .bl-meter-label { font-size:10px; font-weight:800; letter-spacing:1px; color:var(--muted); }
+  .bl-meter-val { font-weight:800; font-size:18px; }
+  .bl-meter-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin:4px 0 3px; }
+  .bl-meter-bar span { display:block; height:100%; border-radius:3px; }
+  .bl-meter-tier { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; text-align:right; }
   .bl-face-wrap { position:relative; flex-shrink:0; display:inline-block; line-height:0; }
   .bl-face { width:52px; height:52px; border-radius:50%; object-fit:cover; object-position:center 28%;
     border:3px solid var(--ring,#9ca3af); background:var(--surface2); box-shadow:0 2px 8px rgba(22,28,39,.18); }
@@ -1036,6 +1089,15 @@ PAGE = """<!DOCTYPE html>
       <p class="bl-note">Stats via the MLB Stats API. Colors, form scores and power rankings are Baseball Lens's own.</p>
     </article>
   </div>
+  <script>
+  function blToggleCard(el){{
+    var card = el.nextElementSibling;
+    if(!card || !card.classList.contains('bl-card')) return;
+    var hidden = card.hasAttribute('hidden');
+    if(hidden){{ card.removeAttribute('hidden'); }} else {{ card.setAttribute('hidden',''); }}
+    el.classList.toggle('bl-open', hidden);
+  }}
+  </script>
 </body>
 </html>
 """
