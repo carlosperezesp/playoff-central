@@ -30,23 +30,23 @@
       "rank": 7
     },
     {
-      "name": "Chicago White Sox",
+      "name": "Philadelphia Phillies",
       "rank": 8
     },
     {
-      "name": "Philadelphia Phillies",
+      "name": "Chicago Cubs",
       "rank": 9
     },
     {
-      "name": "Seattle Mariners",
+      "name": "Tampa Bay Rays",
       "rank": 10
     },
     {
-      "name": "Tampa Bay Rays",
+      "name": "Chicago White Sox",
       "rank": 11
     },
     {
-      "name": "Chicago Cubs",
+      "name": "Toronto Blue Jays",
       "rank": 12
     },
     {
@@ -54,51 +54,51 @@
       "rank": 13
     },
     {
-      "name": "Athletics",
+      "name": "Seattle Mariners",
       "rank": 14
     },
     {
-      "name": "Toronto Blue Jays",
+      "name": "Arizona Diamondbacks",
       "rank": 15
     },
     {
-      "name": "Cleveland Guardians",
+      "name": "Pittsburgh Pirates",
       "rank": 16
     },
     {
-      "name": "New York Mets",
+      "name": "Athletics",
       "rank": 17
     },
     {
-      "name": "Minnesota Twins",
+      "name": "New York Mets",
       "rank": 18
     },
     {
-      "name": "Texas Rangers",
+      "name": "Minnesota Twins",
       "rank": 19
     },
     {
-      "name": "Arizona Diamondbacks",
+      "name": "Texas Rangers",
       "rank": 20
     },
     {
-      "name": "Los Angeles Angels",
+      "name": "Cleveland Guardians",
       "rank": 21
     },
     {
-      "name": "Pittsburgh Pirates",
+      "name": "Houston Astros",
       "rank": 22
     },
     {
-      "name": "Houston Astros",
+      "name": "Los Angeles Angels",
       "rank": 23
     },
     {
-      "name": "Detroit Tigers",
+      "name": "Baltimore Orioles",
       "rank": 24
     },
     {
-      "name": "Cincinnati Reds",
+      "name": "Detroit Tigers",
       "rank": 25
     },
     {
@@ -106,11 +106,11 @@
       "rank": 26
     },
     {
-      "name": "Boston Red Sox",
+      "name": "Cincinnati Reds",
       "rank": 27
     },
     {
-      "name": "Baltimore Orioles",
+      "name": "Boston Red Sox",
       "rank": 28
     },
     {
@@ -130,17 +130,17 @@
     },
     {
       "name": "Ben Rice",
-      "ops": 1.006,
+      "ops": 1.001,
       "hr": 20
     },
     {
       "name": "Nick Kurtz",
-      "ops": 1.0,
+      "ops": 0.993,
       "hr": 18
     },
     {
       "name": "Shohei Ohtani",
-      "ops": 0.966,
+      "ops": 0.963,
       "hr": 15
     },
     {
@@ -155,7 +155,7 @@
     },
     {
       "name": "Willson Contreras",
-      "ops": 0.945,
+      "ops": 0.94,
       "hr": 16
     },
     {
@@ -174,33 +174,33 @@
       "hr": 25
     },
     {
-      "name": "Corbin Carroll",
-      "ops": 0.91,
-      "hr": 13
-    },
-    {
       "name": "Aaron Judge",
       "ops": 0.908,
       "hr": 17
     },
     {
+      "name": "Corbin Carroll",
+      "ops": 0.904,
+      "hr": 13
+    },
+    {
       "name": "Yandy D\u00edaz",
-      "ops": 0.895,
+      "ops": 0.901,
       "hr": 12
     },
     {
       "name": "Matt Olson",
-      "ops": 0.894,
+      "ops": 0.898,
       "hr": 20
     },
     {
       "name": "Max Muncy",
-      "ops": 0.891,
+      "ops": 0.887,
       "hr": 16
     },
     {
       "name": "Jake Bauers",
-      "ops": 0.888,
+      "ops": 0.879,
       "hr": 13
     },
     {
@@ -214,13 +214,8 @@
       "hr": 14
     },
     {
-      "name": "Shea Langeliers",
-      "ops": 0.871,
-      "hr": 18
-    },
-    {
       "name": "Bryan Reynolds",
-      "ops": 0.87,
+      "ops": 0.872,
       "hr": 10
     },
     {
@@ -229,9 +224,19 @@
       "hr": 17
     },
     {
-      "name": "Junior Caminero",
+      "name": "Shea Langeliers",
+      "ops": 0.864,
+      "hr": 18
+    },
+    {
+      "name": "Cody Bellinger",
+      "ops": 0.86,
+      "hr": 11
+    },
+    {
+      "name": "Hunter Goodman",
       "ops": 0.858,
-      "hr": 15
+      "hr": 21
     },
     {
       "name": "Brandon Marsh",
@@ -244,9 +249,14 @@
       "hr": 12
     },
     {
-      "name": "Brice Turang",
+      "name": "Junior Caminero",
       "ops": 0.855,
-      "hr": 11
+      "hr": 15
+    },
+    {
+      "name": "Pete Crow-Armstrong",
+      "ops": 0.854,
+      "hr": 15
     },
     {
       "name": "Michael Harris II",
@@ -254,14 +264,9 @@
       "hr": 14
     },
     {
-      "name": "Miguel Vargas",
+      "name": "Brice Turang",
       "ops": 0.853,
-      "hr": 16
-    },
-    {
-      "name": "Hunter Goodman",
-      "ops": 0.852,
-      "hr": 20
+      "hr": 11
     },
     {
       "name": "Dillon Dingler",
@@ -269,9 +274,19 @@
       "hr": 16
     },
     {
-      "name": "Pete Crow-Armstrong",
-      "ops": 0.846,
-      "hr": 14
+      "name": "Freddie Freeman",
+      "ops": 0.85,
+      "hr": 12
+    },
+    {
+      "name": "Miguel Vargas",
+      "ops": 0.849,
+      "hr": 16
+    },
+    {
+      "name": "Spencer Horwitz",
+      "ops": 0.845,
+      "hr": 9
     },
     {
       "name": "Bryce Harper",
@@ -289,9 +304,9 @@
       "hr": 13
     },
     {
-      "name": "Freddie Freeman",
+      "name": "Brandon Lowe",
       "ops": 0.837,
-      "hr": 11
+      "hr": 18
     },
     {
       "name": "Alec Burleson",
@@ -299,28 +314,13 @@
       "hr": 13
     },
     {
-      "name": "Cody Bellinger",
-      "ops": 0.833,
-      "hr": 10
-    },
-    {
-      "name": "Brandon Lowe",
-      "ops": 0.832,
-      "hr": 18
-    },
-    {
-      "name": "Spencer Horwitz",
-      "ops": 0.829,
-      "hr": 9
-    },
-    {
       "name": "Riley Greene",
       "ops": 0.828,
       "hr": 8
     },
     {
-      "name": "Jonathan Aranda",
-      "ops": 0.825,
+      "name": "Ryan O'Hearn",
+      "ops": 0.826,
       "hr": 11
     }
   ],
@@ -351,14 +351,14 @@
       "forma": 80.7
     },
     {
+      "name": "Eduardo Rodriguez",
+      "era": 2.45,
+      "forma": 71.5
+    },
+    {
       "name": "Yoshinobu Yamamoto",
       "era": 2.52,
       "forma": 87.0
-    },
-    {
-      "name": "Eduardo Rodriguez",
-      "era": 2.53,
-      "forma": 70.6
     },
     {
       "name": "Drew Rasmussen",
@@ -374,11 +374,6 @@
       "name": "Parker Messick",
       "era": 2.68,
       "forma": 74.8
-    },
-    {
-      "name": "Dylan Cease",
-      "era": 2.71,
-      "forma": 70.3
     },
     {
       "name": "Justin Wrobleski",
@@ -431,19 +426,14 @@
       "forma": 73.1
     },
     {
-      "name": "Ranger Suarez",
-      "era": 3.21,
-      "forma": 65.6
+      "name": "Braxton Ashcraft",
+      "era": 3.18,
+      "forma": 68.8
     },
     {
       "name": "Emerson Hancock",
       "era": 3.28,
       "forma": 71.1
-    },
-    {
-      "name": "Braxton Ashcraft",
-      "era": 3.3,
-      "forma": 67.5
     },
     {
       "name": "Davis Martin",
@@ -456,11 +446,6 @@
       "forma": 66.9
     },
     {
-      "name": "Gavin Williams",
-      "era": 3.32,
-      "forma": 67.3
-    },
-    {
       "name": "Kevin Gausman",
       "era": 3.41,
       "forma": 69.2
@@ -471,24 +456,9 @@
       "forma": 69.0
     },
     {
-      "name": "Logan Webb",
-      "era": 3.46,
-      "forma": 63.6
-    },
-    {
-      "name": "Will Warren",
-      "era": 3.47,
-      "forma": 57.7
-    },
-    {
       "name": "Michael King",
       "era": 3.6,
       "forma": 60.4
-    },
-    {
-      "name": "Randy V\u00e1squez",
-      "era": 3.63,
-      "forma": 54.7
     },
     {
       "name": "Michael Wacha",
@@ -516,14 +486,44 @@
       "forma": 58.2
     },
     {
-      "name": "Connelly Early",
-      "era": 3.81,
-      "forma": 52.7
+      "name": "Gavin Williams",
+      "era": 3.83,
+      "forma": 60.4
     },
     {
       "name": "Seth Lugo",
       "era": 3.86,
       "forma": 50.9
+    },
+    {
+      "name": "Freddy Peralta",
+      "era": 3.9,
+      "forma": 52.5
+    },
+    {
+      "name": "Andrew Abbott",
+      "era": 3.95,
+      "forma": 47.4
+    },
+    {
+      "name": "Tanner Bibee",
+      "era": 3.96,
+      "forma": 56.8
+    },
+    {
+      "name": "Kyle Bradish",
+      "era": 4.0,
+      "forma": 42.6
+    },
+    {
+      "name": "Shane Baz",
+      "era": 4.06,
+      "forma": 47.0
+    },
+    {
+      "name": "Robbie Ray",
+      "era": 4.07,
+      "forma": 49.4
     }
   ]
 }

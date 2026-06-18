@@ -89,6 +89,7 @@ def get_teams(season, asof=None):
             wins, losses = tr.get("wins", 0), tr.get("losses", 0)
             out.append({
                 "id": tr["team"]["id"], "name": tr["team"]["name"],
+                "abbr": tr["team"].get("abbreviation", ""),
                 "wins": wins, "losses": losses,
                 "gp": tr.get("gamesPlayed", 0) or (wins + losses),
                 "l10": f"{l10.get('wins', 0)}-{l10.get('losses', 0)}",
@@ -261,6 +262,25 @@ def compute_movers(f, base):
             "baseline_date": base.get("date")}
 
 
+def attach_hr_games(hr_movers, season, since_date, asof, abbr):
+    """For each HR climber, pull the recent game log so we can say where the HRs came from."""
+    for m in hr_movers:
+        m["games"] = []
+        try:
+            gl = fetch(f"{API}/people/{m['p']['id']}/stats?stats=gameLog&season={season}"
+                       f"&group=hitting&gameType=R")
+            for s in gl.get("stats", [{}])[0].get("splits", []):
+                day = s.get("date", "")
+                if day <= since_date or (asof and day > asof):
+                    continue
+                hr = int(s["stat"].get("homeRuns", 0) or 0)
+                if hr > 0:
+                    opp = s.get("opponent", {}).get("name", "")
+                    m["games"].append({"date": day, "opp": abbr.get(opp, opp), "hr": hr})
+        except Exception:
+            pass
+
+
 # ── HTML pieces ─────────────────────────────────────────────────────────────
 def logo_url(team_id):
     return f"https://www.mlbstatic.com/team-logos/{team_id}.svg"
@@ -343,8 +363,12 @@ def pitcher_row(p):
 
 def hr_row(m):
     h, d = m["p"], m["d"]
-    delta = f'<span class="bl-delta" style="color:{TEXT["green"]}">+{d} HR · {h["hr"]} total</span>'
-    return _player_row(h, delta)
+    games = m.get("games") or []
+    sub = " · ".join(f'{g["hr"]} vs {escape(g["opp"])}' for g in games) if games else f'{h["hr"]} HR total'
+    info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
+            f'<span class="bl-muted">{sub}</span></span>')
+    delta = f'<span class="bl-delta" style="color:{TEXT["green"]}">+{d} HR</span>'
+    return f'<li class="bl-player">{face(h["id"], h["tier"], h.get("historic"))}{info}{delta}</li>'
 
 
 def form_row(m):
@@ -542,7 +566,14 @@ LLM_SYSTEM = (
     "and any pun on it. Be fair to the teams and players struggling, never cruel.\n"
     "- A feel for the season's arc — who's rising, who's sliding, where this is heading.\n"
     "- Never lie to the reader: use ONLY the names and numbers in the data provided; never invent, "
-    "round differently, or estimate a stat.\n\n"
+    "round differently, or estimate a stat.\n"
+    "- BE WEEK-AWARE. The headline stats are SEASON TOTALS, but you're given each featured player's "
+    "value a week ago (ops_a_week_ago, form_a_week_ago, hr_a_week_ago), a week_window, rank changes, "
+    "and a movers section. Write about what CHANGED this week, not the static total. A 1.000 OPS that "
+    "was 1.100 a week ago is a cold week — say so; don't call a sliding player hot. Lead with movement: "
+    "who's heating up, who's cooling, who climbed or fell.\n"
+    "- READ THE GAMES. When a player has a 'where' breakdown (HRs by opponent and date), use it for "
+    "concrete color — e.g. 'three of them in a weekend at Kansas City', not just '+3 homers'.\n\n"
     "Today's edition has a THEME (given as edition_theme) and a fixed set of sections (sections_today). "
     "FORMAT: 'title' is a punchy 6-10 word headline true to the theme. 'intro' opens like a column — "
     "3-4 sentences picking out the day's real storyline(s). Each lead is 1-3 sentences setting up its "
@@ -568,17 +599,26 @@ def load_env():
 
 def facts_for_llm(f, theme_title, section_ids):
     m = f.get("movers", {})
+
+    def wk(v):   # round a week-ago value or None
+        return round(v, 3) if isinstance(v, (int, float)) else None
     payload = {
         "edition_theme": theme_title,
         "sections_today": section_ids,
+        "week_window": {"from": f.get("baseline_date"), "to": f.get("asof") or dt.date.today().isoformat()},
         "power_rankings_top": [{"rank": t["rank"], "name": t["name"],
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
-                                "last10": t["l10"]} for t in f["power_top"]],
+                                "last10": t["l10"], "rank_change_vs_last_week": t.get("movement")}
+                               for t in f["power_top"]],
         "best_staffs_by_team_era": [{"rank": i, "name": s["name"], "era": s["val"], "whip": s["whip"]}
                                     for i, s in enumerate(f["staffs"], 1)],
         "elite_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
-                           "hr": h["hr"], "historic_pace": h["historic"]} for h in f["elite_hitters"]],
+                           "ops_a_week_ago": wk(h.get("ops_prev")), "hr": h["hr"],
+                           "hr_a_week_ago": h.get("hr_prev"), "historic_pace": h["historic"]}
+                          for h in f["elite_hitters"]],
         "elite_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"], "whip": p["whip"],
+                            "form_now": round(p["forma"]),
+                            "form_a_week_ago": (round(p["forma_prev"]) if p.get("forma_prev") is not None else None),
                             "historic_pace": p["historic"]} for p in f["aces"]],
     }
     if f.get("bullpen"):
@@ -597,7 +637,9 @@ def facts_for_llm(f, theme_title, section_ids):
         }
     if m:
         payload["movers_vs_last_week"] = {
-            "hr_climbers": [{"name": x["p"]["name"], "hr_now": x["p"]["hr"], "hr_gained": x["d"]} for x in m.get("hr", [])],
+            "hr_climbers": [{"name": x["p"]["name"], "hr_now": x["p"]["hr"], "hr_gained": x["d"],
+                             "where": [f'{g["hr"]} vs {g["opp"]} ({g["date"]})' for g in x.get("games", [])]}
+                            for x in m.get("hr", [])],
             "form_risers": [{"name": x["p"]["name"], "form_now": round(x["p"]["forma"]), "form_gained": round(x["d"])} for x in m.get("form", [])],
             "cooling_bats": [{"name": x["p"]["name"], "ops_now": round(x["p"]["ops"], 3), "ops_drop": round(x["d"], 3)} for x in m.get("cool", [])],
             "color_changes": [{"name": c["p"]["name"], "from": TIER_LABEL[c["old"]], "to": TIER_LABEL[c["p"]["tier"]]} for c in m.get("colors", [])],
@@ -623,14 +665,24 @@ def llm_narration(f, theme_title, section_ids):
         return None
 
 
-def build_facts(season, prev_rank, asof=None, need_rookies=False, need_teamstats=False):
-    ranked = compute_power(get_teams(season, asof))
+def build_facts(season, baseline, asof=None, need_rookies=False, need_teamstats=False):
+    teams = get_teams(season, asof)
+    ranked = compute_power(teams)
+    prev_rank = {r["name"]: r["rank"] for r in baseline.get("power_ranking", [])} if baseline else {}
     for t in ranked:
         t["movement"] = (prev_rank[t["name"]] - t["rank"]) if t["name"] in prev_rank else None
     hitters = get_hitters(season, 60, asof=asof)
     pitchers = get_pitchers(season, 40, asof=asof)
+    bh = {x["name"]: x for x in baseline.get("hitters", [])} if baseline else {}
+    bp = {x["name"]: x for x in baseline.get("pitchers", [])} if baseline else {}
+    for h in hitters:                       # attach week-ago values for trend-aware prose
+        b = bh.get(h["name"]); h["ops_prev"] = b["ops"] if b else None; h["hr_prev"] = b["hr"] if b else None
+    for p in pitchers:
+        b = bp.get(p["name"]); p["forma_prev"] = b["forma"] if b else None
     f = {
         "power_all": ranked, "power_top": ranked[:10], "has_movement": bool(prev_rank),
+        "team_abbr": {t["name"]: t.get("abbr", "") for t in teams},
+        "baseline_date": baseline.get("date") if baseline else None, "asof": asof,
         "staffs": get_team_pitching(season, 5, asof=asof),
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
@@ -862,7 +914,7 @@ def main():
     asof = date_iso if date_iso < dt.date.today().isoformat() else None
 
     if args.snapshot_only:
-        facts = build_facts(args.season, {}, asof=asof)
+        facts = build_facts(args.season, None, asof=asof)
         write_snapshot(date_iso, facts)
         print(f"Snapshot {date_iso} (as-of {asof or 'current'}) — no article")
         return
@@ -871,12 +923,14 @@ def main():
     kicker, section_ids = pick_theme(date_iso, args.theme)
 
     baseline = load_baseline(date_iso)
-    prev_rank = {r["name"]: r["rank"] for r in baseline.get("power_ranking", [])} if baseline else {}
     sids = set(section_ids) | set(FALLBACK_SECTIONS)
-    facts = build_facts(args.season, prev_rank, asof=asof,
+    facts = build_facts(args.season, baseline, asof=asof,
                         need_rookies=bool(sids & ROOKIE_SECTIONS),
                         need_teamstats=bool(sids & TEAMSTAT_SECTIONS))
     facts["movers"] = compute_movers(facts, baseline)
+    if "hr" in section_ids and facts["movers"].get("hr"):
+        attach_hr_games(facts["movers"]["hr"], args.season,
+                        facts.get("baseline_date") or date_iso, asof, facts["team_abbr"])
 
     narration = llm_narration(facts, kicker, section_ids)
     title = (narration or {}).get("title") or f"{kicker} — {pretty}"
