@@ -654,11 +654,12 @@
     }
   ],
   "narration": {
-    "title": "The Week Reshuffles The Mound And The Bats",
-    "intro": "This is a movers' edition, the day we track who climbed and who slipped over the past week. Dustin May had the loudest jump on the mound, while Bryce Harper led a quiet cooldown at the plate. Nobody fell off a cliff, but a few players changed color.",
-    "risers_lead": "Dustin May added 10 points of form to reach 61, the biggest weekly climb of any pitcher. Yamamoto kept rolling too, gaining five to 87, the only riser already living among the elite arms.",
-    "fallers_lead": "Bryce Harper's bat cooled by 38 points to a .844 OPS, the steepest of the week, with Jordan Walker just behind at .878 after a 36-point dip. Both are still comfortable numbers, just less hot than before.",
-    "rookie_surge_lead": "Kansas City's Carter Jensen led the rookie climbers, adding 48 points to reach a .718 OPS. The Athletics' Henry Bolte is the highest of the bunch at .801 after a 30-point week.",
-    "colors_lead": "Three bats slipped from elite to above-average, including Matt Olson and Jordan Walker. Going the other way, Justin Wrobleski climbed into the elite tier on the mound."
+    "title": "Who Got Hot, Who Cooled, This Week",
+    "intro": "This is the week's traffic report: arms heating up, bats going quiet. Dustin May made the biggest jump on the mound, and Pete Crow-Armstrong put on a clinic at the plate. A few names also slid the other way.",
+    "risers_lead": "Dustin May led the form climbers, gaining ten points to reach 61, with Nolan McLean and Reid Detmers both up six to 64 and 67. Yoshinobu Yamamoto's five-point bump to 87 is the one that matters in the bigger picture.",
+    "pfallers_lead": "Davis Martin had the roughest week of any strong arm, dropping fourteen points of form to 64. Bryce Elder and Emerson Hancock each gave back nine.",
+    "hweek_lead": "Pete Crow-Armstrong was the week's best bat, going 14-for-31 with four homers for a 1.487 OPS. Donovan Walton and Dominic Canzone topped him in rate but over far fewer at-bats.",
+    "fallers_lead": "Bryce Harper had a week to forget, 1-for-19 across six games and down thirty-eight points of season OPS. Jordan Walker and Yandy Diaz cooled by similar margins.",
+    "colors_lead": "Justin Wrobleski climbed from above-average to elite, while Jake Bauers slid the other way, from elite to above-average. Connelly Early dropped from above-average to average."
   }
 }

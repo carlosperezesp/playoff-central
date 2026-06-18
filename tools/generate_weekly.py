@@ -169,6 +169,30 @@ def build_month_facts(season, start, end, label):
     }
 
 
+def get_week_hitters(season, start, end, limit=500, min_ab=15):
+    """Per-hitter stats over a date window (the last 7 days) — for hot bats & cooling lines."""
+    d = fetch(_stats_url(season, "hitting", "onBasePlusSlugging", limit, "all", end, start))
+    out = []
+    for s in d.get("stats", [{}])[0].get("splits", []):
+        st = s["stat"]
+        ab = int(st.get("atBats", 0) or 0)
+        ops = float(st.get("ops", 0) or 0)
+        out.append({"id": s["player"]["id"], "name": s["player"]["fullName"],
+                    "team": s.get("team", {}).get("name", ""), "lg": _league(s),
+                    "ab": ab, "hits": int(st.get("hits", 0) or 0),
+                    "hr": int(st.get("homeRuns", 0) or 0), "sb": int(st.get("stolenBases", 0) or 0),
+                    "rbi": int(st.get("rbi", 0) or 0), "g": int(st.get("gamesPlayed", 0) or 0),
+                    "avg": st.get("avg", ".000"), "ops": ops,
+                    "tier": hitter_tier(ops), "historic": False, "ok": ab >= min_ab})
+    return out
+
+
+def attach_team_meta(players, id_by_name, abbr_by_name):
+    for p in players:
+        p["team_id"] = id_by_name.get(p["team"])
+        p["abbr"] = abbr_by_name.get(p["team"], "")
+
+
 def get_rookies(season, asof=None):
     """Rookie standouts — filter out tiny samples so it's real risers, not 2-PA noise."""
     try:
@@ -255,17 +279,22 @@ def compute_movers(f, base):
         if h["ops"] - b.get("ops", h["ops"]) <= -0.020:
             cool.append({"p": h, "base": b, "d": h["ops"] - b["ops"]})
         bt = hitter_tier(b.get("ops", h["ops"]))
-        if bt != h["tier"] and "gray" not in (bt, h["tier"]):
-            colors.append({"p": h, "old": bt})
+        if (bt != h["tier"] and "gray" not in (bt, h["tier"])
+                and abs(h["ops"] - b.get("ops", h["ops"])) >= 0.015):   # real move, not boundary flicker
+            colors.append({"p": h, "old": bt, "stat": "OPS", "from": b.get("ops"), "to": h["ops"]})
+    pform = []
     for p in f["pitchers_all"]:
         b = bp.get(p["name"])
         if not b:
             continue
-        if p["forma"] - b.get("forma", p["forma"]) >= 4:
-            form.append({"p": p, "base": b, "d": p["forma"] - b["forma"]})
+        d = p["forma"] - b.get("forma", p["forma"])
+        if d >= 4:
+            form.append({"p": p, "base": b, "d": d})
+        if d <= -4 and p["forma"] >= 55:   # strong arms (still good) that slipped the most
+            pform.append({"p": p, "base": b, "d": d})
         bt = pitcher_tier(b.get("forma", p["forma"]))
-        if bt != p["tier"] and "gray" not in (bt, p["tier"]):
-            colors.append({"p": p, "old": bt})
+        if bt != p["tier"] and "gray" not in (bt, p["tier"]) and abs(d) >= 4:   # real move
+            colors.append({"p": p, "old": bt, "stat": "form", "from": b.get("forma"), "to": p["forma"]})
     # Rookie surge — first-year hitters making the biggest week-over-week OPS jump.
     brk = {x["name"]: x for x in base.get("rookies", [])}
     surge = []
@@ -277,10 +306,13 @@ def compute_movers(f, base):
 
     hr.sort(key=lambda x: x["d"], reverse=True)
     form.sort(key=lambda x: x["d"], reverse=True)
+    pform.sort(key=lambda x: x["d"])   # most form lost first
     cool.sort(key=lambda x: x["d"])
     colors.sort(key=lambda c: abs(TIER_ORDER[c["old"]] - TIER_ORDER[c["p"]["tier"]]), reverse=True)
-    return {"hr": hr[:5], "form": form[:5], "cool": cool[:5], "colors": colors[:6],
-            "rookie_surge": surge[:5], "baseline_date": base.get("date")}
+    featured = {x["p"]["id"] for x in hr[:5] + form[:5] + pform[:3] + cool[:5] + surge[:5]}
+    colors = [c for c in colors if c["p"]["id"] not in featured]   # don't repeat a player across sections
+    return {"hr": hr[:5], "form": form[:5], "pform": pform[:3], "cool": cool[:5],
+            "colors": colors[:6], "rookie_surge": surge[:5], "baseline_date": base.get("date")}
 
 
 def attach_hr_games(hr_movers, season, since_date, asof, abbr):
@@ -364,10 +396,24 @@ def rookie_row(p, kind):
     return _player_row(p, stat, ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>')
 
 
+def _logo_sm(p):
+    return (f'<img class="bl-prow-logo" src="{logo_url(p["team_id"])}" alt="" loading="lazy">'
+            if p.get("team_id") else "")
+
+
+def _prow_link(p, inner):
+    """Wrap face+info so a click deep-links into the app and opens that player's roster card."""
+    abbr = (p.get("abbr") or "").lower()
+    if abbr:
+        return f'<a class="bl-prow-link" href="/#rosters/{abbr}/{p["id"]}">{inner}</a>'
+    return f'<span class="bl-prow-link">{inner}</span>'
+
+
 def _player_row(p, stat_html, extra=""):
-    return (f'<li class="bl-player">{face(p["id"], p["tier"], p.get("historic"))}'
-            f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
-            f'<span class="bl-muted">{escape(p["team"])}</span></span>{stat_html}{extra}</li>')
+    info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
+    inner = _prow_link(p, face(p["id"], p["tier"], p.get("historic")) + info)
+    return f'<li class="bl-player">{inner}{stat_html}{extra}</li>'
 
 
 def hitter_row(h):
@@ -387,9 +433,10 @@ def hr_row(m):
     games = m.get("games") or []
     sub = " · ".join(f'{g["hr"]} vs {escape(g["opp"])}' for g in games) if games else f'{h["hr"]} HR total'
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
-            f'<span class="bl-muted">{sub}</span></span>')
+            f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
+    inner = _prow_link(h, face(h["id"], h["tier"], h.get("historic")) + info)
     delta = f'<span class="bl-delta" style="color:{TEXT["green"]}">+{d} HR</span>'
-    return f'<li class="bl-player">{face(h["id"], h["tier"], h.get("historic"))}{info}{delta}</li>'
+    return f'<li class="bl-player">{inner}{delta}</li>'
 
 
 def form_row(m):
@@ -401,16 +448,39 @@ def form_row(m):
     return _player_row(p, delta, crossed)
 
 
-def cool_row(m):
+def _week_line(h):
+    parts = [f'{h["g"]} G', f'{h["hits"]}-for-{h["ab"]}']
+    if h["hr"]:
+        parts.append(f'{h["hr"]} HR')
+    if h["sb"]:
+        parts.append(f'{h["sb"]} SB')
+    if h.get("rbi"):
+        parts.append(f'{h["rbi"]} RBI')
+    return " · ".join(parts)
+
+
+def cool_row(m, wk=None):
     h, b, d = m["p"], m["base"], m["d"]
-    delta = (f'<span class="bl-delta" style="color:{TEXT["red"]}">'
-             f'OPS {b["ops"]:.3f}&rarr;{h["ops"]:.3f} ({d:.3f})</span>')
-    return _player_row(h, delta)
+    if wk:   # show the bad week's line, not the season OPS
+        sub, right = _week_line(wk), f'{wk["avg"]} · {wk["ops"]:.3f} OPS this week'
+    else:
+        sub, right = escape(h["team"]), f'OPS {b["ops"]:.3f}&rarr;{h["ops"]:.3f} ({d:.3f})'
+    info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
+    inner = _prow_link(h, face(h["id"], h["tier"], h.get("historic")) + info)
+    return (f'<li class="bl-player">{inner}'
+            f'<span class="bl-delta" style="color:{TEXT["red"]}">{right}</span></li>')
 
 
 def color_row(c):
     p, old = c["p"], c["old"]
-    delta = f'<span class="bl-delta">{tier_dot(old)} &rarr; {tier_dot(p["tier"])}</span>'
+    if c.get("from") is not None and c.get("to") is not None:   # show the stat that justifies it
+        moved = (f'form {c["from"]:.0f}&rarr;{c["to"]:.0f}' if c.get("stat") == "form"
+                 else f'OPS {c["from"]:.3f}&rarr;{c["to"]:.3f}')
+        why = f'<br><span class="bl-why">{moved}</span>'
+    else:
+        why = ""
+    delta = f'<span class="bl-delta">{tier_dot(old)} &rarr; {tier_dot(p["tier"])}{why}</span>'
     return _player_row(p, delta)
 
 
@@ -419,6 +489,24 @@ def rookie_surge_row(m):
     delta = (f'<span class="bl-delta" style="color:{TEXT["green"]}">'
              f'OPS {b["ops"]:.3f}&rarr;{h["ops"]:.3f} (+{d:.3f})</span>')
     return _player_row(h, delta, ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>')
+
+
+def hweek_row(h):   # best hitters of the week — show their 7-day game line
+    info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(h)}{_week_line(h)}</span></span>')
+    inner = _prow_link(h, face(h["id"], h["tier"]) + info)
+    stat = f'<span class="bl-stat" style="color:{TEXT[h["tier"]]}">{h["ops"]:.3f}<small>OPS&middot;WK</small></span>'
+    return f'<li class="bl-player">{inner}{stat}</li>'
+
+
+def pfaller_row(m):   # strong arm losing form
+    p, b, d = m["p"], m["base"], m["d"]
+    info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
+    inner = _prow_link(p, face(p["id"], p["tier"]) + info)
+    delta = (f'<span class="bl-delta" style="color:{TEXT["red"]}">'
+             f'form {b["forma"]:.0f}&rarr;{p["forma"]:.0f} ({d:.0f})</span>')
+    return f'<li class="bl-player">{inner}{delta}</li>'
 
 
 # ── Sections (each returns full HTML or "" if empty) ────────────────────────
@@ -534,9 +622,22 @@ def sec_risers(f, n, limit=5):
     return _section("Turning it around", g, _lead(n, "risers_lead"), rows)
 
 
+def sec_pfallers(f, n, limit=3):
+    rows = "".join(pfaller_row(m) for m in f["movers"].get("pform", [])[:limit])
+    g = "Of the strongest arms, the ones who shed the most form this week."
+    return _section("Cooling on the mound", g, _lead(n, "pfallers_lead"), rows)
+
+
+def sec_hweek(f, n, limit=5):
+    rows = "".join(hweek_row(h) for h in f.get("week_hot", [])[:limit])
+    g = "The week's hottest hitters — top OPS over the last 7 days (min at-bats), with their game line."
+    return _section("Hot at the plate", g, _lead(n, "hweek_lead"), rows)
+
+
 def sec_fallers(f, n, limit=5):
-    rows = "".join(cool_row(m) for m in f["movers"].get("cool", [])[:limit])
-    g = "Hitters whose OPS fell most this week."
+    wk = f.get("week_by_id", {})
+    rows = "".join(cool_row(m, wk.get(m["p"]["id"])) for m in f["movers"].get("cool", [])[:limit])
+    g = "Hitters whose bat cooled most this week — shown with their 7-day line."
     return _section("Cooling off", g, _lead(n, "fallers_lead"), rows)
 
 
@@ -577,6 +678,7 @@ SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "o
             "bats": sec_bats, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
             "fallers": sec_fallers, "colors": sec_colors, "rookies": sec_rookies,
             "rookie_surge": sec_rookie_surge, "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy,
+            "pfallers": sec_pfallers, "hweek": sec_hweek,
             "month_hitters": sec_month_hitters, "month_hr": sec_month_hr,
             "month_pitchers": sec_month_pitchers}
 TEAMSTAT_SECTIONS = {"bullpen", "offense"}
@@ -587,7 +689,7 @@ THEME_CALENDAR = {
     1: ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
     2: ("Hitting Report", ["offense", "bats", "hr"]),
     3: ("Award Races", ["mvp", "cy", "roy"]),
-    4: ("Risers & Fallers", ["risers", "fallers", "rookie_surge", "colors"]),
+    4: ("Risers & Fallers", ["risers", "pfallers", "hweek", "fallers", "colors"]),
     5: ("Rookie Report", ["rookies", "rookie_surge"]),
     6: ("Around the League", ["power", "offense", "staffs"]),
 }
@@ -597,7 +699,7 @@ THEME_BY_KEY = {  # --theme override
     "hitting": ("Hitting Report", ["offense", "bats", "hr"]),
     "races": ("Award Races", ["mvp", "cy", "roy"]),
     "rookies": ("Rookie Report", ["rookies", "rookie_surge"]),
-    "movers": ("Risers & Fallers", ["risers", "fallers", "rookie_surge", "colors"]),
+    "movers": ("Risers & Fallers", ["risers", "pfallers", "hweek", "fallers", "colors"]),
     "league": ("Around the League", ["power", "offense", "staffs"]),
 }
 FALLBACK_SECTIONS = ["power", "bats", "arms"]   # if a theme's sections are all empty
@@ -679,7 +781,7 @@ LLM_SYSTEM = (
     "(only for sections_today) = 1–2 sentences of color — name a standout, don't restate the whole "
     "list, don't redefine terms. Return ONLY raw JSON (no markdown) with string keys from: title, "
     "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, "
-    "risers_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
+    "risers_lead, pfallers_lead, hweek_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
     "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead — include title, intro, and a "
     "lead for each section in sections_today.\n"
     "If edition_theme starts with 'Best of', this is a once-a-month wrap of the FINISHED month "
@@ -747,12 +849,17 @@ def facts_for_llm(f, theme_title, section_ids):
                              "where": [f'{g["hr"]} vs {g["opp"]} ({g["date"]})' for g in x.get("games", [])]}
                             for x in m.get("hr", [])],
             "form_risers": [{"name": x["p"]["name"], "form_now": round(x["p"]["forma"]), "form_gained": round(x["d"])} for x in m.get("form", [])],
-            "cooling_bats": [{"name": x["p"]["name"], "ops_now": round(x["p"]["ops"], 3), "ops_drop": round(x["d"], 3)} for x in m.get("cool", [])],
+            "strong_arms_losing_form": [{"name": x["p"]["name"], "form_now": round(x["p"]["forma"]), "form_lost": round(x["d"])} for x in m.get("pform", [])],
+            "cooling_bats": [{"name": x["p"]["name"], "week_line": _week_line(f["week_by_id"][x["p"]["id"]]) if x["p"]["id"] in f.get("week_by_id", {}) else None, "ops_drop_season": round(x["d"], 3)} for x in m.get("cool", [])],
             "color_changes": [{"name": c["p"]["name"], "from": TIER_LABEL[c["old"]], "to": TIER_LABEL[c["p"]["tier"]]} for c in m.get("colors", [])],
             "rookie_breakouts": [{"name": x["p"]["name"], "team": x["p"]["team"],
                                   "ops_now": round(x["p"]["ops"], 3), "ops_gained": round(x["d"], 3)}
                                  for x in m.get("rookie_surge", [])],
         }
+    if f.get("week_hot"):
+        payload["hot_hitters_this_week"] = [{"name": h["name"], "team": h["team"],
+                                             "line": _week_line(h), "ops_week": round(h["ops"], 3)}
+                                            for h in f["week_hot"]]
     if f.get("month_hitters"):
         payload["month_recap"] = {
             "month": f.get("month_label"),
@@ -791,6 +898,11 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
         t["movement"] = (prev_rank[t["name"]] - t["rank"]) if t["name"] in prev_rank else None
     hitters = get_hitters(season, 60, asof=asof)
     pitchers = get_pitchers(season, 40, asof=asof)
+    id_by_name = {t["name"]: t["id"] for t in teams}
+    abbr_by_name = {t["name"]: t.get("abbr", "") for t in teams}
+    rookies = get_rookies(season, asof=asof)   # always — also feeds the snapshot baseline
+    for lst in (hitters, pitchers, rookies["hitters"], rookies["pitchers"]):
+        attach_team_meta(lst, id_by_name, abbr_by_name)
     bh = {x["name"]: x for x in baseline.get("hitters", [])} if baseline else {}
     bp = {x["name"]: x for x in baseline.get("pitchers", [])} if baseline else {}
     for h in hitters:                       # attach week-ago values for trend-aware prose
@@ -799,14 +911,14 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
         b = bp.get(p["name"]); p["forma_prev"] = b["forma"] if b else None
     f = {
         "power_all": ranked, "power_top": ranked[:10], "has_movement": bool(prev_rank),
-        "team_abbr": {t["name"]: t.get("abbr", "") for t in teams},
+        "team_abbr": abbr_by_name, "team_id_by_name": id_by_name,
         "baseline_date": baseline.get("date") if baseline else None, "asof": asof,
         "staffs": get_team_pitching(season, 5, asof=asof),
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
         "aces": sorted([p for p in pitchers if p["tier"] == "green"],
                        key=lambda p: p["forma"], reverse=True)[:6],   # by form, to match the gloss
-        "rookies": get_rookies(season, asof=asof),   # always — also feeds the snapshot baseline
+        "rookies": rookies,
         "bullpen": [], "offense": [],
     }
     if need_teamstats:
@@ -842,7 +954,7 @@ STYLE = """
   .bl-kicker { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:700; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent-blue); margin-bottom:6px; }
   .bl-article h1 { font-family:'Barlow Condensed','Inter',sans-serif; font-size:34px; line-height:1.05; letter-spacing:.5px; margin-bottom:8px; }
   .bl-date { color:var(--muted); font-size:13px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; margin-bottom:22px; }
-  .bl-article h2 { font-family:'Barlow Condensed','Inter',sans-serif; font-size:14px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); margin:28px 0 10px; }
+  .bl-article h2 { font-family:'Barlow Condensed','Inter',sans-serif; font-size:18px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--accent); margin:30px 0 8px; }
   .bl-article p { font-size:15px; line-height:1.6; margin-bottom:6px; }
   .bl-intro { font-size:16px; color:var(--muted); margin-bottom:18px; }
   .bl-gloss { font-size:12.5px; color:var(--muted); margin:0 0 8px; }
@@ -861,6 +973,10 @@ STYLE = """
   .bl-subhead { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:700; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin:14px 0 2px; }
 
   .bl-player { display:flex; align-items:center; gap:12px; }
+  .bl-prow-link { display:flex; align-items:center; gap:12px; flex:1; min-width:0; text-decoration:none; color:inherit; border-radius:10px; }
+  a.bl-prow-link:hover .bl-player-info strong { color:var(--accent-blue); }
+  a.bl-prow-link:hover .bl-face { border-color:var(--accent-blue); }
+  .bl-prow-logo { width:15px; height:15px; object-fit:contain; vertical-align:-3px; margin-right:5px; }
   .bl-face-wrap { position:relative; flex-shrink:0; display:inline-block; line-height:0; }
   .bl-face { width:52px; height:52px; border-radius:50%; object-fit:cover; object-position:center 28%;
     border:3px solid var(--ring,#9ca3af); background:var(--surface2); box-shadow:0 2px 8px rgba(22,28,39,.18); }
@@ -877,7 +993,8 @@ STYLE = """
   .bl-stat small { font-size:9px; font-weight:700; letter-spacing:.5px; opacity:.8; }
   .bl-chip { font-size:9px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; padding:2px 7px; border-radius:4px; flex-shrink:0; }
   .bl-shimmer-tag { font-size:9px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:#b8860b; }
-  .bl-delta { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:800; font-size:13px; flex-shrink:0; text-align:right; white-space:nowrap; }
+  .bl-delta { font-family:'Barlow Condensed','Inter',sans-serif; font-weight:800; font-size:15px; flex-shrink:0; text-align:right; white-space:nowrap; }
+  .bl-why { font-family:'Inter',sans-serif; font-weight:700; font-size:11.5px; color:var(--muted); }
   .bl-dot { display:inline-block; width:9px; height:9px; border-radius:50%; vertical-align:middle; margin:0 3px 1px 0; }
 
   .bl-foot { margin-top:26px; text-align:center; }
@@ -1095,8 +1212,17 @@ def main():
     facts["movers"] = {} if monthly else compute_movers(facts, baseline)
     if monthly:
         facts.update(build_month_facts(args.season, m_start.isoformat(), m_end.isoformat(), m_label))
+        for lst in (facts["month_hitters"], facts["month_hr"], facts["month_pitchers"]):
+            attach_team_meta(lst, facts["team_id_by_name"], facts["team_abbr"])
     facts["recent_headlines"] = recent_headlines(date_iso)
     facts["recent_prose"] = recent_prose(date_iso)
+    if {"hweek", "fallers"} & set(section_ids):   # last-7-days hitter lines (hot bats + cooling)
+        end_d = asof or dt.date.today().isoformat()
+        start_d = (dt.date.fromisoformat(end_d) - dt.timedelta(days=7)).isoformat()
+        wk = get_week_hitters(args.season, start_d, end_d)
+        attach_team_meta(wk, facts["team_id_by_name"], facts["team_abbr"])
+        facts["week_by_id"] = {h["id"]: h for h in wk}
+        facts["week_hot"] = [h for h in wk if h["ok"]][:5]
     if "hr" in section_ids and facts["movers"].get("hr"):
         attach_hr_games(facts["movers"]["hr"], args.season,
                         facts.get("baseline_date") or date_iso, asof, facts["team_abbr"])

@@ -7994,14 +7994,43 @@ function getTeamLeagueId(teamId) {
   el.textContent = 'Stats update daily by 10:00 Amsterdam time';
 })();
 
-// On load, jump to the tab specified in the URL hash (e.g. #mvp, #rosters/nyy)
+// Map a player id to its diamond key, then open + scroll to that player's card.
+// Lets the blog deep-link straight to a player's full roster card (#rosters/{abbr}/{pid}).
+function diamondKeyForPid(teamId, pid) {
+  const impact = teamsImpactCache[teamId];
+  if (!impact) return null;
+  for (const pos in impact.hittersByPos) {
+    if ((impact.hittersByPos[pos] || []).some(p => p.id === pid)) return `h-${pos}`;
+  }
+  const groups = { SP: impact.spList, CL: impact.clList, RP: impact.rpList };
+  for (const role in groups) {
+    const i = (groups[role] || []).findIndex(p => p.id === pid);
+    if (i >= 0) return `p-${role}-${i}`;
+  }
+  return null;
+}
+function openPlayerInRoster(teamId, pid) {
+  const key = diamondKeyForPid(teamId, pid);
+  if (!key) return;
+  selectDiamondKey(key, teamId);
+  setTimeout(() => {
+    const el = key.startsWith('h-') ? document.getElementById('hitterDetailCard')
+                                    : document.getElementById('detail-' + key);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+// On load, jump to the tab specified in the URL hash (e.g. #mvp, #rosters/nyy, #rosters/nyy/12345)
 const VALID_TABS = new Set(['standings','topgames','rosters','mvp','info']);
-const [hashTab, hashParam] = window.location.hash.replace('#', '').split('/');
+const [hashTab, hashParam, hashPid] = window.location.hash.replace('#', '').split('/');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);
 if (startTab === 'rosters' && hashParam) {
   const tid = Object.keys(TEAM_META).find(id => (TEAM_META[id].abbr || '').toLowerCase() === hashParam.toLowerCase());
-  if (tid) selectTeam(parseInt(tid));
+  if (tid) {
+    const p = selectTeam(parseInt(tid));
+    if (hashPid && p && typeof p.then === 'function') p.then(() => openPlayerInRoster(parseInt(tid), parseInt(hashPid)));
+  }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
