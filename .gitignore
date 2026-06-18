@@ -9,6 +9,7 @@ og-source.png
 
 # Local working/handover docs
 HANDOVER.md
+ROADMAP.md
 El_cronista_de_beisbol_definitivo.md
 
 # Secrets — API keys etc. Never commit these.
