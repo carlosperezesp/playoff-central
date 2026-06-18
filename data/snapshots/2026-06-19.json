@@ -42,11 +42,11 @@
       "rank": 10
     },
     {
-      "name": "Chicago White Sox",
+      "name": "Toronto Blue Jays",
       "rank": 11
     },
     {
-      "name": "Toronto Blue Jays",
+      "name": "Chicago White Sox",
       "rank": 12
     },
     {
@@ -110,11 +110,11 @@
       "rank": 27
     },
     {
-      "name": "Boston Red Sox",
+      "name": "Kansas City Royals",
       "rank": 28
     },
     {
-      "name": "Kansas City Royals",
+      "name": "Boston Red Sox",
       "rank": 29
     },
     {
@@ -154,24 +154,24 @@
       "hr": 15
     },
     {
-      "name": "Willson Contreras",
-      "ops": 0.94,
-      "hr": 16
-    },
-    {
       "name": "Munetaka Murakami",
       "ops": 0.938,
       "hr": 20
     },
     {
-      "name": "Byron Buxton",
-      "ops": 0.937,
-      "hr": 23
-    },
-    {
       "name": "Kyle Schwarber",
       "ops": 0.929,
       "hr": 25
+    },
+    {
+      "name": "Byron Buxton",
+      "ops": 0.926,
+      "hr": 23
+    },
+    {
+      "name": "Willson Contreras",
+      "ops": 0.926,
+      "hr": 16
     },
     {
       "name": "Drake Baldwin",
@@ -204,14 +204,14 @@
       "hr": 16
     },
     {
-      "name": "Jake Bauers",
-      "ops": 0.879,
-      "hr": 13
-    },
-    {
       "name": "Jordan Walker",
       "ops": 0.878,
       "hr": 18
+    },
+    {
+      "name": "Jake Bauers",
+      "ops": 0.877,
+      "hr": 13
     },
     {
       "name": "CJ Abrams",
@@ -269,11 +269,6 @@
       "hr": 14
     },
     {
-      "name": "Brice Turang",
-      "ops": 0.853,
-      "hr": 11
-    },
-    {
       "name": "Dillon Dingler",
       "ops": 0.851,
       "hr": 16
@@ -297,6 +292,11 @@
       "name": "Bryce Harper",
       "ops": 0.844,
       "hr": 15
+    },
+    {
+      "name": "Brice Turang",
+      "ops": 0.844,
+      "hr": 11
     },
     {
       "name": "Otto Lopez",
@@ -372,8 +372,8 @@
     },
     {
       "name": "Parker Messick",
-      "era": 2.68,
-      "forma": 74.8
+      "era": 2.7,
+      "forma": 74.2
     },
     {
       "name": "Justin Wrobleski",
@@ -406,6 +406,11 @@
       "forma": 70.5
     },
     {
+      "name": "Joe Ryan",
+      "era": 3.02,
+      "forma": 74.4
+    },
+    {
       "name": "Michael Soroka",
       "era": 3.11,
       "forma": 70.9
@@ -419,11 +424,6 @@
       "name": "Jacob deGrom",
       "era": 3.17,
       "forma": 73.5
-    },
-    {
-      "name": "Joe Ryan",
-      "era": 3.17,
-      "forma": 73.1
     },
     {
       "name": "Braxton Ashcraft",
@@ -563,14 +563,14 @@
       "hr": 14
     },
     {
+      "name": "Brandon Valenzuela",
+      "ops": 0.805,
+      "hr": 7
+    },
+    {
       "name": "Henry Bolte",
       "ops": 0.801,
       "hr": 2
-    },
-    {
-      "name": "Brandon Valenzuela",
-      "ops": 0.792,
-      "hr": 7
     },
     {
       "name": "Samuel Basallo",
@@ -578,19 +578,24 @@
       "hr": 10
     },
     {
+      "name": "Yohendrick Pi\u00f1ango",
+      "ops": 0.788,
+      "hr": 4
+    },
+    {
       "name": "Wade Meckler",
       "ops": 0.783,
       "hr": 2
     },
     {
-      "name": "Yohendrick Pi\u00f1ango",
-      "ops": 0.778,
-      "hr": 4
-    },
-    {
       "name": "Sam Antonacci",
       "ops": 0.772,
       "hr": 3
+    },
+    {
+      "name": "Travis Bazzana",
+      "ops": 0.768,
+      "hr": 5
     },
     {
       "name": "JJ Wetherholt",
@@ -601,11 +606,6 @@
       "name": "Kazuma Okamoto",
       "ops": 0.749,
       "hr": 15
-    },
-    {
-      "name": "Travis Bazzana",
-      "ops": 0.747,
-      "hr": 4
     },
     {
       "name": "Chase DeLauter",
@@ -654,12 +654,12 @@
     }
   ],
   "narration": {
-    "title": "Movement Week: Some Bats Cool, Some Arms Catch Fire",
-    "intro": "The leaderboards held steady, but underneath them plenty shifted this week. A few arms found their best stretch of the year while a handful of bats went quiet. Here's who moved.",
-    "risers_lead": "Dustin May leads the form climbers, up ten points to 61, with Nolan McLean and Reid Detmers each gaining six to reach 64 and 67. Yoshinobu Yamamoto's five-point jump to 87 is the most dangerous of the bunch, since it lands on a season already worth watching.",
-    "pfallers_lead": "Davis Martin took the hardest fall, dropping fourteen points of form to 64. Bryce Elder and Emerson Hancock each slid nine, both settling around the upper-60s and lower-70s.",
-    "hweek_lead": "Donovan Walton owned the week at a 1.600 OPS, going 8-for-15 with two homers for the Angels. Pete Crow-Armstrong's seven-game line stands out for volume: 14-for-31 with four homers and a pair of steals.",
-    "fallers_lead": "Bryce Harper had the week to forget, 1-for-19 over six games and down 38 points of season OPS. Jordan Walker and Yandy D\u00edaz cooled by similar margins right behind him.",
-    "colors_lead": "Justin Wrobleski climbed from above-average to elite this week, the kind of jump that gets you noticed. Jake Bauers went the other way, slipping from elite to above-average, while Connelly Early dropped from above-average to average."
+    "title": "A Week Of Big Swings, Up And Down",
+    "intro": "The week sorted players into climbers and coolers. A few arms found another gear, a couple of bats went quiet, and the colors did some rearranging along the edges.",
+    "risers_lead": "Dustin May led the form climbers, up ten points to 61. Yoshinobu Yamamoto kept his quiet roll going, adding five to reach 87 on a 2.52 ERA and 0.84 WHIP.",
+    "pfallers_lead": "Davis Martin took the hardest fall, dropping 14 points of form to 64. Bryce Elder and Emerson Hancock each shed nine, landing at 68 and 71.",
+    "hweek_lead": "Donovan Walton had the loudest seven days, an 8-for-15 stretch with two homers for a 1.600 OPS. Pete Crow-Armstrong nearly matched it, going 14-for-31 with four homers for the Cubs.",
+    "fallers_lead": "Bryce Harper hit the chill hardest, a 1-for-19 week that trimmed 38 points off his season OPS. Jordan Walker and Yandy Diaz cooled too, each off about three-and-a-half hundredths.",
+    "colors_lead": "Justin Wrobleski climbed from above-average to elite, the best of the three moves. Jake Bauers slid the other way, from elite to above-average, while Connelly Early dropped to average."
   }
 }

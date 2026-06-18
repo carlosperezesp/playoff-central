@@ -196,6 +196,23 @@ def attach_team_meta(players, id_by_name, abbr_by_name):
         p["abbr"] = abbr_by_name.get(p["team"], "")
 
 
+def get_hitter_season(season, pid, asof=None):
+    """One hitter's season line — for hot-week part-timers missing from the qualified map."""
+    span = f"stats=byDateRange&startDate={season}-01-01&endDate={asof}" if asof else "stats=season"
+    try:
+        sp = fetch(f"{API}/people/{pid}/stats?{span}&season={season}&group=hitting"
+                   f"&gameType=R").get("stats", [{}])[0].get("splits", [])
+        if not sp:
+            return None
+        st = sp[0]["stat"]
+        ops = float(st.get("ops", 0) or 0)
+        return {"id": pid, "ops": ops, "hr": int(st.get("homeRuns", 0) or 0),
+                "avg": st.get("avg", ".000"), "rbi": int(st.get("rbi", 0) or 0),
+                "sb": int(st.get("stolenBases", 0) or 0), "tier": hitter_tier(ops)}
+    except Exception:
+        return None
+
+
 def get_rookies(season, asof=None):
     """Rookie standouts — filter out tiny samples so it's real risers, not 2-PA noise."""
     try:
@@ -404,6 +421,19 @@ def _logo_sm(p):
             if p.get("team_id") else "")
 
 
+def _arrow_stat(label, old, new, tier_fn, prec):
+    """old→new (delta) with each number in its own tier color, label/arrow in gray.
+    The delta number takes the colour of the second value."""
+    g = TEXT["gray"]
+    oc, nc = TEXT[tier_fn(old)], TEXT[tier_fn(new)]
+    return ('<span class="bl-delta">'
+            f'<span style="color:{g}">{label}</span> '
+            f'<span style="color:{oc}">{old:.{prec}f}</span>'
+            f'<span style="color:{g}">&rarr;</span>'
+            f'<span style="color:{nc}">{new:.{prec}f}</span> '
+            f'<span style="color:{nc}">({new - old:+.{prec}f})</span></span>')
+
+
 def _meter(label, value, pct, tier):
     pct = max(4, min(100, pct))
     return (f'<div class="bl-meter"><div class="bl-meter-top"><span class="bl-meter-label">{label}</span>'
@@ -475,11 +505,10 @@ def hr_row(m):
 
 
 def form_row(m):
-    p, b, d = m["p"], m["base"], m["d"]
+    p, b = m["p"], m["base"]
     crossed = (' <span class="bl-shimmer-tag" style="color:#16a34a">now elite</span>'
                if p["tier"] == "green" and pitcher_tier(b["forma"]) != "green" else "")
-    delta = (f'<span class="bl-delta" style="color:{TEXT["green"]}">'
-             f'form {b["forma"]:.0f}&rarr;{p["forma"]:.0f} (+{d:.0f})</span>')
+    delta = _arrow_stat("form", b["forma"], p["forma"], pitcher_tier, 0)
     return _player_row(p, delta, crossed)
 
 
@@ -495,24 +524,34 @@ def _week_line(h):
 
 
 def cool_row(m, wk=None):
-    h, b, d = m["p"], m["base"], m["d"]
-    if wk:   # show the bad week's line, not the season OPS
-        sub, right = _week_line(wk), f'{wk["avg"]} · {wk["ops"]:.3f} OPS this week'
+    h, b = m["p"], m["base"]
+    if wk:   # show the bad week's line, week OPS in its tier colour
+        sub = _week_line(wk)
+        right = (f'<span class="bl-delta"><span style="color:{TEXT["gray"]}">{wk["avg"]}</span> · '
+                 f'<span style="color:{TEXT[hitter_tier(wk["ops"])]}">{wk["ops"]:.3f}</span>'
+                 f'<span style="color:{TEXT["gray"]}"> OPS this week</span></span>')
     else:
-        sub, right = escape(h["team"]), f'OPS {b["ops"]:.3f}&rarr;{h["ops"]:.3f} ({d:.3f})'
+        sub = escape(h["team"])
+        right = _arrow_stat("OPS", b["ops"], h["ops"], hitter_tier, 3)
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
-    inner = (f'{face(h["id"], h["tier"], h.get("historic"))}{info}'
-             f'<span class="bl-delta" style="color:{TEXT["red"]}">{right}</span>')
+    inner = f'{face(h["id"], h["tier"], h.get("historic"))}{info}{right}'
     return _pwrap(inner, player_card(h, week=wk))
 
 
 def color_row(c):
     p, old = c["p"], c["old"]
-    if c.get("from") is not None and c.get("to") is not None:   # show the stat that justifies it
-        moved = (f'form {c["from"]:.0f}&rarr;{c["to"]:.0f}' if c.get("stat") == "form"
-                 else f'OPS {c["from"]:.3f}&rarr;{c["to"]:.3f}')
-        why = f'<br><span class="bl-why">{moved}</span>'
+    g = TEXT["gray"]
+    if c.get("from") is not None and c.get("to") is not None:   # the stat that justifies the move
+        if c.get("stat") == "form":
+            label, prec, tf = "form", 0, pitcher_tier
+        else:
+            label, prec, tf = "OPS", 3, hitter_tier
+        oc, nc = TEXT[tf(c["from"])], TEXT[tf(c["to"])]
+        nums = (f'<span style="color:{oc}">{c["from"]:.{prec}f}</span>'
+                f'<span style="color:{g}">&rarr;</span>'
+                f'<span style="color:{nc}">{c["to"]:.{prec}f}</span>')
+        why = f'<br><span class="bl-why"><span style="color:{g}">{label}</span> {nums}</span>'
     else:
         why = ""
     delta = f'<span class="bl-delta">{tier_dot(old)} &rarr; {tier_dot(p["tier"])}{why}</span>'
@@ -535,12 +574,10 @@ def hweek_row(h, season=None):   # best hitters of the week — show their 7-day
 
 
 def pfaller_row(m):   # strong arm losing form
-    p, b, d = m["p"], m["base"], m["d"]
+    p, b = m["p"], m["base"]
     info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
-    inner = (f'{face(p["id"], p["tier"])}{info}'
-             f'<span class="bl-delta" style="color:{TEXT["red"]}">'
-             f'form {b["forma"]:.0f}&rarr;{p["forma"]:.0f} ({d:.0f})</span>')
+    inner = f'{face(p["id"], p["tier"])}{info}{_arrow_stat("form", b["forma"], p["forma"], pitcher_tier, 0)}'
     return _pwrap(inner, player_card(p))
 
 
@@ -1287,6 +1324,11 @@ def main():
         attach_team_meta(wk, facts["team_id_by_name"], facts["team_abbr"])
         facts["week_by_id"] = {h["id"]: h for h in wk}
         facts["week_hot"] = [h for h in wk if h["ok"]][:5]
+        for h in facts["week_hot"]:   # part-timers missing from the qualified map still get a card
+            if h["id"] not in facts["hit_by_id"]:
+                sea = get_hitter_season(args.season, h["id"], asof)
+                if sea:
+                    facts["hit_by_id"][h["id"]] = sea
     if "hr" in section_ids and facts["movers"].get("hr"):
         attach_hr_games(facts["movers"]["hr"], args.season,
                         facts.get("baseline_date") or date_iso, asof, facts["team_abbr"])
