@@ -410,123 +410,127 @@ def rookie_surge_row(m):
 
 
 # ── Sections (each returns full HTML or "" if empty) ────────────────────────
-def _lead(n, key, fallback):
-    return f'<p>{escape(n[key])}</p>' if n and n.get(key) else fallback
+# Each recurring section carries a FIXED canonical one-line gloss (so a term is
+# defined the same way every edition, never cold). The LLM 'lead' is colour on
+# top — optional, and must not re-define terms (the gloss already did).
+def _lead(n, key):
+    return f'<p>{escape(n[key])}</p>' if n and n.get(key) else ""
 
 
-def _section(heading, lead_html, rows):
-    return f'<h2>{heading}</h2>{lead_html}<ul class="bl-list">{rows}</ul>' if rows else ""
+def _section(heading, gloss, lead, rows):
+    if not rows:
+        return ""
+    g = f'<p class="bl-gloss">{gloss}</p>' if gloss else ""
+    return f'<h2>{heading}</h2>{g}{lead}<ul class="bl-list">{rows}</ul>'
 
 
 def sec_power(f, n, limit=10):
     rows = "".join(power_row(t, f["has_movement"]) for t in f["power_top"][:limit])
-    d = ('<p>Our power ranking — season record, run differential and last-ten form blended into '
-         'one order. The top of the league right now:</p>')
-    return _section("Power Rankings", _lead(n, "power_lead", d), rows)
+    g = "Power ranking — record, run differential and last-10 form, blended into one order."
+    return _section("Power Rankings", g, _lead(n, "power_lead"), rows)
 
 
 def sec_staffs(f, n, limit=5):
     rows = "".join(team_stat_row(i, r, f'{r["val"]:.2f}', "ERA", f'{r["whip"]:.2f} WHIP')
                    for i, r in enumerate(f["staffs"][:limit], 1))
-    d = '<p>Team ERA — rotation and bullpen together. The run-prevention leaders:</p>'
-    return _section("Best staffs on the mound", _lead(n, "staff_lead", d), rows)
+    g = "Team ERA — the whole staff, starters and bullpen. Lower is better."
+    return _section("Best staffs on the mound", g, _lead(n, "staff_lead"), rows)
 
 
 def sec_bullpen(f, n, limit=5):
     rows = "".join(team_stat_row(i, r, f'{r["val"]:.2f}', "ERA", f'{r["whip"]:.2f} WHIP')
                    for i, r in enumerate(f.get("bullpen", [])[:limit], 1))
-    d = '<p>Bullpen ERA — who you trust to hold a lead in the seventh, eighth and ninth:</p>'
-    return _section("Best bullpens", _lead(n, "bullpen_lead", d), rows)
+    g = "Bullpen ERA — relievers only. Lower is better."
+    return _section("Best bullpens", g, _lead(n, "bullpen_lead"), rows)
 
 
 def sec_offense(f, n, limit=5):
     rows = "".join(team_stat_row(i, r, f'{r["val"]:.3f}', "OPS", "team OPS")
                    for i, r in enumerate(f.get("offense", [])[:limit], 1))
-    d = '<p>Team OPS — the lineups doing the most damage, top to bottom:</p>'
-    return _section("Best offenses", _lead(n, "offense_lead", d), rows)
+    g = "Team OPS — on-base plus slugging. Higher is better."
+    return _section("Best offenses", g, _lead(n, "offense_lead"), rows)
 
 
 def sec_rookies(f, n):
     rk = f.get("rookies", {})
     rows = "".join(rookie_row(h, "hit") for h in rk.get("hitters", [])[:5])
     rows += "".join(rookie_row(p, "pit") for p in rk.get("pitchers", [])[:3])
-    d = '<p>The first-year players forcing their way into the conversation (min. real innings/at-bats):</p>'
-    return _section("The rookie class", _lead(n, "rookies_lead", d), rows)
+    g = "Top first-year players, hitters by OPS (minimum real playing time)."
+    return _section("The rookie class", g, _lead(n, "rookies_lead"), rows)
 
 
 def sec_rookie_surge(f, n, limit=5):
     rows = "".join(rookie_surge_row(m) for m in f["movers"].get("rookie_surge", [])[:limit])
-    d = '<p>First-year hitters on the rise — the biggest OPS jumps among rookies this week:</p>'
-    return _section("Rookies breaking out", _lead(n, "rookie_surge_lead", d), rows)
+    g = "Rookies with the biggest OPS jump this week."
+    return _section("Rookies breaking out", g, _lead(n, "rookie_surge_lead"), rows)
 
 
 def _by_league(items):
     return [x for x in items if x.get("lg") == 103], [x for x in items if x.get("lg") == 104]
 
 
-def _race(heading, lead, items, row_fn, each=3):
+def _race(heading, gloss, lead, items, row_fn, each=3):
     al, nl = _by_league(items)
 
     def block(label, lst):
         return (f'<div class="bl-subhead">{label}</div><ul class="bl-list">'
                 + "".join(row_fn(x) for x in lst[:each]) + '</ul>') if lst else ""
     body = block("American League", al) + block("National League", nl)
-    return f'<h2>{heading}</h2>{lead}{body}' if body else ""
+    g = f'<p class="bl-gloss">{gloss}</p>' if gloss else ""
+    return f'<h2>{heading}</h2>{g}{lead}{body}' if body else ""
 
 
 def sec_mvp(f, n):
-    d = '<p>Our quick MVP read — the best bat in each league by OPS right now:</p>'
-    return _race("MVP watch", _lead(n, "mvp_lead", d), f["hitters_all"], hitter_row)
+    g = "Best hitters by OPS, in each league."
+    return _race("MVP watch", g, _lead(n, "mvp_lead"), f["hitters_all"], hitter_row)
 
 
 def sec_cy(f, n):
-    d = '<p>The Cy Young picture — the arms with the best form (ERA &amp; WHIP) in each league:</p>'
-    return _race("Cy Young watch", _lead(n, "cy_lead", d), f["pitchers_all"], pitcher_row)
+    g = "Best starters by form — our 0–100 pitching score from ERA &amp; WHIP — in each league."
+    return _race("Cy Young watch", g, _lead(n, "cy_lead"), f["pitchers_all"], pitcher_row)
 
 
 def sec_roy(f, n):
-    d = '<p>Rookie of the Year — the freshmen bats leading each league:</p>'
-    return _race("Rookie of the Year watch", _lead(n, "roy_lead", d),
+    g = "Top first-year hitters by OPS, in each league."
+    return _race("Rookie of the Year watch", g, _lead(n, "roy_lead"),
                  f.get("rookies", {}).get("hitters", []), lambda h: rookie_row(h, "hit"))
 
 
 def sec_bats(f, n, limit=8):
     rows = "".join(hitter_row(h) for h in f["elite_hitters"][:limit])
-    d = ('<p>An OPS of .900 or better is '
-         f'<span style="color:{TEXT["green"]};font-weight:700">elite</span> on our scale — green. '
-         'A shimmer marks a historic pace (OPS ≥ 1.000):</p>')
-    return _section("Swinging a green bat", _lead(n, "hitters_lead", d), rows)
+    g = "Hitters at .900+ OPS — elite (green). A shimmer means a historic pace (1.000+)."
+    return _section("Swinging a green bat", g, _lead(n, "hitters_lead"), rows)
 
 
 def sec_arms(f, n, limit=6):
     rows = "".join(pitcher_row(p) for p in f["aces"][:limit])
-    d = ('<p>Form — our 0–100 score from ERA &amp; WHIP — puts these arms in the green. '
-         'A shimmer marks a historic pace (ERA ≤ 2.00 &amp; WHIP ≤ 1.00):</p>')
-    return _section("Green on the mound", _lead(n, "pitchers_lead", d), rows)
+    g = ("Top arms by form — our 0–100 pitching score from ERA &amp; WHIP. "
+         "A shimmer means a historic pace (sub-2.00 ERA, sub-1.00 WHIP).")
+    return _section("Green on the mound", g, _lead(n, "pitchers_lead"), rows)
 
 
 def sec_hr(f, n, limit=5):
     rows = "".join(hr_row(m) for m in f["movers"].get("hr", [])[:limit])
-    d = '<p>Who put the ball over the wall most since last week:</p>'
-    return _section("Climbing the home-run ladder", _lead(n, "hr_lead", d), rows)
+    g = "Most home runs added this week."
+    return _section("Climbing the home-run ladder", g, _lead(n, "hr_lead"), rows)
 
 
 def sec_risers(f, n, limit=5):
     rows = "".join(form_row(m) for m in f["movers"].get("form", [])[:limit])
-    d = '<p>Arms trending up — the biggest gains in form since last week:</p>'
-    return _section("Turning it around", _lead(n, "risers_lead", d), rows)
+    g = "Pitchers whose form climbed most this week."
+    return _section("Turning it around", g, _lead(n, "risers_lead"), rows)
 
 
 def sec_fallers(f, n, limit=5):
     rows = "".join(cool_row(m) for m in f["movers"].get("cool", [])[:limit])
-    d = '<p>Bats that have cooled off — the steepest OPS slides since last week:</p>'
-    return _section("Cooling off", _lead(n, "fallers_lead", d), rows)
+    g = "Hitters whose OPS fell most this week."
+    return _section("Cooling off", g, _lead(n, "fallers_lead"), rows)
 
 
 def sec_colors(f, n, limit=6):
     rows = "".join(color_row(c) for c in f["movers"].get("colors", [])[:limit])
-    d = '<p>Players who changed color on our scale this week — the tide turning, one way or the other:</p>'
-    return _section("Changing colors", _lead(n, "colors_lead", d), rows)
+    g = "Players who moved up or down a tier on our scale this week."
+    return _section("Changing colors", g, _lead(n, "colors_lead"), rows)
 
 
 SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "offense": sec_offense,
@@ -576,33 +580,48 @@ def render_article(section_ids, f, n):
 
 # ── Phase 2: LLM writes the prose around the computed facts ─────────────────
 LLM_SYSTEM = (
-    "You write THE LENS, the daily column for Baseball Lens, an MLB site that turns the season "
-    "into color (green = elite, red = struggling).\n\n"
-    "VOICE — a chronicler in the tradition of Red Smith, Roger Angell and Jim Murray:\n"
-    "- Plain, exact American English. Strong precise verbs, not piled-up adjectives. Economy is "
-    "respect for the reader.\n"
-    "- Sense of occasion: when a number is genuinely special, find the image that makes it land — "
-    "but never inflate. Admiration without honesty is just hype. Measure every claim against the data.\n"
-    "- Dry wit is welcome; clichés, hype and emoji are not. Banned outright: 'the kids are alright' "
-    "and any pun on it. Be fair to the teams and players struggling, never cruel.\n"
-    "- A feel for the season's arc — who's rising, who's sliding, where this is heading.\n"
-    "- Never lie to the reader: use ONLY the names and numbers in the data provided; never invent, "
-    "round differently, or estimate a stat.\n"
-    "- BE WEEK-AWARE. The headline stats are SEASON TOTALS, but you're given each featured player's "
-    "value a week ago (ops_a_week_ago, form_a_week_ago, hr_a_week_ago), a week_window, rank changes, "
-    "and a movers section. Write about what CHANGED this week, not the static total. A 1.000 OPS that "
-    "was 1.100 a week ago is a cold week — say so; don't call a sliding player hot. Lead with movement: "
-    "who's heating up, who's cooling, who climbed or fell.\n"
-    "- READ THE GAMES. When a player has a 'where' breakdown (HRs by opponent and date), use it for "
-    "concrete color — e.g. 'three of them in a weekend at Kansas City', not just '+3 homers'.\n\n"
-    "Today's edition has a THEME (given as edition_theme) and a fixed set of sections (sections_today). "
-    "FORMAT: 'title' is a punchy 6-10 word headline true to the theme. 'intro' opens like a column — "
-    "3-4 sentences picking out the day's real storyline(s). Each lead is 1-3 sentences setting up its "
-    "list; name a standout or two but do NOT enumerate the whole list (the page renders it). Return "
-    "ONLY raw JSON (no markdown) with string keys from: title, intro, power_lead, staff_lead, "
-    "bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, risers_lead, fallers_lead, "
-    "colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, roy_lead — include title, intro, "
-    "and a lead for each section in sections_today."
+    "You write THE LENS, the daily MLB column for Baseball Lens (a site that turns the season into "
+    "color: green = elite, red = struggling).\n\n"
+    "WHO IT'S FOR: this is coffee-machine talk, not deep analysis. Short, plain, fun to read in 30 "
+    "seconds. The reader is a fan, not an analyst. Keep it simple.\n\n"
+    "YOUR COMPASS — the questions a fan actually asks:\n"
+    "- Who are the best players right now, and are they over- or under-performing lately?\n"
+    "- Who have been the best of the season so far?\n"
+    "- Who are the best young players — future stars, or just a good year?\n"
+    "- Which teams are good or bad, and why (lots of green players, or lots of red)?\n\n"
+    "VOICE: plain, exact American English; a little dry wit; confident but never hype; no clichés, "
+    "no emoji. Be fair to those struggling, never cruel.\n\n"
+    "HARD RULES:\n"
+    "1. Use ONLY the names and numbers in the data — never invent, re-round or estimate. Never "
+    "contradict the lists: they are PRE-SORTED, so the first name in a list is the leader. Don't "
+    "claim a different leader or a number the list doesn't show.\n"
+    "2. Color words (green, yellow, red, 'elite', 'above average') are TIERS — fixed levels, never "
+    "directions. When something improves or declines, say it rose/fell or name the tiers it moved "
+    "between (e.g. 'from elite to above-average'). Never call a player 'red' unless the data says red.\n"
+    "3. 'Form' is a PITCHING number only (0–100 from ERA & WHIP). For hitters talk OPS, AVG and home "
+    "runs — never 'form'.\n"
+    "4. Don't open in jargon. The first sentence orients a newcomer plainly; never start a piece with "
+    "a proprietary term (form, elite green, recolored) before it's clear. A fixed one-line definition "
+    "already sits under each section heading — do NOT redefine terms in your leads; add the human angle.\n"
+    "5. Be specific about WHICH ranking you mean (the power ranking vs. the team-ERA ranking, etc.). "
+    "Never write a bare 'the rankings'.\n"
+    "6. Ignore noise. A change under ~.015 OPS, a fraction of an ERA, or a one-spot wiggle is NOT a "
+    "story — never dramatize it. 'Down three-thousandths of OPS' is never worth a sentence.\n"
+    "7. BE WEEK-AWARE but honest: season totals are given alongside each featured player's value a "
+    "week ago (ops_a_week_ago, form_a_week_ago, hr_a_week_ago) and a movers section. Frame the week's "
+    "real change; a 1.000 OPS that was 1.100 is a cold week, not a hot streak.\n"
+    "8. READ THE GAMES. When a player has a 'where' breakdown (HRs by opponent/date), use it ('two "
+    "in a weekend at Kansas City'), not just '+3 homers'.\n"
+    "9. DON'T REPEAT YOURSELF across editions. You're given recent_headlines — do not echo their "
+    "angle or phrasing, and never reuse the same image or a player's signature joke (e.g. a WHIP that "
+    "'looks like a typo') two days running. Find a fresh picture.\n\n"
+    "FORMAT: 'title' = a punchy 6–10 word headline, true to today's theme and fresh vs the recent "
+    "headlines. 'intro' = 2–3 short sentences on the day's one real storyline. Each section 'lead' "
+    "(only for sections_today) = 1–2 sentences of color — name a standout, don't restate the whole "
+    "list, don't redefine terms. Return ONLY raw JSON (no markdown) with string keys from: title, "
+    "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, "
+    "risers_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
+    "roy_lead — include title, intro, and a lead for each section in sections_today."
 )
 
 
@@ -626,6 +645,7 @@ def facts_for_llm(f, theme_title, section_ids):
     payload = {
         "edition_theme": theme_title,
         "sections_today": section_ids,
+        "recent_headlines": f.get("recent_headlines", []),
         "week_window": {"from": f.get("baseline_date"), "to": f.get("asof") or dt.date.today().isoformat()},
         "power_rankings_top": [{"rank": t["rank"], "name": t["name"],
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
@@ -750,6 +770,7 @@ STYLE = """
   .bl-article h2 { font-family:'Barlow Condensed','Inter',sans-serif; font-size:14px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); margin:28px 0 10px; }
   .bl-article p { font-size:15px; line-height:1.6; margin-bottom:6px; }
   .bl-intro { font-size:16px; color:var(--muted); margin-bottom:18px; }
+  .bl-gloss { font-size:12.5px; color:var(--muted); margin:0 0 8px; }
   .bl-list { list-style:none; display:flex; flex-direction:column; gap:12px; margin:14px 0; }
   .bl-muted { color:var(--muted); font-weight:500; }
 
@@ -923,6 +944,20 @@ def rebuild_sitemap(date_iso):
                  f"{body}</urlset>\n")
 
 
+def recent_headlines(date_iso, n=3):
+    """Headlines of the last few editions, so the LLM can avoid echoing them."""
+    if not os.path.isdir(BLOG_DIR):
+        return []
+    files = sorted((f for f in os.listdir(BLOG_DIR)
+                    if f.endswith(".html") and f != "index.html" and f[:-5] < date_iso), reverse=True)
+    out = []
+    for fn in files[:n]:
+        m = re.search(r"<h1>(.*?)</h1>", open(os.path.join(BLOG_DIR, fn)).read(), re.S)
+        if m:
+            out.append(re.sub(r"<.*?>", "", m.group(1)).strip())
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=dt.date.today().year)
@@ -951,6 +986,7 @@ def main():
     facts = build_facts(args.season, baseline, asof=asof,
                         need_teamstats=bool(sids & TEAMSTAT_SECTIONS))
     facts["movers"] = compute_movers(facts, baseline)
+    facts["recent_headlines"] = recent_headlines(date_iso)
     if "hr" in section_ids and facts["movers"].get("hr"):
         attach_hr_games(facts["movers"]["hr"], args.season,
                         facts.get("baseline_date") or date_iso, asof, facts["team_abbr"])
