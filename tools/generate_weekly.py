@@ -646,6 +646,21 @@ def build_facts(season, prev_rank, asof=None, need_rookies=False, need_teamstats
     return f
 
 
+def article_jsonld(title, date_iso, canonical, desc):
+    data = {
+        "@context": "https://schema.org", "@type": "BlogPosting",
+        "headline": title, "datePublished": date_iso, "dateModified": date_iso,
+        "description": desc, "url": canonical, "mainEntityOfPage": canonical,
+        "image": f"{SITE}/og-image.png",
+        "author": {"@type": "Organization", "name": "Baseball Lens", "url": f"{SITE}/"},
+        "publisher": {"@type": "Organization", "name": "Baseball Lens",
+                      "logo": {"@type": "ImageObject", "url": f"{SITE}/icon.png"}},
+        "isPartOf": {"@type": "Blog", "name": "The Lens", "url": f"{SITE}/blog/"},
+    }
+    return ('<script type="application/ld+json">'
+            + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + "</script>")
+
+
 STYLE = """
   body { background: var(--bg); }
   .bl-wrap { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
@@ -717,6 +732,7 @@ PAGE = """<!DOCTYPE html>
 <link rel="icon" type="image/png" href="{rel}icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{rel}css/main.css">
+{jsonld}
 <style>{style}</style>
 </head>
 <body>
@@ -747,6 +763,7 @@ INDEX_PAGE = """<!DOCTYPE html>
 <link rel="icon" type="image/png" href="../icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
+{jsonld}
 <style>
   body {{ background: var(--bg); }}
   .bl-wrap {{ max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }}
@@ -791,7 +808,7 @@ def write_snapshot(date_iso, facts):
 
 def rebuild_index():
     os.makedirs(BLOG_DIR, exist_ok=True)
-    cards = []
+    cards, posts = [], []
     for fn in sorted((f for f in os.listdir(BLOG_DIR) if f.endswith(".html") and f != "index.html"),
                      reverse=True):
         html = open(os.path.join(BLOG_DIR, fn)).read()
@@ -801,8 +818,18 @@ def rebuild_index():
         date = dm.group(1).strip() if dm else ""
         cards.append(f'<a class="bl-card" href="{fn}"><h2>{title}</h2>'
                      f'<div class="bl-date">{date}</div></a>')
+        posts.append({"@type": "BlogPosting", "headline": title,
+                      "url": f"{SITE}/blog/{fn}", "datePublished": fn[:-5]})
+    blog_ld = {"@context": "https://schema.org", "@type": "Blog", "name": "The Lens",
+               "url": f"{SITE}/blog/", "description": "A daily MLB column through the Baseball Lens "
+               "color scale — power rankings, hitters, pitchers and week-over-week movers.",
+               "publisher": {"@type": "Organization", "name": "Baseball Lens",
+                             "logo": {"@type": "ImageObject", "url": f"{SITE}/icon.png"}},
+               "blogPost": posts}
+    jsonld = ('<script type="application/ld+json">'
+              + json.dumps(blog_ld, ensure_ascii=False).replace("</", "<\\/") + "</script>")
     with open(os.path.join(BLOG_DIR, "index.html"), "w") as fh:
-        fh.write(INDEX_PAGE.format(site=SITE, cards="".join(cards)))
+        fh.write(INDEX_PAGE.format(site=SITE, cards="".join(cards), jsonld=jsonld))
 
 
 def rebuild_sitemap(date_iso):
@@ -859,10 +886,12 @@ def main():
 
     os.makedirs(BLOG_DIR, exist_ok=True)
     slug = f"{date_iso}.html"
+    canonical = f"{SITE}/blog/{slug}"
+    jsonld = article_jsonld(title, date_iso, canonical, desc)
     with open(os.path.join(BLOG_DIR, slug), "w") as fh:
         fh.write(PAGE.format(title=escape(title), desc=escape(desc), kicker=escape(kicker),
-                             canonical=f"{SITE}/blog/{slug}", site=SITE, rel="../",
-                             datestr=pretty.upper(), body=body, style=STYLE))
+                             canonical=canonical, site=SITE, rel="../", datestr=pretty.upper(),
+                             body=body, style=STYLE, jsonld=jsonld))
 
     write_snapshot(date_iso, facts)
     rebuild_index()
