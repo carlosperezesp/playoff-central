@@ -525,5 +525,132 @@
       "era": 3.95,
       "forma": 47.4
     }
+  ],
+  "rookies": [
+    {
+      "name": "Bryce Eldridge",
+      "ops": 0.963,
+      "hr": 6
+    },
+    {
+      "name": "Munetaka Murakami",
+      "ops": 0.938,
+      "hr": 20
+    },
+    {
+      "name": "Colt Emerson",
+      "ops": 0.827,
+      "hr": 6
+    },
+    {
+      "name": "Kevin McGonigle",
+      "ops": 0.819,
+      "hr": 6
+    },
+    {
+      "name": "TJ Rumfield",
+      "ops": 0.816,
+      "hr": 10
+    },
+    {
+      "name": "Tristan Peters",
+      "ops": 0.805,
+      "hr": 3
+    },
+    {
+      "name": "Sal Stewart",
+      "ops": 0.805,
+      "hr": 14
+    },
+    {
+      "name": "Henry Bolte",
+      "ops": 0.801,
+      "hr": 2
+    },
+    {
+      "name": "Brandon Valenzuela",
+      "ops": 0.792,
+      "hr": 7
+    },
+    {
+      "name": "Samuel Basallo",
+      "ops": 0.788,
+      "hr": 10
+    },
+    {
+      "name": "Wade Meckler",
+      "ops": 0.783,
+      "hr": 2
+    },
+    {
+      "name": "Yohendrick Pi\u00f1ango",
+      "ops": 0.778,
+      "hr": 4
+    },
+    {
+      "name": "Sam Antonacci",
+      "ops": 0.772,
+      "hr": 3
+    },
+    {
+      "name": "JJ Wetherholt",
+      "ops": 0.759,
+      "hr": 10
+    },
+    {
+      "name": "Kazuma Okamoto",
+      "ops": 0.749,
+      "hr": 15
+    },
+    {
+      "name": "Travis Bazzana",
+      "ops": 0.747,
+      "hr": 4
+    },
+    {
+      "name": "Chase DeLauter",
+      "ops": 0.745,
+      "hr": 7
+    },
+    {
+      "name": "Konnor Griffin",
+      "ops": 0.729,
+      "hr": 4
+    },
+    {
+      "name": "Joe Mack",
+      "ops": 0.727,
+      "hr": 3
+    },
+    {
+      "name": "Carter Jensen",
+      "ops": 0.718,
+      "hr": 9
+    },
+    {
+      "name": "Daniel Susac",
+      "ops": 0.703,
+      "hr": 0
+    },
+    {
+      "name": "Dylan Beavers",
+      "ops": 0.7,
+      "hr": 2
+    },
+    {
+      "name": "A.J. Ewing",
+      "ops": 0.695,
+      "hr": 2
+    },
+    {
+      "name": "Carson Benge",
+      "ops": 0.692,
+      "hr": 7
+    },
+    {
+      "name": "Nathan Church",
+      "ops": 0.69,
+      "hr": 5
+    }
   ]
 }

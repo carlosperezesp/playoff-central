@@ -525,5 +525,132 @@
       "era": 4.07,
       "forma": 50.2
     }
+  ],
+  "rookies": [
+    {
+      "name": "Bryce Eldridge",
+      "ops": 0.953,
+      "hr": 5
+    },
+    {
+      "name": "Munetaka Murakami",
+      "ops": 0.938,
+      "hr": 20
+    },
+    {
+      "name": "Colt Emerson",
+      "ops": 0.876,
+      "hr": 6
+    },
+    {
+      "name": "TJ Rumfield",
+      "ops": 0.813,
+      "hr": 9
+    },
+    {
+      "name": "Henry Bolte",
+      "ops": 0.813,
+      "hr": 1
+    },
+    {
+      "name": "Kevin McGonigle",
+      "ops": 0.811,
+      "hr": 5
+    },
+    {
+      "name": "Tristan Peters",
+      "ops": 0.804,
+      "hr": 3
+    },
+    {
+      "name": "Brandon Valenzuela",
+      "ops": 0.792,
+      "hr": 7
+    },
+    {
+      "name": "Samuel Basallo",
+      "ops": 0.79,
+      "hr": 10
+    },
+    {
+      "name": "Sal Stewart",
+      "ops": 0.787,
+      "hr": 13
+    },
+    {
+      "name": "Yohendrick Pi\u00f1ango",
+      "ops": 0.778,
+      "hr": 4
+    },
+    {
+      "name": "Kazuma Okamoto",
+      "ops": 0.761,
+      "hr": 15
+    },
+    {
+      "name": "Sam Antonacci",
+      "ops": 0.76,
+      "hr": 2
+    },
+    {
+      "name": "JJ Wetherholt",
+      "ops": 0.751,
+      "hr": 10
+    },
+    {
+      "name": "Travis Bazzana",
+      "ops": 0.749,
+      "hr": 4
+    },
+    {
+      "name": "Chase DeLauter",
+      "ops": 0.745,
+      "hr": 7
+    },
+    {
+      "name": "Daniel Susac",
+      "ops": 0.733,
+      "hr": 0
+    },
+    {
+      "name": "Konnor Griffin",
+      "ops": 0.729,
+      "hr": 4
+    },
+    {
+      "name": "A.J. Ewing",
+      "ops": 0.706,
+      "hr": 2
+    },
+    {
+      "name": "Carson Benge",
+      "ops": 0.703,
+      "hr": 7
+    },
+    {
+      "name": "Dylan Beavers",
+      "ops": 0.7,
+      "hr": 2
+    },
+    {
+      "name": "Mois\u00e9s Ballesteros",
+      "ops": 0.692,
+      "hr": 6
+    },
+    {
+      "name": "Nathan Church",
+      "ops": 0.684,
+      "hr": 5
+    },
+    {
+      "name": "Carter Jensen",
+      "ops": 0.675,
+      "hr": 8
+    },
+    {
+      "name": "Ryan Waldschmidt",
+      "ops": 0.671,
+      "hr": 0
+    }
   ]
 }

@@ -254,12 +254,21 @@ def compute_movers(f, base):
         bt = pitcher_tier(b.get("forma", p["forma"]))
         if bt != p["tier"] and "gray" not in (bt, p["tier"]):
             colors.append({"p": p, "old": bt})
+    # Rookie surge — first-year hitters making the biggest week-over-week OPS jump.
+    brk = {x["name"]: x for x in base.get("rookies", [])}
+    surge = []
+    for h in f.get("rookies", {}).get("hitters", []):
+        b = brk.get(h["name"])
+        if b and h["ops"] - b.get("ops", h["ops"]) >= 0.030:
+            surge.append({"p": h, "base": b, "d": h["ops"] - b["ops"]})
+    surge.sort(key=lambda x: x["d"], reverse=True)
+
     hr.sort(key=lambda x: x["d"], reverse=True)
     form.sort(key=lambda x: x["d"], reverse=True)
     cool.sort(key=lambda x: x["d"])
     colors.sort(key=lambda c: abs(TIER_ORDER[c["old"]] - TIER_ORDER[c["p"]["tier"]]), reverse=True)
     return {"hr": hr[:5], "form": form[:5], "cool": cool[:5], "colors": colors[:6],
-            "baseline_date": base.get("date")}
+            "rookie_surge": surge[:5], "baseline_date": base.get("date")}
 
 
 def attach_hr_games(hr_movers, season, since_date, asof, abbr):
@@ -393,6 +402,13 @@ def color_row(c):
     return _player_row(p, delta)
 
 
+def rookie_surge_row(m):
+    h, b, d = m["p"], m["base"], m["d"]
+    delta = (f'<span class="bl-delta" style="color:{TEXT["green"]}">'
+             f'OPS {b["ops"]:.3f}&rarr;{h["ops"]:.3f} (+{d:.3f})</span>')
+    return _player_row(h, delta, ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>')
+
+
 # ── Sections (each returns full HTML or "" if empty) ────────────────────────
 def _lead(n, key, fallback):
     return f'<p>{escape(n[key])}</p>' if n and n.get(key) else fallback
@@ -436,6 +452,12 @@ def sec_rookies(f, n):
     rows += "".join(rookie_row(p, "pit") for p in rk.get("pitchers", [])[:3])
     d = '<p>The first-year players forcing their way into the conversation (min. real innings/at-bats):</p>'
     return _section("The rookie class", _lead(n, "rookies_lead", d), rows)
+
+
+def sec_rookie_surge(f, n, limit=5):
+    rows = "".join(rookie_surge_row(m) for m in f["movers"].get("rookie_surge", [])[:limit])
+    d = '<p>First-year hitters on the rise — the biggest OPS jumps among rookies this week:</p>'
+    return _section("Rookies breaking out", _lead(n, "rookie_surge_lead", d), rows)
 
 
 def _by_league(items):
@@ -510,8 +532,7 @@ def sec_colors(f, n, limit=6):
 SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "offense": sec_offense,
             "bats": sec_bats, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
             "fallers": sec_fallers, "colors": sec_colors, "rookies": sec_rookies,
-            "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy}
-ROOKIE_SECTIONS = {"rookies", "roy"}
+            "rookie_surge": sec_rookie_surge, "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy}
 TEAMSTAT_SECTIONS = {"bullpen", "offense"}
 
 # Weekday (0=Mon) → (edition title, [section ids])
@@ -520,8 +541,8 @@ THEME_CALENDAR = {
     1: ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
     2: ("Hitting Report", ["offense", "bats", "hr"]),
     3: ("Award Races", ["mvp", "cy", "roy"]),
-    4: ("Risers & Fallers", ["risers", "fallers", "colors"]),
-    5: ("Rookie Report", ["rookies"]),
+    4: ("Risers & Fallers", ["risers", "fallers", "rookie_surge", "colors"]),
+    5: ("Rookie Report", ["rookies", "rookie_surge"]),
     6: ("Around the League", ["power", "offense", "staffs"]),
 }
 THEME_BY_KEY = {  # --theme override
@@ -529,8 +550,8 @@ THEME_BY_KEY = {  # --theme override
     "pitching": ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
     "hitting": ("Hitting Report", ["offense", "bats", "hr"]),
     "races": ("Award Races", ["mvp", "cy", "roy"]),
-    "rookies": ("Rookie Report", ["rookies"]),
-    "movers": ("Risers & Fallers", ["risers", "fallers", "colors"]),
+    "rookies": ("Rookie Report", ["rookies", "rookie_surge"]),
+    "movers": ("Risers & Fallers", ["risers", "fallers", "rookie_surge", "colors"]),
     "league": ("Around the League", ["power", "offense", "staffs"]),
 }
 FALLBACK_SECTIONS = ["power", "bats", "arms"]   # if a theme's sections are all empty
@@ -580,8 +601,8 @@ LLM_SYSTEM = (
     "list; name a standout or two but do NOT enumerate the whole list (the page renders it). Return "
     "ONLY raw JSON (no markdown) with string keys from: title, intro, power_lead, staff_lead, "
     "bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, risers_lead, fallers_lead, "
-    "colors_lead, rookies_lead, mvp_lead, cy_lead, roy_lead — include title, intro, and a lead for "
-    "each section in sections_today."
+    "colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, roy_lead — include title, intro, "
+    "and a lead for each section in sections_today."
 )
 
 
@@ -643,6 +664,9 @@ def facts_for_llm(f, theme_title, section_ids):
             "form_risers": [{"name": x["p"]["name"], "form_now": round(x["p"]["forma"]), "form_gained": round(x["d"])} for x in m.get("form", [])],
             "cooling_bats": [{"name": x["p"]["name"], "ops_now": round(x["p"]["ops"], 3), "ops_drop": round(x["d"], 3)} for x in m.get("cool", [])],
             "color_changes": [{"name": c["p"]["name"], "from": TIER_LABEL[c["old"]], "to": TIER_LABEL[c["p"]["tier"]]} for c in m.get("colors", [])],
+            "rookie_breakouts": [{"name": x["p"]["name"], "team": x["p"]["team"],
+                                  "ops_now": round(x["p"]["ops"], 3), "ops_gained": round(x["d"], 3)}
+                                 for x in m.get("rookie_surge", [])],
         }
     return json.dumps(payload, indent=2)
 
@@ -665,7 +689,7 @@ def llm_narration(f, theme_title, section_ids):
         return None
 
 
-def build_facts(season, baseline, asof=None, need_rookies=False, need_teamstats=False):
+def build_facts(season, baseline, asof=None, need_teamstats=False):
     teams = get_teams(season, asof)
     ranked = compute_power(teams)
     prev_rank = {r["name"]: r["rank"] for r in baseline.get("power_ranking", [])} if baseline else {}
@@ -687,11 +711,9 @@ def build_facts(season, baseline, asof=None, need_rookies=False, need_teamstats=
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
         "aces": [p for p in pitchers if p["tier"] == "green"][:6],
-        "rookies": {"hitters": [], "pitchers": []},
+        "rookies": get_rookies(season, asof=asof),   # always — also feeds the snapshot baseline
         "bullpen": [], "offense": [],
     }
-    if need_rookies:
-        f["rookies"] = get_rookies(season, asof=asof)
     if need_teamstats:
         f["bullpen"] = get_team_bullpen(season, 5, asof=asof)
         f["offense"] = get_team_offense(season, 5, asof=asof)
@@ -853,6 +875,8 @@ def write_snapshot(date_iso, facts):
                     for h in facts["hitters_all"][:40]],
         "pitchers": [{"name": p["name"], "era": p["era"], "forma": round(p["forma"], 1)}
                      for p in facts["pitchers_all"][:40]],
+        "rookies": [{"name": h["name"], "ops": round(h["ops"], 3), "hr": h["hr"]}
+                    for h in facts.get("rookies", {}).get("hitters", [])[:25]],
     }
     with open(os.path.join(SNAP_DIR, f"{date_iso}.json"), "w") as fh:
         json.dump(snap, fh, indent=2)
@@ -925,7 +949,6 @@ def main():
     baseline = load_baseline(date_iso)
     sids = set(section_ids) | set(FALLBACK_SECTIONS)
     facts = build_facts(args.season, baseline, asof=asof,
-                        need_rookies=bool(sids & ROOKIE_SECTIONS),
                         need_teamstats=bool(sids & TEAMSTAT_SECTIONS))
     facts["movers"] = compute_movers(facts, baseline)
     if "hr" in section_ids and facts["movers"].get("hr"):
