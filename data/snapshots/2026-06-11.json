@@ -525,5 +525,132 @@
       "era": 4.1,
       "forma": 45.7
     }
+  ],
+  "rookies": [
+    {
+      "name": "Munetaka Murakami",
+      "ops": 0.938,
+      "hr": 20
+    },
+    {
+      "name": "Bryce Eldridge",
+      "ops": 0.906,
+      "hr": 4
+    },
+    {
+      "name": "Sal Stewart",
+      "ops": 0.812,
+      "hr": 13
+    },
+    {
+      "name": "Kevin McGonigle",
+      "ops": 0.809,
+      "hr": 4
+    },
+    {
+      "name": "Brandon Valenzuela",
+      "ops": 0.79,
+      "hr": 7
+    },
+    {
+      "name": "Tristan Peters",
+      "ops": 0.79,
+      "hr": 2
+    },
+    {
+      "name": "Yohendrick Pi\u00f1ango",
+      "ops": 0.787,
+      "hr": 4
+    },
+    {
+      "name": "Samuel Basallo",
+      "ops": 0.784,
+      "hr": 9
+    },
+    {
+      "name": "TJ Rumfield",
+      "ops": 0.784,
+      "hr": 8
+    },
+    {
+      "name": "Travis Bazzana",
+      "ops": 0.766,
+      "hr": 4
+    },
+    {
+      "name": "Sam Antonacci",
+      "ops": 0.763,
+      "hr": 1
+    },
+    {
+      "name": "Daniel Susac",
+      "ops": 0.762,
+      "hr": 0
+    },
+    {
+      "name": "Henry Bolte",
+      "ops": 0.753,
+      "hr": 1
+    },
+    {
+      "name": "JJ Wetherholt",
+      "ops": 0.742,
+      "hr": 9
+    },
+    {
+      "name": "Kazuma Okamoto",
+      "ops": 0.731,
+      "hr": 13
+    },
+    {
+      "name": "Konnor Griffin",
+      "ops": 0.729,
+      "hr": 4
+    },
+    {
+      "name": "Chase DeLauter",
+      "ops": 0.726,
+      "hr": 7
+    },
+    {
+      "name": "Carson Benge",
+      "ops": 0.714,
+      "hr": 7
+    },
+    {
+      "name": "Mois\u00e9s Ballesteros",
+      "ops": 0.708,
+      "hr": 6
+    },
+    {
+      "name": "Dylan Beavers",
+      "ops": 0.7,
+      "hr": 2
+    },
+    {
+      "name": "A.J. Ewing",
+      "ops": 0.69,
+      "hr": 1
+    },
+    {
+      "name": "Nathan Church",
+      "ops": 0.685,
+      "hr": 5
+    },
+    {
+      "name": "Ryan Waldschmidt",
+      "ops": 0.681,
+      "hr": 0
+    },
+    {
+      "name": "Alex Freeland",
+      "ops": 0.671,
+      "hr": 3
+    },
+    {
+      "name": "Carter Jensen",
+      "ops": 0.669,
+      "hr": 8
+    }
   ]
 }

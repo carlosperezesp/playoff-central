@@ -115,17 +115,17 @@ def _league(s):
     return (s.get("team", {}) or {}).get("league", {}).get("id")   # 103 AL, 104 NL
 
 
-def _stats_url(season, group, sort, limit, pool, asof):
+def _stats_url(season, group, sort, limit, pool, asof, start=None):
     if asof:
-        span = f"stats=byDateRange&startDate={season}-01-01&endDate={asof}"
+        span = f"stats=byDateRange&startDate={start or f'{season}-01-01'}&endDate={asof}"
     else:
         span = "stats=season"
     return (f"{API}/stats?{span}&season={season}&sportId=1&group={group}&gameType=R"
             f"&playerPool={pool}&sortStat={sort}&limit={limit}&hydrate=team(league)")
 
 
-def get_hitters(season, limit=60, pool="qualified", asof=None):
-    d = fetch(_stats_url(season, "hitting", "onBasePlusSlugging", limit, pool, asof))
+def get_hitters(season, limit=60, pool="qualified", asof=None, start=None, min_ab=120):
+    d = fetch(_stats_url(season, "hitting", "onBasePlusSlugging", limit, pool, asof, start))
     out = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s["stat"]
@@ -136,12 +136,12 @@ def get_hitters(season, limit=60, pool="qualified", asof=None):
                     "ab": int(st.get("atBats", 0) or 0),
                     "tier": hitter_tier(ops), "historic": ops >= 1.000})
     if asof and pool == "qualified":   # byDateRange ignores the qualified pool — approximate it
-        out = [h for h in out if h["ab"] >= 120]
+        out = [h for h in out if h["ab"] >= min_ab]
     return out
 
 
-def get_pitchers(season, limit=40, pool="qualified", asof=None):
-    d = fetch(_stats_url(season, "pitching", "earnedRunAverage", limit, pool, asof))
+def get_pitchers(season, limit=40, pool="qualified", asof=None, start=None, min_ip=50):
+    d = fetch(_stats_url(season, "pitching", "earnedRunAverage", limit, pool, asof, start))
     out = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s["stat"]
@@ -153,8 +153,20 @@ def get_pitchers(season, limit=40, pool="qualified", asof=None):
                     "ip": float(st.get("inningsPitched", 0) or 0),
                     "tier": pitcher_tier(forma), "historic": era <= 2.00 and whip <= 1.00})
     if asof and pool == "qualified":
-        out = [p for p in out if p["ip"] >= 50]
+        out = [p for p in out if p["ip"] >= min_ip]
     return out
+
+
+def build_month_facts(season, start, end, label):
+    """Protagonists of a finished calendar month (byDateRange that month)."""
+    hitters = get_hitters(season, 80, asof=end, start=start, min_ab=40)
+    pitchers = get_pitchers(season, 60, asof=end, start=start, min_ip=20)
+    return {
+        "month_label": label,
+        "month_hitters": hitters[:8],
+        "month_hr": sorted(hitters, key=lambda h: h["hr"], reverse=True)[:6],
+        "month_pitchers": pitchers[:6],
+    }
 
 
 def get_rookies(season, asof=None):
@@ -533,10 +545,39 @@ def sec_colors(f, n, limit=6):
     return _section("Changing colors", g, _lead(n, "colors_lead"), rows)
 
 
+# ── Monthly "Best of [month]" sections ──────────────────────────────────────
+def hr_total_row(h):
+    stat = f'<span class="bl-stat" style="color:{TEXT["green"]}">{h["hr"]}<small>HR</small></span>'
+    return _player_row(h, stat)
+
+
+def sec_month_hitters(f, n, limit=8):
+    lbl = f.get("month_label", "The month")
+    rows = "".join(hitter_row(h) for h in f.get("month_hitters", [])[:limit])
+    return _section(f"{lbl} at the plate", f"{lbl}'s best hitters, by OPS for the month.",
+                    _lead(n, "month_hitters_lead"), rows)
+
+
+def sec_month_hr(f, n, limit=6):
+    lbl = f.get("month_label", "the month")
+    rows = "".join(hr_total_row(h) for h in f.get("month_hr", [])[:limit])
+    return _section("Home runs of the month", f"Most home runs hit in {lbl}.",
+                    _lead(n, "month_hr_lead"), rows)
+
+
+def sec_month_pitchers(f, n, limit=6):
+    lbl = f.get("month_label", "The month")
+    rows = "".join(pitcher_row(p) for p in f.get("month_pitchers", [])[:limit])
+    return _section(f"{lbl} on the mound", f"{lbl}'s best starters, by ERA for the month.",
+                    _lead(n, "month_pitchers_lead"), rows)
+
+
 SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "offense": sec_offense,
             "bats": sec_bats, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
             "fallers": sec_fallers, "colors": sec_colors, "rookies": sec_rookies,
-            "rookie_surge": sec_rookie_surge, "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy}
+            "rookie_surge": sec_rookie_surge, "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy,
+            "month_hitters": sec_month_hitters, "month_hr": sec_month_hr,
+            "month_pitchers": sec_month_pitchers}
 TEAMSTAT_SECTIONS = {"bullpen", "offense"}
 
 # Weekday (0=Mon) → (edition title, [section ids])
@@ -621,7 +662,11 @@ LLM_SYSTEM = (
     "list, don't redefine terms. Return ONLY raw JSON (no markdown) with string keys from: title, "
     "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, "
     "risers_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
-    "roy_lead — include title, intro, and a lead for each section in sections_today."
+    "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead — include title, intro, and a "
+    "lead for each section in sections_today.\n"
+    "If edition_theme starts with 'Best of', this is a once-a-month wrap of the FINISHED month "
+    "(data in month_recap): the intro looks back at who owned that month, and the leads recap, not "
+    "preview. No week-over-week framing here."
 )
 
 
@@ -687,6 +732,15 @@ def facts_for_llm(f, theme_title, section_ids):
             "rookie_breakouts": [{"name": x["p"]["name"], "team": x["p"]["team"],
                                   "ops_now": round(x["p"]["ops"], 3), "ops_gained": round(x["d"], 3)}
                                  for x in m.get("rookie_surge", [])],
+        }
+    if f.get("month_hitters"):
+        payload["month_recap"] = {
+            "month": f.get("month_label"),
+            "top_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
+                             "hr": h["hr"]} for h in f["month_hitters"]],
+            "hr_leaders": [{"name": h["name"], "hr": h["hr"]} for h in f["month_hr"]],
+            "top_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"]}
+                             for p in f["month_pitchers"]],
         }
     return json.dumps(payload, indent=2)
 
@@ -979,13 +1033,23 @@ def main():
         return
 
     pretty = dt.date.fromisoformat(date_iso).strftime("%B %-d, %Y")
-    kicker, section_ids = pick_theme(date_iso, args.theme)
+    # On the 1st of May–Oct, publish a "Best of [last month]" wrap instead of the daily theme.
+    d = dt.date.fromisoformat(date_iso)
+    monthly = d.day == 1 and d.month in (5, 6, 7, 8, 9, 10)
+    if monthly:
+        m_end = d - dt.timedelta(days=1)
+        m_start, m_label = m_end.replace(day=1), m_end.strftime("%B")
+        kicker, section_ids = f"Best of {m_label}", ["month_hitters", "month_hr", "month_pitchers"]
+    else:
+        kicker, section_ids = pick_theme(date_iso, args.theme)
 
-    baseline = load_baseline(date_iso)
+    baseline = None if monthly else load_baseline(date_iso)
     sids = set(section_ids) | set(FALLBACK_SECTIONS)
     facts = build_facts(args.season, baseline, asof=asof,
                         need_teamstats=bool(sids & TEAMSTAT_SECTIONS))
-    facts["movers"] = compute_movers(facts, baseline)
+    facts["movers"] = {} if monthly else compute_movers(facts, baseline)
+    if monthly:
+        facts.update(build_month_facts(args.season, m_start.isoformat(), m_end.isoformat(), m_label))
     facts["recent_headlines"] = recent_headlines(date_iso)
     if "hr" in section_ids and facts["movers"].get("hr"):
         attach_hr_games(facts["movers"]["hr"], args.season,
