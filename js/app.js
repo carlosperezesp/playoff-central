@@ -2432,10 +2432,11 @@ async function selectTeam(teamId) {
       fetchRecentPitching(pitcherPids),
       fetchRecentHitting(hitterPids),
       fetchAwards(uniquePids),
+      fetchTrades(),
     ]);
-    Object.values(impact.hittersByPos).flat().forEach(p => { p.isRookie = isRookieEligible(p.id, 'hitter'); });
-    [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => { p.isRookie = isRookieEligible(p.id, 'pitcher'); });
-    impact.ilPlayers.forEach(p => { p.isRookie = isRookieEligible(p.id, p.isPitcher ? 'pitcher' : 'hitter'); });
+    Object.values(impact.hittersByPos).flat().forEach(p => { p.isRookie = isRookieEligible(p.id, 'hitter'); p.tradedIn = tradedCache[p.id] === teamId; });
+    [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => { p.isRookie = isRookieEligible(p.id, 'pitcher'); p.tradedIn = tradedCache[p.id] === teamId; });
+    impact.ilPlayers.forEach(p => { p.isRookie = isRookieEligible(p.id, p.isPitcher ? 'pitcher' : 'hitter'); p.tradedIn = tradedCache[p.id] === teamId; });
     // Recalculate FORMA with recent data now available
     [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => {
       p.score = calcPitcherScoreWithRecent(p.stats || {}, p.id) ?? 0;
@@ -3016,6 +3017,37 @@ async function fetchTeamImpact(teamId) {
 // ── Awards cache & fetch ──────────────────────────────────────────────────
 const awardsCache = {};
 
+// ── In-season trade badge ─────────────────────────────────────────────────
+// tradedCache[playerId] = team id the player was traded TO during the current
+// regular season (latest wins). A player shows the badge on that team only.
+// Call-ups, free-agent signings and a player going in/out of his own roster do
+// NOT count — only `typeCode === 'TR'` (trades) since the season opener.
+// (Offseason regime — winter trades + free agents — is a future addition.)
+const tradedCache = {};
+let _tradesLoaded = false;
+
+async function fetchTrades() {
+  if (_tradesLoaded) return;
+  _tradesLoaded = true;
+  try {
+    const start = `${CURRENT_YEAR}-03-25`;   // ~ regular-season opener; excludes winter/spring trades
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await fetchWithTimeout(
+      `${MLB_API}/transactions?startDate=${start}&endDate=${today}&sportId=1`);
+    const data = await res.json();
+    (data.transactions || []).forEach(t => {
+      if (t.typeCode === 'TR' && t.person?.id && t.toTeam?.id) {
+        tradedCache[t.person.id] = t.toTeam.id;   // chronological order → latest team wins
+      }
+    });
+  } catch (e) { /* badge simply won't show */ }
+}
+
+function tradedBadgeHTML(traded) {
+  if (!traded) return '';
+  return `<span title="Acquired via in-season trade" style="position:absolute;top:50%;right:-7px;transform:translateY(-50%);width:15px;height:15px;border-radius:50%;background:#7c3aed;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;line-height:1">⇄</span>`;
+}
+
 async function fetchAwards(pids) {
   const missing = pids.filter(id => !(id in awardsCache));
   if (!missing.length) return;
@@ -3371,7 +3403,7 @@ function playerDetailHTML(p, type, roleOrPos) {
       <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
       <div class="impact-name-block">
-        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}</div>
+        <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.tradedIn ? '<span class="traded-badge">TRADE</span>' : ''}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}</div>
         <div class="impact-stats-line">${statsLine}</div>
         ${narrativeHTML}
       </div>
@@ -3607,7 +3639,7 @@ function renderDiamondPanel(teamId, impact) {
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
       onclick="selectDiamondKey('${key}',${teamId})">
-      <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
+      <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}${tradedBadgeHTML(p?.tradedIn)}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
       <div class="dfield-pill">${nameLabel}</div>
     </button>`;
   }
@@ -3632,7 +3664,7 @@ function renderDiamondPanel(teamId, impact) {
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
         onclick="selectDiamondKey('${key}',${teamId})">
-        <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
+        <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}${tradedBadgeHTML(p.tradedIn)}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
         <div class="dfield-pill">${p.name}</div>
         ${extras}
       </button>`;

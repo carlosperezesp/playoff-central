@@ -805,6 +805,10 @@
     font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
     background: rgba(234,179,8,.15); color: #b45309; letter-spacing: .5px;
   }
+  .traded-badge {
+    font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
+    background: rgba(124,58,237,.14); color: #7c3aed; letter-spacing: .5px;
+  }
   .award-pip {
     position: absolute; width: 17px; height: 17px; border-radius: 50%;
     background: transparent; border: none;
