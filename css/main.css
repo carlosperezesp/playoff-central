@@ -74,10 +74,12 @@
   .tab-btn {
     background: var(--surface); border: 1.5px solid var(--border);
     color: var(--muted); font-family: 'Barlow Condensed';
-    font-weight: 700; font-size: 14px; letter-spacing: 1.5px; padding: 10px 22px;
+    font-weight: 700; font-size: 14px; letter-spacing: 1.5px; padding: 10px 20px;
     cursor: pointer; border-radius: 8px;
     transition: all .15s; white-space: nowrap; text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 8px;
   }
+  .tab-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
   .tab-btn.active { color: #fff; background: #0d2016; border-color: #0d2016; }
   .tab-btn:hover:not(.active) { color: var(--text); border-color: #aaa; }
 
