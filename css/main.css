@@ -932,8 +932,8 @@
     border-color: rgba(37,99,235,.3);
   }
   .narrative-badge.descriptor {
-    background: rgba(219,39,119,.12); color: #be185d;
-    border-color: rgba(219,39,119,.3);
+    background: rgba(71,85,105,.12); color: #475569;
+    border-color: rgba(71,85,105,.3);
   }
   .narrative-badges-row {
     display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;
