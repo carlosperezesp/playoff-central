@@ -192,7 +192,11 @@ const DATA = __DATA__;
   document.getElementById('dots').innerHTML = games.map(g=>
     `<div class="dot">
        <div class="o" style="background:${g.color}"></div>
-       ${g.logo?`<span class="opp${g.whiten?' w':''}"><img src="${g.logo}" onerror="this.parentNode.style.visibility='hidden'"></span>`:''}
+       ${g.logo
+         ? (g.tint
+             ? `<span class="opp tint" style="background:${g.tint};-webkit-mask:url('${g.logo}') center/contain no-repeat;mask:url('${g.logo}') center/contain no-repeat"></span>`
+             : `<span class="opp${g.whiten?' w':''}"><img src="${g.logo}" onerror="this.parentNode.style.visibility='hidden'"></span>`)
+         : ''}
        ${g.date?`<div class="dt">${g.date}</div>`:''}
      </div>`).join('');
 

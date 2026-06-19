@@ -43,7 +43,7 @@
       "color": "#16a34a",
       "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg",
       "date": "4/15",
-      "whiten": true
+      "tint": "#FF5910"
     },
     {
       "color": "#16a34a",
