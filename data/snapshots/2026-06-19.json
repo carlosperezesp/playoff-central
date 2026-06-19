@@ -6,11 +6,11 @@
       "rank": 1
     },
     {
-      "name": "Milwaukee Brewers",
+      "name": "Los Angeles Dodgers",
       "rank": 2
     },
     {
-      "name": "Los Angeles Dodgers",
+      "name": "Milwaukee Brewers",
       "rank": 3
     },
     {
@@ -18,35 +18,35 @@
       "rank": 4
     },
     {
-      "name": "St. Louis Cardinals",
+      "name": "Washington Nationals",
       "rank": 5
     },
     {
-      "name": "Washington Nationals",
+      "name": "Miami Marlins",
       "rank": 6
     },
     {
-      "name": "Miami Marlins",
+      "name": "Chicago White Sox",
       "rank": 7
     },
     {
-      "name": "Philadelphia Phillies",
+      "name": "Seattle Mariners",
       "rank": 8
     },
     {
-      "name": "Chicago Cubs",
+      "name": "St. Louis Cardinals",
       "rank": 9
     },
     {
-      "name": "Tampa Bay Rays",
+      "name": "Chicago Cubs",
       "rank": 10
     },
     {
-      "name": "Toronto Blue Jays",
+      "name": "Tampa Bay Rays",
       "rank": 11
     },
     {
-      "name": "Chicago White Sox",
+      "name": "Toronto Blue Jays",
       "rank": 12
     },
     {
@@ -54,35 +54,35 @@
       "rank": 13
     },
     {
-      "name": "Seattle Mariners",
+      "name": "Philadelphia Phillies",
       "rank": 14
     },
     {
-      "name": "Arizona Diamondbacks",
+      "name": "Minnesota Twins",
       "rank": 15
     },
     {
-      "name": "Pittsburgh Pirates",
+      "name": "Arizona Diamondbacks",
       "rank": 16
     },
     {
-      "name": "Athletics",
+      "name": "Pittsburgh Pirates",
       "rank": 17
     },
     {
-      "name": "New York Mets",
+      "name": "Athletics",
       "rank": 18
     },
     {
-      "name": "Minnesota Twins",
+      "name": "Cleveland Guardians",
       "rank": 19
     },
     {
-      "name": "Texas Rangers",
+      "name": "New York Mets",
       "rank": 20
     },
     {
-      "name": "Cleveland Guardians",
+      "name": "Texas Rangers",
       "rank": 21
     },
     {
@@ -90,23 +90,23 @@
       "rank": 22
     },
     {
-      "name": "Los Angeles Angels",
+      "name": "Baltimore Orioles",
       "rank": 23
     },
     {
-      "name": "Baltimore Orioles",
+      "name": "Detroit Tigers",
       "rank": 24
     },
     {
-      "name": "Detroit Tigers",
+      "name": "San Francisco Giants",
       "rank": 25
     },
     {
-      "name": "San Francisco Giants",
+      "name": "Cincinnati Reds",
       "rank": 26
     },
     {
-      "name": "Cincinnati Reds",
+      "name": "Los Angeles Angels",
       "rank": 27
     },
     {
@@ -130,13 +130,18 @@
     },
     {
       "name": "Ben Rice",
-      "ops": 1.001,
+      "ops": 0.994,
       "hr": 20
     },
     {
       "name": "Nick Kurtz",
-      "ops": 0.993,
+      "ops": 0.99,
       "hr": 18
+    },
+    {
+      "name": "Juan Soto",
+      "ops": 0.98,
+      "hr": 17
     },
     {
       "name": "Shohei Ohtani",
@@ -149,24 +154,9 @@
       "hr": 20
     },
     {
-      "name": "Juan Soto",
-      "ops": 0.948,
-      "hr": 15
-    },
-    {
       "name": "Munetaka Murakami",
       "ops": 0.938,
       "hr": 20
-    },
-    {
-      "name": "Kyle Schwarber",
-      "ops": 0.929,
-      "hr": 25
-    },
-    {
-      "name": "Byron Buxton",
-      "ops": 0.926,
-      "hr": 23
     },
     {
       "name": "Willson Contreras",
@@ -177,6 +167,16 @@
       "name": "Drake Baldwin",
       "ops": 0.921,
       "hr": 14
+    },
+    {
+      "name": "Byron Buxton",
+      "ops": 0.919,
+      "hr": 23
+    },
+    {
+      "name": "Kyle Schwarber",
+      "ops": 0.919,
+      "hr": 25
     },
     {
       "name": "Aaron Judge",
@@ -205,13 +205,8 @@
     },
     {
       "name": "Jordan Walker",
-      "ops": 0.878,
+      "ops": 0.882,
       "hr": 18
-    },
-    {
-      "name": "Jake Bauers",
-      "ops": 0.877,
-      "hr": 13
     },
     {
       "name": "CJ Abrams",
@@ -219,9 +214,19 @@
       "hr": 14
     },
     {
+      "name": "Jake Bauers",
+      "ops": 0.875,
+      "hr": 13
+    },
+    {
       "name": "Bryan Reynolds",
       "ops": 0.872,
       "hr": 10
+    },
+    {
+      "name": "Shea Langeliers",
+      "ops": 0.87,
+      "hr": 19
     },
     {
       "name": "Mike Trout",
@@ -229,24 +234,9 @@
       "hr": 17
     },
     {
-      "name": "Shea Langeliers",
-      "ops": 0.864,
-      "hr": 18
-    },
-    {
-      "name": "Cody Bellinger",
-      "ops": 0.86,
-      "hr": 11
-    },
-    {
       "name": "Hunter Goodman",
       "ops": 0.858,
       "hr": 21
-    },
-    {
-      "name": "Brandon Marsh",
-      "ops": 0.857,
-      "hr": 9
     },
     {
       "name": "Junior Caminero",
@@ -279,9 +269,9 @@
       "hr": 12
     },
     {
-      "name": "Miguel Vargas",
-      "ops": 0.849,
-      "hr": 16
+      "name": "Cody Bellinger",
+      "ops": 0.848,
+      "hr": 11
     },
     {
       "name": "Spencer Horwitz",
@@ -289,13 +279,13 @@
       "hr": 9
     },
     {
-      "name": "Bryce Harper",
+      "name": "Brandon Marsh",
       "ops": 0.844,
-      "hr": 15
+      "hr": 9
     },
     {
       "name": "Brice Turang",
-      "ops": 0.844,
+      "ops": 0.843,
       "hr": 11
     },
     {
@@ -304,9 +294,19 @@
       "hr": 5
     },
     {
+      "name": "Colson Montgomery",
+      "ops": 0.841,
+      "hr": 20
+    },
+    {
       "name": "Liam Hicks",
       "ops": 0.839,
       "hr": 13
+    },
+    {
+      "name": "Bryce Harper",
+      "ops": 0.837,
+      "hr": 15
     },
     {
       "name": "Brandon Lowe",
@@ -314,14 +314,14 @@
       "hr": 18
     },
     {
-      "name": "Alec Burleson",
-      "ops": 0.835,
-      "hr": 13
+      "name": "Miguel Vargas",
+      "ops": 0.837,
+      "hr": 16
     },
     {
-      "name": "Riley Greene",
-      "ops": 0.828,
-      "hr": 8
+      "name": "Bobby Witt Jr.",
+      "ops": 0.833,
+      "hr": 10
     }
   ],
   "pitchers": [
@@ -407,8 +407,8 @@
     },
     {
       "name": "Joe Ryan",
-      "era": 3.02,
-      "forma": 74.4
+      "era": 2.99,
+      "forma": 75.1
     },
     {
       "name": "Michael Soroka",
@@ -461,11 +461,6 @@
       "forma": 63.6
     },
     {
-      "name": "Will Warren",
-      "era": 3.47,
-      "forma": 57.7
-    },
-    {
       "name": "Michael King",
       "era": 3.6,
       "forma": 60.4
@@ -516,14 +511,19 @@
       "forma": 50.9
     },
     {
+      "name": "Sean Burke",
+      "era": 3.89,
+      "forma": 55.9
+    },
+    {
       "name": "Freddy Peralta",
       "era": 3.9,
       "forma": 52.5
     },
     {
-      "name": "Andrew Abbott",
-      "era": 3.95,
-      "forma": 47.4
+      "name": "Bryan Woo",
+      "era": 3.94,
+      "forma": 64.6
     }
   ],
   "rookies": [
@@ -539,7 +539,7 @@
     },
     {
       "name": "Colt Emerson",
-      "ops": 0.827,
+      "ops": 0.838,
       "hr": 6
     },
     {
@@ -553,9 +553,9 @@
       "hr": 10
     },
     {
-      "name": "Tristan Peters",
-      "ops": 0.805,
-      "hr": 3
+      "name": "Henry Bolte",
+      "ops": 0.807,
+      "hr": 2
     },
     {
       "name": "Sal Stewart",
@@ -568,14 +568,14 @@
       "hr": 7
     },
     {
-      "name": "Henry Bolte",
-      "ops": 0.801,
-      "hr": 2
+      "name": "Tristan Peters",
+      "ops": 0.8,
+      "hr": 3
     },
     {
-      "name": "Samuel Basallo",
-      "ops": 0.788,
-      "hr": 10
+      "name": "Wade Meckler",
+      "ops": 0.798,
+      "hr": 2
     },
     {
       "name": "Yohendrick Pi\u00f1ango",
@@ -583,24 +583,24 @@
       "hr": 4
     },
     {
-      "name": "Wade Meckler",
-      "ops": 0.783,
-      "hr": 2
+      "name": "Samuel Basallo",
+      "ops": 0.781,
+      "hr": 10
     },
     {
       "name": "Sam Antonacci",
-      "ops": 0.772,
+      "ops": 0.78,
       "hr": 3
     },
     {
-      "name": "Travis Bazzana",
-      "ops": 0.768,
-      "hr": 5
+      "name": "JJ Wetherholt",
+      "ops": 0.777,
+      "hr": 10
     },
     {
-      "name": "JJ Wetherholt",
-      "ops": 0.759,
-      "hr": 10
+      "name": "Travis Bazzana",
+      "ops": 0.772,
+      "hr": 5
     },
     {
       "name": "Kazuma Okamoto",
@@ -618,14 +618,19 @@
       "hr": 4
     },
     {
+      "name": "Carter Jensen",
+      "ops": 0.728,
+      "hr": 9
+    },
+    {
       "name": "Joe Mack",
       "ops": 0.727,
       "hr": 3
     },
     {
-      "name": "Carter Jensen",
-      "ops": 0.718,
-      "hr": 9
+      "name": "A.J. Ewing",
+      "ops": 0.719,
+      "hr": 2
     },
     {
       "name": "Daniel Susac",
@@ -633,19 +638,14 @@
       "hr": 0
     },
     {
+      "name": "Carson Benge",
+      "ops": 0.701,
+      "hr": 7
+    },
+    {
       "name": "Dylan Beavers",
       "ops": 0.7,
       "hr": 2
-    },
-    {
-      "name": "A.J. Ewing",
-      "ops": 0.695,
-      "hr": 2
-    },
-    {
-      "name": "Carson Benge",
-      "ops": 0.692,
-      "hr": 7
     },
     {
       "name": "Nathan Church",
@@ -654,12 +654,9 @@
     }
   ],
   "narration": {
-    "title": "A Week Of Big Swings, Up And Down",
-    "intro": "The week sorted players into climbers and coolers. A few arms found another gear, a couple of bats went quiet, and the colors did some rearranging along the edges.",
-    "risers_lead": "Dustin May led the form climbers, up ten points to 61. Yoshinobu Yamamoto kept his quiet roll going, adding five to reach 87 on a 2.52 ERA and 0.84 WHIP.",
-    "pfallers_lead": "Davis Martin took the hardest fall, dropping 14 points of form to 64. Bryce Elder and Emerson Hancock each shed nine, landing at 68 and 71.",
-    "hweek_lead": "Donovan Walton had the loudest seven days, an 8-for-15 stretch with two homers for a 1.600 OPS. Pete Crow-Armstrong nearly matched it, going 14-for-31 with four homers for the Cubs.",
-    "fallers_lead": "Bryce Harper hit the chill hardest, a 1-for-19 week that trimmed 38 points off his season OPS. Jordan Walker and Yandy Diaz cooled too, each off about three-and-a-half hundredths.",
-    "colors_lead": "Justin Wrobleski climbed from above-average to elite, the best of the three moves. Jake Bauers slid the other way, from elite to above-average, while Connelly Early dropped to average."
+    "title": "Great Players, Bad Records, No Spotlight",
+    "intro": "Not every star gets to play in October. Today we pull the best healthy players off the ten worst teams in baseball, the ones doing real work for clubs going nowhere. Houston's Yordan Alvarez headlines a list that deserves better company.",
+    "gem_pitchers_lead": "Cincinnati's Chase Burns is the find here, a 2.01 ERA and 1.02 WHIP with 95 strikeouts and eight wins on a losing club. The Angels send two: Jos\u00e9 Soriano keeps runs off the board at 2.79, while Reid Detmers' 100 strikeouts lead the group despite only three wins to show for it.",
+    "gem_hitters_lead": "Alvarez sits a tier above everyone at a 1.070 OPS with 24 homers and a .325 average, wasted on a 35-41 team. Juan Soto carries the Mets at .980, and Colorado's Hunter Goodman has quietly hit 21 homers in the thin air for a 28-47 Rockies side."
   }
 }

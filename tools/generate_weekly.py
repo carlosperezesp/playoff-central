@@ -83,13 +83,14 @@ def get_teams(season, asof=None):
               f"&standingsTypes=regularSeason{datep}&hydrate=team,division")
     out = []
     for rec in d.get("records", []):
+        lg = rec.get("league", {}).get("id")   # 103 AL, 104 NL
         for tr in rec.get("teamRecords", []):
             l10 = next((s for s in tr.get("records", {}).get("splitRecords", [])
                         if s.get("type") == "lastTen"), {})
             wins, losses = tr.get("wins", 0), tr.get("losses", 0)
             out.append({
                 "id": tr["team"]["id"], "name": tr["team"]["name"],
-                "abbr": tr["team"].get("abbreviation", ""),
+                "abbr": tr["team"].get("abbreviation", ""), "lg": lg,
                 "wins": wins, "losses": losses,
                 "gp": tr.get("gamesPlayed", 0) or (wins + losses),
                 "l10": f"{l10.get('wins', 0)}-{l10.get('losses', 0)}",
@@ -211,6 +212,34 @@ def get_hitter_season(season, pid, asof=None):
                 "sb": int(st.get("stolenBases", 0) or 0), "tier": hitter_tier(ops)}
     except Exception:
         return None
+
+
+def build_gems_facts(season, asof, facts):
+    """Best HEALTHY players on the 5 worst teams (by record) in each league."""
+    worst = []
+    for lg in (103, 104):
+        same = [t for t in facts["power_all"] if t.get("lg") == lg]
+        same.sort(key=lambda t: t["wins"] / max(1, t["wins"] + t["losses"]))
+        worst += same[:5]
+    worst_names = {t["name"] for t in worst}
+    active = set()   # active rosters exclude IL / injured players
+    for t in worst:
+        try:
+            r = fetch(f"{API}/teams/{t['id']}/roster?rosterType=active"
+                      + (f"&date={asof}" if asof else ""))
+            active |= {p["person"]["id"] for p in r.get("roster", [])}
+        except Exception:
+            pass
+    pit = get_pitchers(season, 400, asof=asof, min_ip=40)
+    hit = get_hitters(season, 400, asof=asof, min_ab=100)
+    attach_team_meta(pit, facts["team_id_by_name"], facts["team_abbr"])
+    attach_team_meta(hit, facts["team_id_by_name"], facts["team_abbr"])
+    keep = lambda p: p["team"] in worst_names and (not active or p["id"] in active)
+    return {
+        "gem_pitchers": sorted([p for p in pit if keep(p)], key=lambda p: p["forma"], reverse=True)[:5],
+        "gem_hitters": sorted([h for h in hit if keep(h)], key=lambda h: h["ops"], reverse=True)[:5],
+        "gem_teams": sorted(worst, key=lambda t: (t["lg"], -(t["wins"] - t["losses"]))),
+    }
 
 
 def get_rookies(season, asof=None):
@@ -747,11 +776,25 @@ def sec_month_pitchers(f, n, limit=6):
                     _lead(n, "month_pitchers_lead"), rows)
 
 
+def sec_gem_pitchers(f, n, limit=5):
+    rows = "".join(pitcher_row(p) for p in f.get("gem_pitchers", [])[:limit])
+    g = ("The best arms (by form) on the five worst teams in each league — healthy, stuck on "
+         "losing clubs. Tap a name for where they shine.")
+    return _section("Aces going to waste", g, _lead(n, "gem_pitchers_lead"), rows)
+
+
+def sec_gem_hitters(f, n, limit=5):
+    rows = "".join(hitter_row(h) for h in f.get("gem_hitters", [])[:limit])
+    g = "The best bats (by OPS) on those same teams."
+    return _section("Bats stuck on bad teams", g, _lead(n, "gem_hitters_lead"), rows)
+
+
 SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "offense": sec_offense,
             "bats": sec_bats, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
             "fallers": sec_fallers, "colors": sec_colors, "rookies": sec_rookies,
             "rookie_surge": sec_rookie_surge, "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy,
             "pfallers": sec_pfallers, "hweek": sec_hweek,
+            "gem_pitchers": sec_gem_pitchers, "gem_hitters": sec_gem_hitters,
             "month_hitters": sec_month_hitters, "month_hr": sec_month_hr,
             "month_pitchers": sec_month_pitchers}
 TEAMSTAT_SECTIONS = {"bullpen", "offense"}
@@ -774,6 +817,11 @@ THEME_BY_KEY = {  # --theme override
     "rookies": ("Rookie Report", ["rookies", "rookie_surge"]),
     "movers": ("Risers & Fallers", ["risers", "pfallers", "hweek", "fallers", "colors"]),
     "league": ("Around the League", ["power", "offense", "staffs"]),
+    "gems": ("Hidden Gems on the League's Worst Teams", ["gem_pitchers", "gem_hitters"]),
+}
+# One-off themed editions that override the weekday rotation on a specific date.
+SPECIAL_EDITIONS = {
+    "2026-06-19": ("Hidden Gems on the League's Worst Teams", ["gem_pitchers", "gem_hitters"]),
 }
 FALLBACK_SECTIONS = ["power", "bats", "arms"]   # if a theme's sections are all empty
 
@@ -787,6 +835,7 @@ EDITION_DEK = {
     "Risers & Fallers": "Who climbed and who cooled over the past week.",
     "Rookie Report": "The first-year players worth watching.",
     "Around the League": "A quick lap of the standings, offenses and pitching staffs.",
+    "Hidden Gems on the League's Worst Teams": "Good, healthy players having strong seasons on teams going nowhere.",
 }
 
 
@@ -855,11 +904,14 @@ LLM_SYSTEM = (
     "list, don't redefine terms. Return ONLY raw JSON (no markdown) with string keys from: title, "
     "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, "
     "risers_lead, pfallers_lead, hweek_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
-    "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead — include title, intro, and a "
-    "lead for each section in sections_today.\n"
+    "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead, gem_pitchers_lead, "
+    "gem_hitters_lead — include title, intro, and a lead for each section in sections_today.\n"
     "If edition_theme starts with 'Best of', this is a once-a-month wrap of the FINISHED month "
     "(data in month_recap): the intro looks back at who owned that month, and the leads recap, not "
-    "preview. No week-over-week framing here."
+    "preview. No week-over-week framing here.\n"
+    "If hidden_gems is present, the angle is good, healthy players stuck on losing teams (the 5 worst "
+    "by record in each league): the intro frames that, and the pitcher lead notes WHERE each arm shines "
+    "(low ERA, strikeouts, etc.) from the data. Don't mock the teams; it's about the players."
 )
 
 
@@ -942,6 +994,17 @@ def facts_for_llm(f, theme_title, section_ids):
             "top_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"]}
                              for p in f["month_pitchers"]],
         }
+    if f.get("gem_pitchers") or f.get("gem_hitters"):
+        payload["hidden_gems"] = {
+            "premise": "best healthy players on the 5 worst teams (by record) in each league",
+            "worst_teams": [f'{t["name"]} ({t["wins"]}-{t["losses"]})' for t in f.get("gem_teams", [])],
+            "top_pitchers": [{"name": p["name"], "team": p["team"], "era": p["era"], "whip": p["whip"],
+                              "form": round(p["forma"]), "gs": p.get("gs"), "wins": p.get("w"),
+                              "strikeouts": p.get("so")} for p in f.get("gem_pitchers", [])],
+            "top_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
+                             "avg": h.get("avg"), "hr": h["hr"], "rbi": h.get("rbi"),
+                             "sb": h.get("sb")} for h in f.get("gem_hitters", [])],
+        }
     return json.dumps(payload, indent=2)
 
 
@@ -1001,17 +1064,26 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
     return f
 
 
-def article_jsonld(title, date_iso, canonical, desc):
-    data = {
-        "@context": "https://schema.org", "@type": "BlogPosting",
+def article_jsonld(title, date_iso, canonical, desc, image=None):
+    post = {
+        "@type": "BlogPosting",
         "headline": title, "datePublished": date_iso, "dateModified": date_iso,
         "description": desc, "url": canonical, "mainEntityOfPage": canonical,
-        "image": f"{SITE}/og-image.png",
+        "image": image or f"{SITE}/og-image.png",
         "author": {"@type": "Organization", "name": "Baseball Lens", "url": f"{SITE}/"},
         "publisher": {"@type": "Organization", "name": "Baseball Lens",
                       "logo": {"@type": "ImageObject", "url": f"{SITE}/icon.png"}},
         "isPartOf": {"@type": "Blog", "name": "The Lens", "url": f"{SITE}/blog/"},
     }
+    crumbs = {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Baseball Lens", "item": f"{SITE}/"},
+            {"@type": "ListItem", "position": 2, "name": "The Lens", "item": f"{SITE}/blog/"},
+            {"@type": "ListItem", "position": 3, "name": title, "item": canonical},
+        ],
+    }
+    data = {"@context": "https://schema.org", "@graph": [post, crumbs]}
     return ('<script type="application/ld+json">'
             + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + "</script>")
 
@@ -1092,6 +1164,10 @@ STYLE = """
   .bl-foot { margin-top:26px; text-align:center; }
   .bl-cta { display:inline-block; background:var(--accent-blue); color:#fff; text-decoration:none; font-weight:700; font-size:14px; padding:11px 20px; border-radius:999px; }
   .bl-note { color:var(--muted); font-size:12px; margin-top:16px; text-align:center; }
+  .bl-related { margin-top:34px; border-top:1px solid var(--border); padding-top:18px; }
+  .bl-related ul { list-style:none; display:flex; flex-direction:column; gap:8px; margin:10px 0 0; }
+  .bl-related a { color:var(--accent-blue); text-decoration:none; font-weight:600; font-size:14.5px; }
+  .bl-related a:hover { text-decoration:underline; }
 """
 
 PAGE = """<!DOCTYPE html>
@@ -1099,12 +1175,12 @@ PAGE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title} — Baseball Lens</title>
+<title>{seo_title}</title>
 <meta name="description" content="{desc}">
 <meta name="theme-color" content="#0d2016">
 <link rel="canonical" href="{canonical}">
 <meta property="og:type" content="article">
-<meta property="og:title" content="{title} — Baseball Lens">
+<meta property="og:title" content="{seo_title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:image" content="{site}/og-image.png">
 <meta property="og:url" content="{canonical}">
@@ -1124,6 +1200,7 @@ PAGE = """<!DOCTYPE html>
       <div class="bl-date">{datestr}</div>
       {dek}
       {body}
+      {related}
       <div class="bl-foot"><a class="bl-cta" href="{rel}">See the full picture →</a></div>
       <p class="bl-note">Stats via the MLB Stats API. Colors, form scores and power rankings are Baseball Lens's own.</p>
     </article>
@@ -1182,6 +1259,16 @@ INDEX_PAGE = """<!DOCTYPE html>
 """
 
 
+def _slugify(s):
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+
+def _fn_date(fn):
+    """The YYYY-MM-DD embedded in a blog filename (date-only or keyword slug)."""
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", fn)
+    return m.group(1) if m else fn[:-5]
+
+
 def write_snapshot(date_iso, facts, narration=None):
     os.makedirs(SNAP_DIR, exist_ok=True)
     snap = {
@@ -1204,7 +1291,7 @@ def rebuild_index():
     os.makedirs(BLOG_DIR, exist_ok=True)
     cards, posts = [], []
     for fn in sorted((f for f in os.listdir(BLOG_DIR) if f.endswith(".html") and f != "index.html"),
-                     reverse=True):
+                     key=_fn_date, reverse=True):
         html = open(os.path.join(BLOG_DIR, fn)).read()
         tm = re.search(r"<h1>(.*?)</h1>", html, re.S)
         dm = re.search(r'class="bl-date">(.*?)<', html, re.S)
@@ -1213,7 +1300,7 @@ def rebuild_index():
         cards.append(f'<a class="bl-card" href="{fn}"><h2>{title}</h2>'
                      f'<div class="bl-date">{date}</div></a>')
         posts.append({"@type": "BlogPosting", "headline": title,
-                      "url": f"{SITE}/blog/{fn}", "datePublished": fn[:-5]})
+                      "url": f"{SITE}/blog/{fn}", "datePublished": _fn_date(fn)})
     blog_ld = {"@context": "https://schema.org", "@type": "Blog", "name": "The Lens",
                "url": f"{SITE}/blog/", "description": "A daily MLB column through the Baseball Lens "
                "color scale — power rankings, hitters, pitchers and week-over-week movers.",
@@ -1229,7 +1316,7 @@ def rebuild_index():
 def rebuild_sitemap(date_iso):
     urls = [(f"{SITE}/", "1.0", "daily"), (f"{SITE}/blog/", "0.8", "daily")]
     for fn in sorted((f for f in os.listdir(BLOG_DIR) if f.endswith(".html") and f != "index.html"),
-                     reverse=True):
+                     key=_fn_date, reverse=True):
         urls.append((f"{SITE}/blog/{fn}", "0.6", "monthly"))
     body = "".join(
         f"  <url>\n    <loc>{u}</loc>\n    <lastmod>{date_iso}</lastmod>\n"
@@ -1246,12 +1333,28 @@ def recent_headlines(date_iso, n=3):
     if not os.path.isdir(BLOG_DIR):
         return []
     files = sorted((f for f in os.listdir(BLOG_DIR)
-                    if f.endswith(".html") and f != "index.html" and f[:-5] < date_iso), reverse=True)
+                    if f.endswith(".html") and f != "index.html" and _fn_date(f) < date_iso),
+                   key=_fn_date, reverse=True)
     out = []
     for fn in files[:n]:
         m = re.search(r"<h1>(.*?)</h1>", open(os.path.join(BLOG_DIR, fn)).read(), re.S)
         if m:
             out.append(re.sub(r"<.*?>", "", m.group(1)).strip())
+    return out
+
+
+def recent_links(date_iso, n=4):
+    """(title, filename) of the last few editions, for in-article internal linking."""
+    if not os.path.isdir(BLOG_DIR):
+        return []
+    files = sorted((f for f in os.listdir(BLOG_DIR)
+                    if f.endswith(".html") and f != "index.html" and _fn_date(f) < date_iso),
+                   key=_fn_date, reverse=True)
+    out = []
+    for fn in files[:n]:
+        m = re.search(r"<h1>(.*?)</h1>", open(os.path.join(BLOG_DIR, fn)).read(), re.S)
+        if m:
+            out.append((re.sub(r"<.*?>", "", m.group(1)).strip(), fn))
     return out
 
 
@@ -1303,6 +1406,8 @@ def main():
         m_end = d - dt.timedelta(days=1)
         m_start, m_label = m_end.replace(day=1), m_end.strftime("%B")
         kicker, section_ids = f"Best of {m_label}", ["month_hitters", "month_hr", "month_pitchers"]
+    elif not args.theme and date_iso in SPECIAL_EDITIONS:
+        kicker, section_ids = SPECIAL_EDITIONS[date_iso]
     else:
         kicker, section_ids = pick_theme(date_iso, args.theme)
 
@@ -1329,6 +1434,8 @@ def main():
                 sea = get_hitter_season(args.season, h["id"], asof)
                 if sea:
                     facts["hit_by_id"][h["id"]] = sea
+    if "gem_pitchers" in section_ids or "gem_hitters" in section_ids:
+        facts.update(build_gems_facts(args.season, asof, facts))
     if "hr" in section_ids and facts["movers"].get("hr"):
         attach_hr_games(facts["movers"]["hr"], args.season,
                         facts.get("baseline_date") or date_iso, asof, facts["team_abbr"])
@@ -1339,17 +1446,30 @@ def main():
     dek_text = (f"The hitters, sluggers and arms who owned {m_label}." if monthly
                 else EDITION_DEK.get(kicker, ""))
     dek = f'<p class="bl-dek">{escape(dek_text)}</p>' if dek_text else ""
-    desc = (f"{kicker}: MLB through the Baseball Lens color scale — power rankings, elite hitters "
-            "and pitchers, and week-over-week movers.")
+    # SEO: keyword-rich title; unique meta description from the LLM intro.
+    seo_title = f"MLB {kicker} — {pretty} | Baseball Lens"
+    desc = (narration or {}).get("intro") or (
+        f"{kicker}: MLB through the Baseball Lens color scale — power rankings, hitters, pitchers "
+        "and week-over-week movers.")
+    if len(desc) > 160:
+        desc = desc[:157].rsplit(" ", 1)[0] + "…"
+    links = recent_links(date_iso)
+    related = (('<div class="bl-related"><h2>More from The Lens</h2><ul>'
+                + "".join(f'<li><a href="{fn}">{t}</a></li>' for t, fn in links)  # t already escaped HTML
+                + '</ul></div>') if links else "")
 
     os.makedirs(BLOG_DIR, exist_ok=True)
-    slug = f"{date_iso}.html"
+    slug = f"mlb-{_slugify(kicker)}-{date_iso}.html"
     canonical = f"{SITE}/blog/{slug}"
     jsonld = article_jsonld(title, date_iso, canonical, desc)
     with open(os.path.join(BLOG_DIR, slug), "w") as fh:
-        fh.write(PAGE.format(title=escape(title), desc=escape(desc), kicker=escape(kicker),
-                             canonical=canonical, site=SITE, rel="../", datestr=pretty.upper(),
-                             dek=dek, body=body, style=STYLE, jsonld=jsonld))
+        fh.write(PAGE.format(title=escape(title), seo_title=escape(seo_title), desc=escape(desc),
+                             kicker=escape(kicker), canonical=canonical, site=SITE, rel="../",
+                             datestr=pretty.upper(), dek=dek, related=related, body=body,
+                             style=STYLE, jsonld=jsonld))
+    for old in os.listdir(BLOG_DIR):   # drop a prior file for the same date under a different slug
+        if old.endswith(".html") and old not in ("index.html", slug) and _fn_date(old) == date_iso:
+            os.remove(os.path.join(BLOG_DIR, old))
 
     write_snapshot(date_iso, facts, narration)
     rebuild_index()
