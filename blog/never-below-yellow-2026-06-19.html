@@ -139,7 +139,9 @@
   </div>
 <script>
 (function(){
-  if(!/edit/i.test(location.search+location.hash)) return;
+  if(!/[?&#]edit\b/i.test(location.search+location.hash)) return;
+  function _h(s){var x=5381;for(var i=0;i<s.length;i++){x=((x*33)+s.charCodeAt(i))>>>0;}return x.toString(16);}
+  var pw=prompt('Edit password:'); if(pw===null||_h(pw)!=='423d4508'){ if(pw!==null) alert('Wrong password.'); return; }
   var art=document.querySelector('.bl-article');
   var eds=[].slice.call(art.querySelectorAll('h1,h2,p,li,figcaption,.bl-kicker,.bl-date'));
   eds.forEach(function(e){e.setAttribute('contenteditable','true');});

@@ -77,7 +77,8 @@
     {
       "color": "#16a34a",
       "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg",
-      "date": "5/15"
+      "date": "5/15",
+      "whiten": true
     },
     {
       "color": "#ffc000",
