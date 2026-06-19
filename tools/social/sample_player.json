@@ -1,0 +1,18 @@
+{
+  "mode": "player",
+  "kicker": "Jugador de la semana",
+  "photo": "https://midfield.mlbstatic.com/v1/people/592450/spots/240",
+  "name": "Aaron Judge",
+  "team": "New York Yankees",
+  "position": "RF",
+  "accent": "#16a34a",
+  "stats": [
+    { "label": "AVG", "value": ".312", "hi": true },
+    { "label": "HR", "value": "28" },
+    { "label": "OPS", "value": "1.041", "hi": true },
+    { "label": "RBI", "value": "71" }
+  ],
+  "note": "Lidera la Liga Americana en **OPS** y jonrones",
+  "footer": "baseballlens.com",
+  "edition": "Semana 12 · 2026"
+}

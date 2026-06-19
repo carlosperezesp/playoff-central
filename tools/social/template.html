@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#0d2016; --bg2:#1a2e1f;
+    --accent:#16a34a; --blue:#1565d8; --orange:#e05a2b;
+    --text:#ffffff; --muted:#9fb4a6; --line:rgba(255,255,255,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1080px;overflow:hidden}
+  body{
+    font-family:'Barlow Condensed',system-ui,sans-serif;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #214a30 0%, var(--bg2) 38%, var(--bg1) 78%);
+    color:var(--text); position:relative;
+  }
+  /* subtle baseball-diamond watermark */
+  .wm{position:absolute; width:760px; height:760px; left:50%; top:54%;
+    transform:translate(-50%,-50%) rotate(45deg);
+    border:2px solid rgba(255,255,255,.04); border-radius:24px; pointer-events:none}
+  .wm::after{content:''; position:absolute; inset:120px; border:2px solid rgba(255,255,255,.035); border-radius:18px}
+
+  .card{position:absolute; inset:0; display:flex; flex-direction:column; padding:70px 72px}
+
+  /* header */
+  .hd{display:flex; align-items:center; justify-content:space-between}
+  .brand{font-family:'Bebas Neue'; font-size:40px; letter-spacing:4px; line-height:1}
+  .brand b{font-weight:400; color:var(--accent)}
+  .kicker{font-weight:700; font-size:20px; letter-spacing:2.5px; text-transform:uppercase;
+    color:var(--text); background:rgba(255,255,255,.08); border:1px solid var(--line);
+    padding:9px 18px; border-radius:999px}
+
+  /* body */
+  .body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center}
+
+  .face-wrap{position:relative; width:340px; height:340px; flex:none}
+  .face{width:100%; height:100%; border-radius:50%; object-fit:cover; object-position:center 22%;
+    border:8px solid var(--ring,#9ca3af); background:#0a1711;
+    box-shadow:0 16px 50px rgba(0,0,0,.45)}
+  .face-fallback{width:100%; height:100%; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Bebas Neue'; font-size:140px; letter-spacing:2px; color:rgba(255,255,255,.85);
+    border:8px solid var(--ring,#9ca3af); background:linear-gradient(160deg,#1e3a28,#0a1711);
+    box-shadow:0 16px 50px rgba(0,0,0,.45)}
+
+  .name{font-family:'Bebas Neue'; font-size:110px; line-height:.92; letter-spacing:2px;
+    text-align:center; margin-top:34px; text-transform:uppercase}
+  .meta{display:flex; align-items:center; gap:14px; margin-top:12px}
+  .team-logo{width:42px; height:42px; object-fit:contain}
+  .team{font-weight:600; font-size:30px; letter-spacing:1px; color:var(--muted); text-transform:uppercase}
+  .pos{font-weight:800; font-size:24px; letter-spacing:1.5px; color:var(--text);
+    background:var(--ring,#9ca3af); padding:3px 12px; border-radius:6px}
+
+  /* stats */
+  .stats{display:flex; align-items:stretch; justify-content:center; gap:0; margin-top:46px}
+  .stat{display:flex; flex-direction:column; align-items:center; padding:0 40px; position:relative}
+  .stat + .stat::before{content:''; position:absolute; left:0; top:14%; bottom:14%; width:1px; background:var(--line)}
+  .stat .v{font-family:'Bebas Neue'; font-size:90px; line-height:1; letter-spacing:1px; color:var(--text)}
+  .stat .v.hi{color:var(--ring,#fff)}
+  .stat .l{font-weight:700; font-size:22px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; margin-top:6px}
+
+  .note{margin-top:40px; max-width:880px; text-align:center; font-weight:500; font-size:32px;
+    line-height:1.3; color:#dfe7e1}
+  .note b{color:var(--ring,#fff); font-weight:700}
+
+  /* footer */
+  .ft{display:flex; align-items:center; justify-content:space-between; color:var(--muted)}
+  .ft .url{font-weight:700; font-size:24px; letter-spacing:2px; text-transform:uppercase}
+  .ft .edition{font-weight:500; font-size:22px; letter-spacing:1px}
+
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+  <div class="wm"></div>
+  <div class="card">
+    <div class="hd">
+      <div class="brand">BASEBALL<b> LENS</b></div>
+      <div class="kicker" id="kicker"></div>
+    </div>
+
+    <div class="body">
+      <div class="face-wrap">
+        <img class="face" id="face" alt="">
+        <div class="face-fallback hidden" id="faceFallback"></div>
+      </div>
+      <div class="name" id="name"></div>
+      <div class="meta">
+        <img class="team-logo hidden" id="teamLogo" alt="">
+        <span class="team" id="team"></span>
+        <span class="pos hidden" id="pos"></span>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="note hidden" id="note"></div>
+    </div>
+
+    <div class="ft">
+      <span class="url" id="url"></span>
+      <span class="edition" id="edition"></span>
+    </div>
+  </div>
+
+<script>
+const DATA = __DATA__;
+
+(function(){
+  const d = DATA || {};
+  const accent = d.accent || '#16a34a';
+  document.documentElement.style.setProperty('--ring', accent);
+
+  const set = (id, val, opt) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(val === undefined || val === null || val === ''){ (opt&&opt.keep) || el.classList.add('hidden'); return; }
+    el.textContent = val; el.classList.remove('hidden');
+  };
+
+  set('kicker', d.kicker);
+  set('name', d.name);
+  set('team', d.team, {keep:true});
+  set('pos', d.position);
+  set('url', d.footer || 'baseballlens.com');
+  set('edition', d.edition);
+
+  // photo with initials fallback
+  const face = document.getElementById('face');
+  const fb = document.getElementById('faceFallback');
+  if(d.photo){
+    face.src = d.photo;
+    face.onerror = () => { face.classList.add('hidden'); showFallback(); };
+  } else { face.classList.add('hidden'); showFallback(); }
+  function showFallback(){
+    const initials = (d.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    fb.textContent = initials; fb.classList.remove('hidden');
+  }
+
+  // team logo
+  if(d.teamLogo){
+    const tl = document.getElementById('teamLogo');
+    tl.src = d.teamLogo; tl.classList.remove('hidden');
+    tl.onerror = () => tl.classList.add('hidden');
+  }
+
+  // stats
+  const stats = d.stats || [];
+  const wrap = document.getElementById('stats');
+  if(stats.length){
+    wrap.innerHTML = stats.map(s =>
+      `<div class="stat"><div class="v ${s.hi?'hi':''}">${s.value}</div><div class="l">${s.label}</div></div>`
+    ).join('');
+  } else { wrap.classList.add('hidden'); }
+
+  // note (allow **bold**)
+  if(d.note){
+    const n = document.getElementById('note');
+    n.innerHTML = String(d.note).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    n.classList.remove('hidden');
+  }
+
+  // signal ready (after fonts settle)
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(()=>{ window.__ready = true; }); }
+  else { window.__ready = true; }
+})();
+</script>
+</body>
+</html>

@@ -176,6 +176,25 @@ const TEAM_META = {
   158: { name: 'Brewers',     abbr: 'MIL', color: '#12284B', logo: 'https://www.mlbstatic.com/team-logos/158.svg' },
 };
 
+// Team-colored backdrop for transparent player cutouts (MLB "silo" headshots).
+function shadeHex(hex, ratio) {            // ratio 0..1 toward black
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.round(((n >> 16) & 255) * (1 - ratio));
+  const g = Math.round(((n >> 8) & 255) * (1 - ratio));
+  const b = Math.round((n & 255) * (1 - ratio));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+function siloHeadshot(pid) {
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/silo/current`;
+}
+function teamPhotoBg(team) {
+  let c = '#26324a';
+  if (typeof team === 'number') c = (TEAM_META[team] && TEAM_META[team].color) || c;
+  else if (typeof team === 'string' && team) c = team;
+  else if (team && team.color) c = team.color;
+  return `linear-gradient(145deg, ${c} 0%, ${shadeHex(c, 0.45)} 100%)`;
+}
+
 // ── HISTORICAL RESULTS 2021–2025 ──────────────────────────────────────────
 // Index: 0=2021, 1=2022, 2=2023, 3=2024, 4=2025
 // ws=WS champ(amarillo) div=div champ(verde) wc=wild card(azul)
@@ -2748,7 +2767,7 @@ async function fetchTeamImpact(teamId) {
       lastLineupPos: latestLineupByPid[pid] || null,
       bestBoxscorePos,
       fallbackPos,
-      photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+      photoUrl: siloHeadshot(pid), teamBg: teamPhotoBg(teamId)
     });
   });
 
@@ -2909,7 +2928,7 @@ async function fetchTeamImpact(teamId) {
         qualityStarts: apps.qualityStarts || 0,
         isRookie: rookiePids.has(pid),
         flag: countryFlag(p.person?.birthCountry),
-        photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+        photoUrl: siloHeadshot(pid), teamBg: teamPhotoBg(teamId)
       };
     });
 
@@ -2993,7 +3012,7 @@ async function fetchTeamImpact(teamId) {
         ? !!ps && [ps.era, ps.whip, ps.inningsPitched].some(v => v !== undefined && v !== null && String(v).trim() !== '')
         : !!hs && [hs.avg, hs.ops, hs.homeRuns, hs.rbi].some(v => v !== undefined && v !== null && String(v).trim() !== ''),
       stats: (pos === 'P' || pos === 'TWP') ? ps : hs,
-      photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+      photoUrl: siloHeadshot(pid), teamBg: teamPhotoBg(teamId)
     };
   }).sort((a, b) => {
     // Field players before pitchers, then players closest to returning first.
@@ -3400,8 +3419,8 @@ function playerDetailHTML(p, type, roleOrPos) {
 
   return `<div class="impact-row">
     <div class="impact-row-left">
-      <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
-        onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+      <img class="impact-photo" src="${p.photoUrl}" style="background:${p.teamBg}" alt="${p.name}"
+        onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
       <div class="impact-name-block">
         <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.tradedIn ? '<span class="traded-badge">TRADE</span>' : ''}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}</div>
         <div class="impact-stats-line">${statsLine}</div>
@@ -3716,8 +3735,8 @@ function renderDiamondPanel(teamId, impact) {
       else if (!p.isPitcher && ilCareer?.ops && p.ops) ilTrend = trendBadgeHTML(p.ops, ilCareer.ops, 'ops');
       return `<div class="il-row">
         <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-          <img class="impact-photo" src="${p.photoUrl}" alt="${p.name}"
-            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+          <img class="impact-photo" src="${p.photoUrl}" style="background:${p.teamBg}" alt="${p.name}"
+            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
           <div class="impact-name-block">
             <div class="impact-name" style="opacity:.8">${p.name}
               <span style="font-size:10px;font-weight:600;color:var(--muted)">${posLabel}</span>
@@ -4904,7 +4923,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         bdr = `${color}47`;            // ~28% border of the form color
         lc  = statTextColor(color);    // readable label matching the form value
       }
-      const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
+      const photoUrl = siloHeadshot(pid); const photoBg = teamPhotoBg(teamMeta);
       const barW = Math.min(100, Math.round((forma/100)*100));
       const career = pitcherCareerMap[pid];
       const isRookiePitcher = pid && (isRookieCareerEligible(pid, career, 'pitcher') || (spAwardMap[pid]||[]).includes('ROY'));
@@ -4915,8 +4934,8 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${lc};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
         <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
           <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-            <img class="impact-photo" src="${photoUrl}"
-              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+            <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
             <div class="impact-name-block">
               <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name} ${rookieBadge}</div>
               <div class="impact-stats-line">ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'}</div>
@@ -4945,7 +4964,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const forma  = isPitcher ? (calcPitcherScoreWithRecent(stats, pid) ?? 0) : 0;
       const opsVal = isPitcher ? 0 : (parseFloat(stats.ops) || 0);
       const color  = isPitcher ? getDiamondPlayerColor(forma, 'pitcher') : getDiamondPlayerColor(opsVal, 'hitter');
-      const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
+      const photoUrl = siloHeadshot(pid); const photoBg = teamPhotoBg(teamMeta);
       const teamPill = teamMeta ? `<span style="display:inline-flex;align-items:center;gap:3px;flex-shrink:0">
         <img src="${teamMeta.logo}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'">
         <span style="font-family:'Barlow Condensed';font-weight:700;font-size:11px;color:var(--muted)">${teamMeta.abbr}</span>
@@ -4979,8 +4998,8 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       else if (!isPitcher && stats.avg) statsLine = `AVG ${stats.avg} · HR ${stats.homeRuns??'—'} · RBI ${stats.rbi??'—'}`;
       return `<div class="impact-row">
         <div class="impact-row-left">
-          <img class="impact-photo" src="${photoUrl}"
-            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+          <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
           <div class="impact-name-block">
             <div class="impact-name">${c.name||'?'} ${rookieBadge} ${teamPill}</div>
             ${statsLine ? `<div class="impact-stats-line">${statsLine}</div>` : ''}
@@ -5255,8 +5274,8 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
         const pa  = _aIntStat(bat.atBats) + _aIntStat(bat.baseOnBalls) + _aIntStat(bat.hitByPitch) + _aIntStat(bat.sacFlies);
         const hasBat = pa > 0 || _aIntStat(bat.hits) > 0 || _aIntStat(bat.rbi) > 0 || _aIntStat(bat.runs) > 0;
         const hasPit = _aParseIp(pit.inningsPitched) > 0 || _aIntStat(pit.battersFaced) > 0;
-        if (hasBat) hitters.push({ pid, name, teamMeta, type:'hitter', displayRole: gamePos && gamePos!=='P' && gamePos!=='TWP' ? gamePos : '', score:_aHitterScore(bat), topStats:_aHitterTopStats(bat), photoUrl:`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current` });
-        if (hasPit) pitchers.push({ pid, name, teamMeta, type:'pitcher', displayRole:'PITCHER', score:_aPitcherScore(pit), topStats:_aPitcherTopStats(pit), photoUrl:`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current` });
+        if (hasBat) hitters.push({ pid, name, teamMeta, type:'hitter', displayRole: gamePos && gamePos!=='P' && gamePos!=='TWP' ? gamePos : '', score:_aHitterScore(bat), topStats:_aHitterTopStats(bat), photoUrl:siloHeadshot(pid), teamBg: teamPhotoBg(teamMeta) });
+        if (hasPit) pitchers.push({ pid, name, teamMeta, type:'pitcher', displayRole:'PITCHER', score:_aPitcherScore(pit), topStats:_aPitcherTopStats(pit), photoUrl:siloHeadshot(pid), teamBg: teamPhotoBg(teamMeta) });
       });
     });
     hitters.sort((a,b) => b.score-a.score);
@@ -5303,7 +5322,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     const statsLine = p.topStats.join(' · ') || (p.type==='pitcher' ? '0 ER' : '1 H');
     return `<div class="impact-row">
       <div class="impact-row-left">
-        <img class="impact-photo" src="${p.photoUrl}" onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+        <img class="impact-photo" src="${p.photoUrl}" style="background:${p.teamBg}" onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
         <div class="impact-name-block">
           <div class="impact-name">${p.name} ${roleBadge} ${rookieBadge} ${teamPill}</div>
           <div class="impact-stats-line">${statsLine}</div>
@@ -5968,7 +5987,7 @@ async function _OLD_loadTopGames() {
               stats: bat,
               topStats: hitterTopStats(bat),
               isRookie,
-              photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+              photoUrl: siloHeadshot(pid), teamBg: teamPhotoBg(teamId)
             });
           }
 
@@ -5987,7 +6006,7 @@ async function _OLD_loadTopGames() {
               stats: pit,
               topStats: pitcherTopStats(pit),
               isRookie,
-              photoUrl: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`
+              photoUrl: siloHeadshot(pid), teamBg: teamPhotoBg(teamId)
             });
           }
         });
@@ -6048,8 +6067,8 @@ async function _OLD_loadTopGames() {
       const statsLine = p.topStats.join(' · ') || (p.type === 'pitcher' ? '0 ER' : '1 H');
       return `<div class="impact-row">
         <div class="impact-row-left">
-          <img class="impact-photo" src="${p.photoUrl}"
-            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+          <img class="impact-photo" src="${p.photoUrl}" style="background:${p.teamBg}"
+            onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
           <div class="impact-name-block">
             <div class="impact-name">${p.name} ${roleBadge} ${rookieBadge} ${teamPill}</div>
             <div class="impact-stats-line">${statsLine}</div>
@@ -6214,7 +6233,7 @@ async function _OLD_loadTopGames() {
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:3px">${spLabel}</div>
           <div style="font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--muted)">TBD</div>
         </div>`;
-        const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pid}/headshot/67/current`;
+        const photoUrl = siloHeadshot(pid); const photoBg = teamPhotoBg(teamMeta);
         const ps = stat || ptwPitchStats[pid] || {};
         const era = ps.era||'—', whip = ps.whip||'—', ip = ps.inningsPitched||'—', gs = ps.gamesStarted??'—';
         const statsLine1 = `ERA ${era} · WHIP ${whip}`;
@@ -6227,8 +6246,8 @@ async function _OLD_loadTopGames() {
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
           <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
             <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-              <img class="impact-photo" src="${photoUrl}"
-                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
               <div class="impact-name-block">
                 <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name} ${rookieBadge}</div>
                 <div class="impact-stats-line">${statsLine1}</div>
@@ -6262,7 +6281,7 @@ async function _OLD_loadTopGames() {
       const allWatch = [...awayWatch, ...homeWatch].sort((a, b) => a.rank - b.rank).slice(0, 4);
 
       function ptwPlayerCard(c, badgeFn) {
-        const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${c.pid}/headshot/67/current`;
+        const photoUrl = siloHeadshot(c.pid); const photoBg = teamPhotoBg(c.teamMeta);
         const hs = ptwHitStats[c.pid];
         const ps = ptwPitchStats[c.pid];
         const awardKeys = (c.labels || []).map(l => l.key);
@@ -6290,8 +6309,8 @@ async function _OLD_loadTopGames() {
           const statsLine = `ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'} · GS ${ps.gamesStarted??'—'}`;
           return `<div class="impact-row">
             <div class="impact-row-left">
-              <img class="impact-photo" src="${photoUrl}"
-                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
               <div class="impact-name-block">
                 <div class="impact-name">${c.name} ${posBadge} ${rookieBadge} ${teamPill}</div>
                 <div class="impact-stats-line">${statsLine}</div>
@@ -6317,8 +6336,8 @@ async function _OLD_loadTopGames() {
           const statsLine2 = `RBI ${hs.rbi??'—'} · SB ${hs.stolenBases??'—'}`;
           return `<div class="impact-row">
             <div class="impact-row-left">
-              <img class="impact-photo" src="${photoUrl}"
-                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+              <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+                onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
               <div class="impact-name-block">
                 <div class="impact-name">${c.name} ${posBadge} ${rookieBadge} ${teamPill}</div>
                 <div class="impact-stats-line">${statsLine}</div>
@@ -6339,8 +6358,8 @@ async function _OLD_loadTopGames() {
         // No stats yet
         return `<div class="impact-row">
           <div class="impact-row-left">
-            <img class="impact-photo" src="${photoUrl}"
-              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+            <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+              onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
             <div class="impact-name-block">
               <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
             </div>
@@ -7001,13 +7020,13 @@ async function loadPlayers() {
     const pitcherCats = PLAYER_CATEGORIES.filter(c => c.type === 'pitcher');
 
     function cardHTML(p, cat) {
-      const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.pid}/headshot/67/current`;
+      const photoUrl = siloHeadshot(p.pid);
       const teamMeta = TEAM_META[p.teamId];
       const teamLogo = teamMeta ? `<img src="${teamMeta.logo}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display='none'">` : '';
       return `<div class="player-rank-card">
         <div class="player-rank-num${p.rank <= 3 ? ' top3' : ''}">${p.rank}</div>
-        <img class="player-rank-photo" src="${photoUrl}" alt="${p.name}"
-          onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+        <img class="player-rank-photo" src="${photoUrl}" style="background:${teamPhotoBg(p.teamId)}" alt="${p.name}"
+          onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
         <div class="player-rank-info">
           <div class="player-rank-name">${p.name}</div>
           <div class="player-rank-team">${teamLogo}${p.teamAbbr}</div>
@@ -7761,7 +7780,7 @@ async function _loadMVPTracker() {
     // --- Row HTML (shared by MVP, CY, and ROY)
     function rowHTML(p, awardType) {
       const rankCls = p.rank <= 3 ? `rank${p.rank}` : '';
-      const photoUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.pid}/headshot/67/current`;
+      const photoUrl = siloHeadshot(p.pid);
       const teamLogo = p.teamId && TEAM_META[p.teamId]
         ? `<img src="${TEAM_META[p.teamId].logo}" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-right:2px" onerror="this.style.display='none'">` : '';
       const score = p.mvpS.toFixed(1);
@@ -7789,8 +7808,8 @@ async function _loadMVPTracker() {
       return `<details class="mvp-row-wrap">
         <summary class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
-        <img class="mvp-photo" src="${photoUrl}" alt="${p.name}"
-          onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/0/headshot/67/current'">
+        <img class="mvp-photo" src="${photoUrl}" alt="${p.name}" style="background:${teamPhotoBg(p.teamId)}"
+          onerror="this.src='${siloHeadshot(0)}'">
         <div class="mvp-info">
           <div class="mvp-name">${rookieBadge}${posHtml}<span class="mvp-name-text">${p.name}</span></div>
           <div class="mvp-meta">
