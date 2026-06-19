@@ -50,8 +50,8 @@
   .strip{display:flex; align-items:center; justify-content:center; gap:0; margin:28px 0 4px}
   .strip .s{display:flex; flex-direction:column; align-items:center; padding:0 44px; position:relative}
   .strip .s + .s::before{content:''; position:absolute; left:0; top:12%; bottom:12%; width:1px; background:var(--line)}
-  .strip .s .v{font-family:'Bebas Neue'; font-size:70px; line-height:1; letter-spacing:1px; color:var(--stat,#fff)}
-  .strip .s .l{font-weight:700; font-size:20px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; margin-top:4px}
+  .strip .s .v{font-family:'Barlow Condensed'; font-weight:800; font-size:78px; line-height:1; letter-spacing:.5px; color:var(--stat,#fff)}
+  .strip .s .l{font-weight:700; font-size:21px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; margin-top:6px}
   .strip .s.forma .v{color:var(--stat,var(--accent,#ffc52f))}
 
   /* games — two rows of colored dots with opponent logos + date */
@@ -67,13 +67,13 @@
   .dot .opp{width:50px; height:34px; display:flex; align-items:center; justify-content:center}
   .dot .opp img{max-width:100%; max-height:100%; object-fit:contain; display:block}
   .dot .opp.w img{filter:brightness(0) invert(1)}   /* force-white for dark-clashing logos */
-  .dot .dt{font-weight:600; font-size:14px; letter-spacing:.2px; color:var(--muted); line-height:1}
+  .dot .dt{font-weight:600; font-size:18px; letter-spacing:.2px; color:var(--muted); line-height:1}
 
   /* legend */
-  .legend{display:flex; align-items:center; justify-content:center; gap:24px; margin-top:30px}
-  .legend .it{display:flex; align-items:center; gap:9px; font-weight:600; font-size:18px; letter-spacing:.5px; color:var(--muted)}
-  .legend .it i{width:18px; height:18px; border-radius:50%; display:inline-block}
-  .legend-note{max-width:840px; margin:11px auto 0; text-align:center; font-weight:500; font-size:18px;
+  .legend{display:flex; align-items:center; justify-content:center; gap:22px; margin-top:30px}
+  .legend .it{display:flex; align-items:center; gap:10px; font-weight:600; font-size:21px; letter-spacing:.4px; color:var(--muted)}
+  .legend .it i{width:20px; height:20px; border-radius:50%; display:inline-block}
+  .legend-note{max-width:880px; margin:13px auto 0; text-align:center; font-weight:500; font-size:21px;
     line-height:1.4; letter-spacing:.2px; color:#fff}
   .legend-note b{color:#fff; font-weight:700}
 
