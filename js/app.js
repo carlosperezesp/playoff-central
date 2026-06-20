@@ -844,8 +844,7 @@ async function renderStandings() {
   const orderedDivs = [...alDivs, ...nlDivs];
 
   html += `
-    <div class="divisions-layout">
-      <div class="divisions-col" id="divisionsGrid">`;
+    <div class="divisions-rows" id="divisionsGrid">`;
 
   let alIdx = 0, nlIdx = 0;
   orderedDivs.forEach((divRecord, di) => {
@@ -930,8 +929,8 @@ async function renderStandings() {
     // On desktop: AL (league 103) goes in left column, NL in right. On mobile: AL first (natural order).
     const isAL = leagueId === 103;
     const cardOrder = isAL ? (alIdx++) : (3 + nlIdx++); // AL: order 0,1,2 → left col; NL: order 3,4,5 → right col
-    html += `<div class="division-card" id="divcard-${divId}" style="order:${cardOrder}">
-      <div class="division-header" id="divhdr-${divId}" onclick="selectDivisionChart(${divId})">
+    html += `<div class="division-row"><div class="division-card" id="divcard-${divId}">
+      <div class="division-header" id="divhdr-${divId}" onclick="toggleDivision(${divId})">
         <div style="display:flex;align-items:center;gap:10px">
           <span class="division-name">${dm.name}</span>
           <span class="division-league">${isAL ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
@@ -947,12 +946,14 @@ async function renderStandings() {
           <tbody>${rows.replace(/class="r div-col-mn"/g, `class="r div-col-mn" style="${mnColStyle}"`)}</tbody>
         </table>
       </div>
-    </div>`;
+    </div>
+    <div class="div-chart-card"><div class="tracker-section">
+      <div class="tracker-header"><span class="tracker-title">WIN% · ${dm.name}</span></div>
+      <div style="position:relative;flex:1;min-height:0;padding:8px 10px"><canvas id="divcanvas-${divId}" style="display:block;width:100%;height:100%"></canvas></div>
+    </div></div></div>`;
   });
 
-  html += `</div>
-      <div class="division-chart-panel"><div id="trackerWidget"></div></div>
-    </div>`;
+  html += `</div>`;
   el.innerHTML = html;
 
   // Update date info label
@@ -963,19 +964,11 @@ async function renderStandings() {
   if (dateInfo) dateInfo.textContent = dateStr;
   if (wcDateInfo) wcDateInfo.textContent = dateStr;
 
-  // Default-select the first division and show its win% chart in the right panel
-  const firstDivId = orderedDivs[0]?.division?.id;
-  if (firstDivId && TRACKER_DIVISIONS[firstDivId]) {
-    trackerCurrentDiv = firstDivId;
-    const fhdr = document.getElementById(`divhdr-${firstDivId}`);
-    if (fhdr) fhdr.classList.add('selected');
-    initTracker();
-  }
-
   ensureStandingsNextGames(allTeamIds).then(() => renderStandingsNextGames(allTeamIds)).catch(()=>{});
 
-  // Pre-load tracker data in background (no UI yet)
-  loadTrackerData().catch(e => console.warn('Tracker load failed:', e));
+  // Draw every division's win% chart once tracker data is ready (desktop)
+  if (trackerLoaded) drawAllDivisionCharts();
+  else loadTrackerData().then(() => drawAllDivisionCharts()).catch(e => console.warn('Tracker load failed:', e));
 
   // Render wild card tables
   renderWildCardTables();
@@ -1002,84 +995,39 @@ function toggleWildcardTeamRow(leagueKey, teamId) {
   row.classList.toggle('open', !isOpen);
 }
 
-function selectDivisionChart(divId) {
-  if (!TRACKER_DIVISIONS[divId]) return;
-  trackerCurrentDiv = divId;
-  document.querySelectorAll('.division-header.selected').forEach(h => h.classList.remove('selected'));
-  const hdr = document.getElementById(`divhdr-${divId}`);
-  if (hdr) hdr.classList.add('selected');
-  initTracker();
+// Draw one division's win% chart into its own canvas, matched to the standings height.
+function drawDivChart(divId) {
+  divId = parseInt(divId);
+  const canvas = document.getElementById(`divcanvas-${divId}`);
+  if (!canvas || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
+  const card = document.getElementById(`divcard-${divId}`);
+  const h = Math.max(200, (card?.clientHeight || 300) - 46); // match standings height (minus chart header)
+  drawTracker(trackerDates.length - 1, divId, canvas, h);
+}
+
+// Desktop: draw every division's chart side-by-side.
+function drawAllDivisionCharts() {
+  if (window.innerWidth <= 900) return; // mobile draws lazily on click
+  document.querySelectorAll('[id^="divcanvas-"]').forEach(cv => {
+    drawDivChart(cv.id.replace('divcanvas-', ''));
+  });
 }
 
 function toggleDivision(divId) {
-  // Desktop: no collapse, all divisions always visible
-  if (window.innerWidth > 768) return;
-  const wasActive = activeDivisionId === divId;
-
-  // Collapse all divisions
-  document.querySelectorAll('.division-card').forEach(card => {
-    card.style.display = '';
-  });
-  document.querySelectorAll('[id^="divhdr-"]').forEach(hdr => hdr.classList.remove('selected'));
-
-  // Hide tracker and remove from DOM
-  const trackerContainer = document.getElementById('divTrackerContainer');
-  if (trackerContainer) trackerContainer.remove();
-
-  if (wasActive) {
-    // Toggle off — show all, hide tracker
-    activeDivisionId = null;
-    return;
+  // Desktop: each division already shows its own chart — nothing to toggle.
+  if (window.innerWidth > 900) return;
+  // Mobile: clicking a division reveals its chart below it (one open at a time).
+  const card = document.getElementById(`divcard-${divId}`);
+  const row = card?.closest('.division-row');
+  if (!row) return;
+  const opening = !row.classList.contains('open');
+  document.querySelectorAll('.division-row.open').forEach(r => r.classList.remove('open'));
+  document.querySelectorAll('[id^="divhdr-"]').forEach(h => h.classList.remove('selected'));
+  if (opening) {
+    row.classList.add('open');
+    document.getElementById(`divhdr-${divId}`)?.classList.add('selected');
+    drawDivChart(divId);
   }
-
-  // Activate this division
-  activeDivisionId = divId;
-  document.getElementById(`divhdr-${divId}`)?.classList.add('selected');
-
-  // Hide all OTHER division cards
-  document.querySelectorAll('.division-card').forEach(card => {
-    if (card.id !== `divcard-${divId}`) card.style.display = 'none';
-  });
-
-  // Inject tracker container ABOVE the active division card
-  const divCard = document.getElementById(`divcard-${divId}`);
-  const grid = document.getElementById('divisionsGrid');
-  if (!divCard || !grid) return;
-
-  // Find the TRACKER_DIVISIONS entry to match divId → tracker division
-  const trackerDiv = TRACKER_DIVISIONS[divId];
-  if (!trackerDiv) return;
-
-  // Insert tracker container after the divisionsGrid (outside flex layout)
-  const container = document.createElement('div');
-  container.id = 'divTrackerContainer';
-  container.style.marginTop = '12px';
-  container.style.marginBottom = '16px';
-  container.innerHTML = `<div id="trackerWidget"></div>`;
-  grid.parentNode.insertBefore(container, grid.nextSibling);
-
-  // Set tracker to this division and draw
-  trackerCurrentDiv = parseInt(divId);
-  initTracker();
-
-  // Update GR label after tracker loads
-  loadGamesRemaining(
-    Array.from(document.querySelectorAll(`#divcard-${divId} [onclick*="goToTeam"]`))
-      .map(el => { const m = el.getAttribute('onclick').match(/\d+/); return m ? parseInt(m[0]) : null; })
-      .filter(Boolean)
-  ).then(rem => {
-    const maxGR = Math.max(0, ...Object.values(rem));
-    const dateInfo = document.getElementById('standingsDateInfo');
-    const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
-    const trackerGR = document.getElementById('trackerMaxGR');
-    if (dateInfo && maxGR > 0) {
-      const today = new Date();
-      const dateStr = today.toLocaleDateString('en-US', { day:'numeric', month:'short' }).toUpperCase();
-      dateInfo.textContent = `${dateStr} · ${maxGR} Games Until Playoff`;
-    }
-    if (wcDateInfo && maxGR > 0) wcDateInfo.textContent = `${new Date().toLocaleDateString('en-US', { day:'numeric', month:'short' }).toUpperCase()} · ${maxGR} Games Until Playoff`;
-    if (trackerGR && maxGR > 0) trackerGR.textContent = `· ${maxGR} GR`;
-  }).catch(()=>{});
 }
 
 // ── STANDINGS VIEW TOGGLE ─────────────────────────────────────────────────
@@ -1672,8 +1620,9 @@ function showTrackerTooltip(idx, visibleDates, mouseX, canvas) {
   tooltip.style.top = '10px';
 }
 
-function drawTracker(sliderIdx) {
-  const canvas = document.getElementById('trackerCanvas');
+function drawTracker(sliderIdx, divId, canvasEl, chartH) {
+  const canvas = canvasEl || document.getElementById('trackerCanvas');
+  divId = divId || trackerCurrentDiv;
   if (!canvas || !trackerLoaded || !trackerDates.length) return;
 
   const visibleDates = trackerDates;
@@ -1685,7 +1634,7 @@ function drawTracker(sliderIdx) {
   }
 
   const latestRec = trackerData[trackerDates[lastIdx]] || [];
-  const divRec = latestRec.find(r => r.division?.id === trackerCurrentDiv);
+  const divRec = latestRec.find(r => r.division?.id === divId);
   if (!divRec) return;
   const divTeams = divRec.teamRecords.map(t => t.team.id);
 
@@ -1693,7 +1642,7 @@ function drawTracker(sliderIdx) {
   divTeams.forEach(id => series[id] = []);
   visibleDates.forEach(date => {
     const recs = trackerData[date] || [];
-    const dr = recs.find(r => r.division?.id === trackerCurrentDiv);
+    const dr = recs.find(r => r.division?.id === divId);
     const seen = new Set();
     if (dr) {
       dr.teamRecords.forEach(tr => {
@@ -1708,7 +1657,7 @@ function drawTracker(sliderIdx) {
 
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 600;
-  const H = 240;
+  const H = chartH || 240;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
