@@ -948,7 +948,10 @@ async function renderStandings() {
       </div>
     </div>
     <div class="div-chart-card"><div class="tracker-section">
-      <div class="tracker-header"><span class="tracker-title">WIN% · ${dm.name}</span></div>
+      <div class="tracker-header">
+        <span class="tracker-title tracker-title-desktop">WIN% · ${dm.name}</span>
+        <span class="tracker-title tracker-title-mobile">WIN% · ${dm.name}</span>
+      </div>
       <div class="div-chart-body"><canvas id="divcanvas-${divId}"></canvas></div>
     </div></div></div>`;
   });
@@ -1011,21 +1014,26 @@ function drawDivChart(divId) {
   const canvas = document.getElementById(`divcanvas-${divId}`);
   const card = document.getElementById(`divcard-${divId}`);
   if (!canvas || !card || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
-  // Size the chart card to exactly the standings height; the absolute canvas fills it.
-  const chartCard = canvas.closest('.div-chart-card');
-  if (chartCard) chartCard.style.height = card.offsetHeight + 'px';
-  if (!canvas.offsetHeight) return;
   const desktop = window.innerWidth > 900;
+  // Desktop pairs the chart height with the standings card; mobile keeps its CSS height.
+  const chartCard = canvas.closest('.div-chart-card');
+  if (chartCard) chartCard.style.height = desktop ? `${card.offsetHeight}px` : '';
+  if (!canvas.offsetHeight) return;
   canvas.style.cursor = 'crosshair';
   canvas.onmousemove = (e) => onDivHover(e, divId);
   canvas.onmouseleave = () => onDivLeave(divId);
-  drawTracker(trackerDates.length - 1, divId, canvas, canvas.offsetHeight,
-    desktop ? { startDate: DESKTOP_TRACKER_START, showXAxis: false } : {});
+  if (desktop) drawDivisionWinPctTracker(divId, canvas, canvas.offsetHeight);
+  else drawTracker(trackerDates.length - 1, divId, canvas, canvas.offsetHeight, { divisionChart: true });
 }
 
 function _divVisibleDates(divId) {
   const desktop = window.innerWidth > 900;
-  return desktop ? trackerDates.filter(d => d >= DESKTOP_TRACKER_START) : trackerDates;
+  if (!desktop) return trackerDates;
+  divId = parseInt(divId);
+  return trackerDates.filter(date => date >= DESKTOP_TRACKER_START).filter(date => {
+    const dr = (trackerData[date] || []).find(r => r.division?.id === divId);
+    return !!dr?.teamRecords?.length;
+  });
 }
 
 function onDivHover(e, divId) {
@@ -1034,9 +1042,12 @@ function onDivHover(e, divId) {
   const visibleDates = _divVisibleDates(divId);
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
-  const PADleft = 50, PADright = 72;
-  const cW = canvas.offsetWidth - PADleft - PADright;
-  const relX = mx - PADleft;
+  const desktop = window.innerWidth > 900;
+  const PAD = desktop
+    ? divisionWinPctPadding(canvas.offsetWidth, canvas.offsetHeight)
+    : trackerChartPadding(canvas.offsetWidth, canvas.offsetHeight, { showXAxis: true, divisionChart: true });
+  const cW = canvas.offsetWidth - PAD.left - PAD.right;
+  const relX = mx - PAD.left;
   if (relX < 0 || relX > cW) { onDivLeave(divId); return; }
   const idx = Math.max(0, Math.min(Math.round((relX / cW) * Math.max(visibleDates.length - 1, 1)), visibleDates.length - 1));
   if (trackerHoverIdx === idx && _hoverDiv === divId) return;
@@ -1068,7 +1079,9 @@ function showDivTooltip(idx, divId, visibleDates, cx, cy) {
   const d = new Date(date + 'T12:00:00');
   const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   tt.innerHTML = `<div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:1.5px;color:#6b7280;margin-bottom:5px">${dateStr}</div>` +
-    sorted.map(tr => {
+    sorted
+      .sort((a, b) => (parseFloat(b.winningPercentage) || 0) - (parseFloat(a.winningPercentage) || 0))
+      .map(tr => {
       const meta = TEAM_META[tr.team.id] || { abbr: '???' };
       const color = TEAM_COLORS_TRACKER[tr.team.id] || '#999';
       const pct = parseFloat(tr.winningPercentage || 0).toFixed(3).replace(/^0/, '');
@@ -1640,8 +1653,9 @@ function onTrackerHover(e) {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const visibleDates = trackerDates;
-  const PAD = { top: 20, right: 72, bottom: 28, left: 50 };
   const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight || 240;
+  const PAD = trackerChartPadding(W, H);
   const cW = W - PAD.left - PAD.right;
   const relX = mx - PAD.left;
   if (relX < 0 || relX > cW) { onTrackerLeave(); return; }
@@ -1700,6 +1714,208 @@ function showTrackerTooltip(idx, visibleDates, mouseX, canvas) {
 const DESKTOP_TRACKER_START = '2026-04-01';
 let _hoverDiv = null;
 
+function divisionWinPctPadding(W, H) {
+  return { top: 12, right: 54, bottom: H < 190 ? 18 : 24, left: 42 };
+}
+
+function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
+  const canvas = canvasEl;
+  divId = parseInt(divId);
+  if (!canvas || !trackerLoaded || !trackerDates.length) return;
+
+  const visibleDates = _divVisibleDates(divId);
+  if (!visibleDates.length) return;
+  const latestDate = [...visibleDates].reverse().find(date => {
+    const dr = (trackerData[date] || []).find(r => r.division?.id === divId);
+    return !!dr?.teamRecords?.length;
+  });
+  const latestRec = (trackerData[latestDate] || []).find(r => r.division?.id === divId);
+  if (!latestRec?.teamRecords?.length) return;
+
+  const divTeams = latestRec.teamRecords
+    .map(t => t.team.id)
+    .sort((a, b) => {
+      const ar = latestRec.teamRecords.find(t => t.team.id === a);
+      const br = latestRec.teamRecords.find(t => t.team.id === b);
+      return (parseFloat(br?.winningPercentage) || 0) - (parseFloat(ar?.winningPercentage) || 0);
+    });
+
+  const series = {};
+  divTeams.forEach(id => { series[id] = []; });
+  visibleDates.forEach(date => {
+    const dr = (trackerData[date] || []).find(r => r.division?.id === divId);
+    const seen = new Set();
+    if (dr?.teamRecords?.length) {
+      dr.teamRecords.forEach(tr => {
+        if (!series[tr.team.id]) return;
+        series[tr.team.id].push(parseFloat(tr.winningPercentage) || null);
+        seen.add(tr.team.id);
+      });
+    }
+    divTeams.forEach(id => { if (!seen.has(id)) series[id].push(null); });
+  });
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 600;
+  const H = chartH || canvas.offsetHeight || 220;
+  if (W < 120 || H < 120) return;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = divisionWinPctPadding(W, H);
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+  if (cW <= 0 || cH <= 0) return;
+
+  let minPct = 0.45, maxPct = 0.65;
+  Object.values(series).forEach(vals => vals.forEach(v => {
+    if (v !== null && Number.isFinite(v)) {
+      minPct = Math.min(minPct, v);
+      maxPct = Math.max(maxPct, v);
+    }
+  }));
+  minPct = Math.max(0, Math.floor((minPct - 0.025) * 20) / 20);
+  maxPct = Math.min(1, Math.ceil((maxPct + 0.025) * 20) / 20);
+  if (maxPct - minPct < 0.15) {
+    const mid = (maxPct + minPct) / 2;
+    minPct = Math.max(0, mid - 0.075);
+    maxPct = Math.min(1, mid + 0.075);
+  }
+  minPct = Math.min(minPct, 0.5);
+  maxPct = Math.max(maxPct, 0.5);
+  const pctRange = Math.max(maxPct - minPct, 0.1);
+
+  const yFor = pct => PAD.top + cH - ((pct - minPct) / pctRange) * cH;
+  const xFor = (i, total) => PAD.left + (i / Math.max(total - 1, 1)) * cW;
+  const pctLabel = pct => pct.toFixed(3).replace(/^0/, '');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.font = '11px Barlow Condensed, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const gridStep = pctRange <= 0.25 ? 0.05 : 0.1;
+  const startGrid = Math.ceil(minPct / gridStep) * gridStep;
+  for (let p = startGrid; p <= maxPct + 0.001; p += gridStep) {
+    p = Math.round(p * 1000) / 1000;
+    const y = yFor(p);
+    const is500 = Math.abs(p - 0.5) < 0.001;
+    ctx.strokeStyle = is500 ? 'rgba(107,114,128,.5)' : '#e5e7eb';
+    ctx.lineWidth = is500 ? 1.5 : 1;
+    ctx.setLineDash(is500 ? [5, 4] : []);
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = is500 ? '#4b5563' : '#9ca3af';
+    ctx.fillText(pctLabel(p), PAD.left - 6, y);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#6b7280';
+  const labelStep = Math.max(1, Math.floor(visibleDates.length / (W < 560 ? 3 : 4)));
+  visibleDates.forEach((date, i) => {
+    if (i % labelStep !== 0 && i !== visibleDates.length - 1) return;
+    const x = xFor(i, visibleDates.length);
+    const dd = new Date(date + 'T12:00:00');
+    ctx.fillText(dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - 6);
+  });
+
+  function buildPath(vals, total) {
+    const pts = [];
+    vals.forEach((v, i) => {
+      if (v !== null && Number.isFinite(v)) pts.push({ x: xFor(i, total), y: yFor(v), i });
+    });
+    return pts;
+  }
+  function drawSmoothPath(pts) {
+    if (!pts.length) return;
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1], curr = pts[i];
+      const cpx = (prev.x + curr.x) / 2;
+      ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+    }
+  }
+
+  const currentPct = {};
+  divTeams.forEach(id => {
+    const last = [...series[id]].reverse().find(v => v !== null && Number.isFinite(v));
+    currentPct[id] = last ?? 0;
+  });
+  const bottomFirst = [...divTeams].sort((a, b) => currentPct[a] - currentPct[b]);
+  bottomFirst.forEach(tid => {
+    const pts = buildPath(series[tid], visibleDates.length);
+    if (pts.length < 2) return;
+    const color = TEAM_COLORS_TRACKER[tid] || '#999';
+    const isTop = currentPct[tid] === Math.max(...Object.values(currentPct));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isTop ? 2.7 : 2;
+    ctx.globalAlpha = isTop ? 1 : 0.9;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); drawSmoothPath(pts); ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+
+  if (trackerHoverIdx !== null && trackerHoverIdx < visibleDates.length) {
+    const hx = xFor(trackerHoverIdx, visibleDates.length);
+    ctx.strokeStyle = 'rgba(17,24,39,.28)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(hx, PAD.top); ctx.lineTo(hx, PAD.top + cH); ctx.stroke();
+    ctx.setLineDash([]);
+    divTeams.forEach(tid => {
+      const v = series[tid][trackerHoverIdx];
+      if (v === null || !Number.isFinite(v)) return;
+      const color = TEAM_COLORS_TRACKER[tid] || '#999';
+      ctx.beginPath(); ctx.arc(hx, yFor(v), 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+    });
+  }
+
+  const labelTeams = [...divTeams].sort((a, b) => currentPct[b] - currentPct[a]);
+  const labelY = labelTeams.map(tid => yFor(currentPct[tid]));
+  const minGap = 12;
+  for (let i = 1; i < labelY.length; i++) {
+    if (labelY[i] - labelY[i - 1] < minGap) labelY[i] = labelY[i - 1] + minGap;
+  }
+  for (let i = labelY.length - 2; i >= 0; i--) {
+    if (labelY[i + 1] > PAD.top + cH && labelY[i] > PAD.top) {
+      labelY[i] -= labelY[i + 1] - (PAD.top + cH);
+    }
+  }
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  labelTeams.forEach((tid, i) => {
+    const vals = series[tid];
+    const lastIdx = vals.map(v => v !== null && Number.isFinite(v)).lastIndexOf(true);
+    if (lastIdx < 0) return;
+    const color = TEAM_COLORS_TRACKER[tid] || '#999';
+    const x = xFor(lastIdx, visibleDates.length);
+    const y = yFor(vals[lastIdx]);
+    ctx.beginPath(); ctx.arc(x, y, currentPct[tid] === Math.max(...Object.values(currentPct)) ? 4 : 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.4; ctx.stroke();
+    const meta = TEAM_META[tid] || { abbr: '???' };
+    ctx.font = 'bold 11px Barlow Condensed, sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(meta.abbr, PAD.left + cW + 6, Math.min(PAD.top + cH, Math.max(PAD.top, labelY[i])));
+  });
+}
+
+function trackerChartPadding(W, H, opts = {}) {
+  const compact = !!opts.divisionChart || W < 560 || H < 260;
+  return {
+    top: compact ? 14 : 20,
+    right: opts.showTeamLabels === false ? 16 : (compact ? 46 : 58),
+    bottom: opts.showXAxis === false ? (compact ? 10 : 12) : (compact ? 24 : 28),
+    left: compact ? 42 : 50
+  };
+}
+
 function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   const canvas = canvasEl || document.getElementById('trackerCanvas');
   divId = divId || trackerCurrentDiv;
@@ -1740,14 +1956,16 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 600;
   const H = chartH || canvas.offsetHeight || 240;
+  if (W < 120 || H < 120) return;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const PAD = { top: 20, right: 72, bottom: opts.showXAxis === false ? 12 : 28, left: 50 };
+  const PAD = trackerChartPadding(W, H, opts);
   const cW = W - PAD.left - PAD.right;
   const cH = H - PAD.top - PAD.bottom;
+  if (cW <= 0 || cH <= 0) return;
 
   let minPct = .350, maxPct = .750;
   Object.values(series).forEach(arr => arr.forEach(v => {
@@ -1755,7 +1973,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   }));
   minPct = Math.max(0, Math.floor(minPct * 10) / 10 - 0.05);
   maxPct = Math.min(1, Math.ceil(maxPct * 10) / 10 + 0.05);
-  const pctRange = maxPct - minPct;
+  const pctRange = Math.max(maxPct - minPct, 0.1);
 
   const yFor = pct => PAD.top + cH - ((pct - minPct) / pctRange) * cH;
   const xFor = (i, total) => PAD.left + (i / Math.max(total - 1, 1)) * cW;
@@ -1763,24 +1981,25 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  ctx.font = '11px Barlow Condensed, sans-serif';
+  const compact = !!opts.divisionChart || W < 560 || H < 260;
+  ctx.font = `${compact ? 11 : 12}px Barlow Condensed, sans-serif`;
   ctx.textAlign = 'right';
   const gridPcts = [];
   for (let p = Math.ceil(minPct * 10) / 10; p <= maxPct + 0.001; p = Math.round((p + 0.1) * 10) / 10) gridPcts.push(p);
   gridPcts.forEach(p => {
     const y = yFor(p);
     const is500 = Math.abs(p - 0.5) < 0.001;
-    ctx.strokeStyle = is500 ? 'rgba(107,114,128,.4)' : '#f0f0f0';
+    ctx.strokeStyle = is500 ? 'rgba(107,114,128,.45)' : '#e5e7eb';
     ctx.lineWidth = is500 ? 1.5 : 1;
     ctx.setLineDash(is500 ? [4,3] : []);
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = is500 ? '#6b7280' : '#c0c0c0';
+    ctx.fillStyle = is500 ? '#4b5563' : '#9ca3af';
     ctx.fillText(p.toFixed(3).replace(/^0/,''), PAD.left - 5, y + 3.5);
   });
 
   if (opts.showXAxis !== false) {
-    ctx.fillStyle = '#aaa';
+    ctx.fillStyle = '#6b7280';
     ctx.textAlign = 'center';
     const labelStep = Math.max(1, Math.floor(visibleDates.length / 5));
     visibleDates.forEach((date, i) => {
@@ -1840,7 +2059,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
     const isTop = rank === 0;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = isTop ? 2.2 : 1.6;
+    ctx.lineWidth = isTop ? (compact ? 2.8 : 2.6) : (compact ? 2 : 1.8);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.beginPath();
     drawSmooth(ctx, pts);
@@ -1875,7 +2094,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
     const v = currentPcts[tid];
     return v ? yFor(v) : null;
   });
-  const minGap = 13;
+  const minGap = compact ? 12 : 13;
   for (let i = 1; i < labelY.length; i++) {
     if (labelY[i] !== null && labelY[i-1] !== null && labelY[i] - labelY[i-1] < minGap) {
       labelY[i] = labelY[i-1] + minGap;
@@ -1884,7 +2103,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   sortedTeams.forEach((tid, i) => {
     if (labelY[i] === null) return;
     const meta = TEAM_META[tid] || { abbr: '???' };
-    ctx.font = 'bold 12px Barlow Condensed, sans-serif';
+    ctx.font = `bold ${compact ? 11 : 12}px Barlow Condensed, sans-serif`;
     ctx.fillStyle = TEAM_COLORS_TRACKER[tid] || '#999';
     ctx.fillText(meta.abbr, PAD.left + cW + 5, labelY[i] + 4);
   });
