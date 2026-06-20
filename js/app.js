@@ -1009,10 +1009,13 @@ function toggleWildcardTeamRow(leagueKey, teamId) {
 function drawDivChart(divId) {
   divId = parseInt(divId);
   const canvas = document.getElementById(`divcanvas-${divId}`);
-  if (!canvas || !TRACKER_DIVISIONS[divId] || !trackerLoaded || !canvas.offsetHeight) return;
+  const card = document.getElementById(`divcard-${divId}`);
+  if (!canvas || !card || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
+  // Size the chart card to exactly the standings height; the absolute canvas fills it.
+  const chartCard = canvas.closest('.div-chart-card');
+  if (chartCard) chartCard.style.height = card.offsetHeight + 'px';
+  if (!canvas.offsetHeight) return;
   const desktop = window.innerWidth > 900;
-  // The canvas fills its card via CSS (absolute), so it's always exactly the
-  // standings height — just draw at its current rendered size.
   canvas.style.cursor = 'crosshair';
   canvas.onmousemove = (e) => onDivHover(e, divId);
   canvas.onmouseleave = () => onDivLeave(divId);
