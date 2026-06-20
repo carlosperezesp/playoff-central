@@ -1426,3 +1426,16 @@
   .tg-day-btn.active .tg-day-btn-label { color:#fff; }
   .tg-day-btn-date { display:block; font-family:'Barlow Condensed'; font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
   .tg-day-btn.active .tg-day-btn-date { color:rgba(255,255,255,.6); }
+
+  /* ── Dark page backdrop: keep text readable where it sits directly on the page background ── */
+  .legend-item { color: rgba(255,255,255,.72); }
+  .mvp-page-title { color: #eef3ef; }
+  .mvp-page-subtitle { color: rgba(255,255,255,.62); }
+  .info-title { color: #eef3ef; }
+  .info-intro { color: rgba(255,255,255,.72); }
+  .app-footer { color: rgba(255,255,255,.72); --muted: rgba(255,255,255,.5); }
+  /* Top Games rows live on the backdrop: re-scope the text vars so the inline
+     styles (tg-abbr/tg-time use var(--text)/var(--muted)) resolve light here. */
+  .tg-game-row { color:#e9eeeb; --text:#f1f5f3; --muted:rgba(255,255,255,.6); --win:#4ade80; --loss:#f87171;
+    border-bottom-color: rgba(255,255,255,.1); }
+  .tg-game-row:hover { background: rgba(255,255,255,.06); }
