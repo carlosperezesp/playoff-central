@@ -41,6 +41,8 @@ PRIMARY={108:"#BA0021",109:"#A71930",110:"#DF4601",111:"#BD3039",112:"#0E3386",1
   139:"#092C5C",140:"#003278",141:"#134A8E",142:"#002B5C",143:"#E81828",144:"#CE1141",145:"#27251F",
   146:"#00A3E0",147:"#003087"}
 ACCENT={117:"#EB6E1F",133:"#EFB21E",121:"#FF5910",110:"#000000",134:"#27251F",146:"#000000"}
+# logos that clash with their own banner -> render as a tinted color silhouette
+LOGO_TINT={121:"#FF5910"}   # Mets cap reads blue-on-blue; use Mets orange
 
 # 1) rank qualified hitters by OPS
 d=fetch(f"{API}/stats?stats=season&season={SEASON}&sportId=1&group=hitting&gameType=R"
@@ -73,7 +75,7 @@ for rank in range(1,6):
     data={"mode":"hitter_day","editable":False,
       "kicker":"In Focus",
       "photo":f"https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/{pid}/headshot/silo/current",
-      "name":p["name"],"team":p["team"],"teamLogo":cap(tid),
+      "name":p["name"],"team":p["team"],"teamLogo":cap(tid),"teamLogoTint":LOGO_TINT.get(tid),
       "number":str(num),"position":pos,
       "cardColor":c1,"cardColor2":shade(c1),"accent":acc,"statColor":BRIGHT["green"],
       "strip":[{"key":"ops","label":"OPS","value":fmt3(p["ops"])},

@@ -41,6 +41,7 @@
   .teamline{display:flex; align-items:baseline; gap:12px; margin-top:16px; flex-wrap:wrap}
   .tlogo{height:30px; display:inline-flex; align-items:flex-end; justify-content:center; flex:none; transform:translateY(4px)}
   .tlogo img{height:30px; width:auto; object-fit:contain; display:block}
+  .tlogo .tlmask{display:block; width:34px; height:30px}   /* tinted color-silhouette logo */
   .teamline .num{font-family:'Bebas Neue'; font-size:26px; color:var(--accent,#ffc52f); letter-spacing:1px; line-height:1}
   .teamline .tn{font-weight:600; font-size:24px; letter-spacing:1px; color:rgba(255,255,255,.85); text-transform:uppercase; line-height:1}
   .teamline .pos{font-weight:700; font-size:18px; letter-spacing:1.5px; color:#1a1a1a;
@@ -167,10 +168,13 @@ const DATA = __DATA__;
   else { face.classList.add('hidden'); showFb(); }
   function showFb(){ fb.textContent=(d.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); fb.classList.remove('hidden'); }
 
-  // team logo chip
+  // team logo chip (tinted color-silhouette via CSS mask when teamLogoTint is set,
+  // so logos that clash with the banner — e.g. the Mets cap — read in team color)
   if(d.teamLogo){
     const tl=document.getElementById('teamLogo');
-    tl.innerHTML=`<img src="${d.teamLogo}" onerror="this.parentNode.classList.add('hidden')">`;
+    tl.innerHTML = d.teamLogoTint
+      ? `<span class="tlmask" style="background:${d.teamLogoTint};-webkit-mask:url('${d.teamLogo}') center/contain no-repeat;mask:url('${d.teamLogo}') center/contain no-repeat"></span>`
+      : `<img src="${d.teamLogo}" onerror="this.parentNode.classList.add('hidden')">`;
     tl.classList.remove('hidden');
   }
 

@@ -6,6 +6,7 @@
   "name": "Juan Soto",
   "team": "New York Mets",
   "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg",
+  "teamLogoTint": "#FF5910",
   "number": "22",
   "position": "LF",
   "cardColor": "#002D72",
