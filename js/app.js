@@ -970,6 +970,16 @@ async function renderStandings() {
   if (trackerLoaded) drawAllDivisionCharts();
   else loadTrackerData().then(() => drawAllDivisionCharts()).catch(e => console.warn('Tracker load failed:', e));
 
+  // Keep each chart matched to its standings height as fonts/logos load or the window resizes.
+  if (window.ResizeObserver) {
+    if (window._divRO) window._divRO.disconnect();
+    window._divRO = new ResizeObserver(entries => {
+      if (window.innerWidth <= 900 || !trackerLoaded) return;
+      entries.forEach(en => drawDivChart(en.target.id.replace('divcard-', '')));
+    });
+    document.querySelectorAll('[id^="divcard-"]').forEach(c => window._divRO.observe(c));
+  }
+
   // Render wild card tables
   renderWildCardTables();
 }
