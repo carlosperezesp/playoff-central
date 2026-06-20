@@ -1001,12 +1001,80 @@ function drawDivChart(divId) {
   const canvas = document.getElementById(`divcanvas-${divId}`);
   const card = document.getElementById(`divcard-${divId}`);
   if (!canvas || !card || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
-  // Make the chart exactly as tall as the standings table next to it (no empty space).
+  const desktop = window.innerWidth > 900;
+  // Match the chart card to the standings height exactly (no empty space).
+  const targetH = card.offsetHeight;
+  const chartCard = canvas.closest('.div-chart-card');
+  if (chartCard) chartCard.style.height = targetH + 'px';
   const section = canvas.closest('.tracker-section');
   const headerH = section?.querySelector('.tracker-header')?.offsetHeight || 40;
-  const h = Math.max(200, card.offsetHeight - headerH - 18);
+  const h = Math.max(180, targetH - headerH - 16);
   canvas.style.height = h + 'px';
-  drawTracker(trackerDates.length - 1, divId, canvas, h);
+  // hover (works on every chart, desktop and mobile)
+  canvas.style.cursor = 'crosshair';
+  canvas.onmousemove = (e) => onDivHover(e, divId);
+  canvas.onmouseleave = () => onDivLeave(divId);
+  drawTracker(trackerDates.length - 1, divId, canvas, h,
+    desktop ? { startDate: DESKTOP_TRACKER_START, showXAxis: false } : {});
+}
+
+function _divVisibleDates(divId) {
+  const desktop = window.innerWidth > 900;
+  return desktop ? trackerDates.filter(d => d >= DESKTOP_TRACKER_START) : trackerDates;
+}
+
+function onDivHover(e, divId) {
+  const canvas = e.currentTarget;
+  if (!canvas || !trackerLoaded) return;
+  const visibleDates = _divVisibleDates(divId);
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const PADleft = 50, PADright = 72;
+  const cW = canvas.offsetWidth - PADleft - PADright;
+  const relX = mx - PADleft;
+  if (relX < 0 || relX > cW) { onDivLeave(divId); return; }
+  const idx = Math.max(0, Math.min(Math.round((relX / cW) * Math.max(visibleDates.length - 1, 1)), visibleDates.length - 1));
+  if (trackerHoverIdx === idx && _hoverDiv === divId) return;
+  trackerHoverIdx = idx; _hoverDiv = divId;
+  drawDivChart(divId);
+  showDivTooltip(idx, divId, visibleDates, e.clientX, e.clientY);
+}
+
+function onDivLeave(divId) {
+  trackerHoverIdx = null; _hoverDiv = null;
+  drawDivChart(divId);
+  const tt = document.getElementById('divTrackerTooltip');
+  if (tt) tt.style.display = 'none';
+}
+
+function showDivTooltip(idx, divId, visibleDates, cx, cy) {
+  let tt = document.getElementById('divTrackerTooltip');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = 'divTrackerTooltip';
+    tt.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.16);padding:9px 12px;pointer-events:none;min-width:150px;z-index:1000;border-radius:7px';
+    document.body.appendChild(tt);
+  }
+  const date = visibleDates[idx];
+  const recs = trackerData[date] || [];
+  const dr = recs.find(r => r.division?.id === parseInt(divId));
+  if (!dr) { tt.style.display = 'none'; return; }
+  const sorted = [...dr.teamRecords].sort((a, b) => b.wins - a.wins);
+  const d = new Date(date + 'T12:00:00');
+  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  tt.innerHTML = `<div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:1.5px;color:#6b7280;margin-bottom:5px">${dateStr}</div>` +
+    sorted.map(tr => {
+      const meta = TEAM_META[tr.team.id] || { abbr: '???' };
+      const color = TEAM_COLORS_TRACKER[tr.team.id] || '#999';
+      const pct = parseFloat(tr.winningPercentage || 0).toFixed(3).replace(/^0/, '');
+      return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:12px">
+        <span style="font-family:'Barlow Condensed';font-weight:700;color:${color};width:30px">${meta.abbr}</span>
+        <span style="font-family:'Barlow Condensed';color:#6b7280;width:42px">${tr.wins}-${tr.losses}</span>
+        <span style="font-family:'Barlow Condensed';font-weight:700;color:#111827">${pct}</span></div>`;
+    }).join('');
+  tt.style.display = 'block';
+  tt.style.left = Math.min(cx + 14, window.innerWidth - 210) + 'px';
+  tt.style.top = Math.min(cy + 14, window.innerHeight - tt.offsetHeight - 10) + 'px';
 }
 
 // Desktop: draw every division's chart side-by-side.
@@ -1624,12 +1692,17 @@ function showTrackerTooltip(idx, visibleDates, mouseX, canvas) {
   tooltip.style.top = '10px';
 }
 
-function drawTracker(sliderIdx, divId, canvasEl, chartH) {
+const DESKTOP_TRACKER_START = '2026-04-01';
+let _hoverDiv = null;
+
+function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   const canvas = canvasEl || document.getElementById('trackerCanvas');
   divId = divId || trackerCurrentDiv;
+  opts = opts || {};
   if (!canvas || !trackerLoaded || !trackerDates.length) return;
 
-  const visibleDates = trackerDates;
+  const visibleDates = opts.startDate ? trackerDates.filter(d => d >= opts.startDate) : trackerDates;
+  if (!visibleDates.length) return;
   const lastIdx = trackerDates.length - 1;
   const dateLabel = document.getElementById('trackerDateLabel');
   if (dateLabel) {
@@ -1667,7 +1740,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const PAD = { top: 20, right: 72, bottom: 28, left: 50 };
+  const PAD = { top: 20, right: 72, bottom: opts.showXAxis === false ? 12 : 28, left: 50 };
   const cW = W - PAD.left - PAD.right;
   const cH = H - PAD.top - PAD.bottom;
 
@@ -1701,15 +1774,17 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH) {
     ctx.fillText(p.toFixed(3).replace(/^0/,''), PAD.left - 5, y + 3.5);
   });
 
-  ctx.fillStyle = '#aaa';
-  ctx.textAlign = 'center';
-  const labelStep = Math.max(1, Math.floor(visibleDates.length / 5));
-  visibleDates.forEach((date, i) => {
-    if (i % labelStep !== 0 && i !== visibleDates.length - 1) return;
-    const x = xFor(i, visibleDates.length);
-    const dd = new Date(date + 'T12:00:00');
-    ctx.fillText(dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - 7);
-  });
+  if (opts.showXAxis !== false) {
+    ctx.fillStyle = '#aaa';
+    ctx.textAlign = 'center';
+    const labelStep = Math.max(1, Math.floor(visibleDates.length / 5));
+    visibleDates.forEach((date, i) => {
+      if (i % labelStep !== 0 && i !== visibleDates.length - 1) return;
+      const x = xFor(i, visibleDates.length);
+      const dd = new Date(date + 'T12:00:00');
+      ctx.fillText(dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - 7);
+    });
+  }
 
   const currentPcts = {};
   divTeams.forEach(id => {
