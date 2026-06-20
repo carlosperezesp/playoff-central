@@ -1,0 +1,330 @@
+{
+  "mode": "hitter_day",
+  "editable": false,
+  "kicker": "In Focus",
+  "photo": "https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/660271/headshot/silo/current",
+  "name": "Shohei Ohtani",
+  "team": "Los Angeles Dodgers",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/119.svg",
+  "number": "17",
+  "position": "TWP",
+  "cardColor": "#005A9C",
+  "cardColor2": "#003256",
+  "accent": "#ffffff",
+  "statColor": "#16a34a",
+  "strip": [
+    {
+      "key": "ops",
+      "label": "OPS",
+      "value": ".963"
+    },
+    {
+      "label": "HR",
+      "value": "15"
+    },
+    {
+      "label": "AVG",
+      "value": ".296"
+    }
+  ],
+  "gamesTitle": "His 68 games in 2026",
+  "games": [
+    {
+      "color": "#ffc000",
+      "date": "3/26"
+    },
+    {
+      "color": "#ff8100",
+      "date": "3/27"
+    },
+    {
+      "color": "#ffc000",
+      "date": "3/28"
+    },
+    {
+      "color": "#ffc000",
+      "date": "3/30"
+    },
+    {
+      "color": "#ffc000",
+      "date": "3/31"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/1"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/3"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/4"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/5"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/6"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/7"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/8"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/10"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/11"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/12"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/13"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/14"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/17"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/18"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/19"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/20"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/21"
+    },
+    {
+      "color": "#ff2200",
+      "date": "4/22"
+    },
+    {
+      "color": "#ff2200",
+      "date": "4/23"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/24"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/25"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/26"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/27"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/29"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/1"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/2"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/3"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/4"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/6"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/8"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/9"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/10"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/11"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/12"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/15"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/16"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/17"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/18"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/19"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/20"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/22"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/23"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/24"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/25"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/26"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/27"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/29"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/30"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/31"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/1"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/2"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/3"
+    },
+    {
+      "color": "#ff2200",
+      "date": "6/5"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/6"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/7"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/9"
+    },
+    {
+      "color": "#b1c882",
+      "date": "6/10"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/11"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/13"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/14"
+    },
+    {
+      "color": "#ff2200",
+      "date": "6/15"
+    },
+    {
+      "color": "#b1c882",
+      "date": "6/16"
+    },
+    {
+      "color": "#ff2200",
+      "date": "6/17"
+    }
+  ],
+  "legend": [
+    {
+      "label": "Demolished",
+      "color": "#16a34a"
+    },
+    {
+      "label": "Big day",
+      "color": "#b1c882"
+    },
+    {
+      "label": "Solid",
+      "color": "#ffc000"
+    },
+    {
+      "label": "Quiet",
+      "color": "#ff8100"
+    },
+    {
+      "label": "Ghost",
+      "color": "#ff2200"
+    }
+  ],
+  "legendNote": "Each dot is one game by that day's OPS: green **1.500+**, light-green **1.000+**, yellow **.500+**, orange **under .500**, red a **.000** ghost game.",
+  "footer": "baseballlens.com",
+  "edition": "2026 Season"
+}

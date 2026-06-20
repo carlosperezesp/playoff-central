@@ -1,0 +1,290 @@
+{
+  "mode": "hitter_day",
+  "editable": false,
+  "kicker": "In Focus",
+  "photo": "https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/665742/headshot/silo/current",
+  "name": "Juan Soto",
+  "team": "New York Mets",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg",
+  "number": "22",
+  "position": "LF",
+  "cardColor": "#002D72",
+  "cardColor2": "#00193f",
+  "accent": "#FF5910",
+  "statColor": "#16a34a",
+  "strip": [
+    {
+      "key": "ops",
+      "label": "OPS",
+      "value": ".980"
+    },
+    {
+      "label": "HR",
+      "value": "17"
+    },
+    {
+      "label": "AVG",
+      "value": ".300"
+    }
+  ],
+  "gamesTitle": "His 58 games in 2026",
+  "games": [
+    {
+      "color": "#b1c882",
+      "date": "3/26"
+    },
+    {
+      "color": "#ff8100",
+      "date": "3/28"
+    },
+    {
+      "color": "#b1c882",
+      "date": "3/29"
+    },
+    {
+      "color": "#ffc000",
+      "date": "3/30"
+    },
+    {
+      "color": "#b1c882",
+      "date": "3/31"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/1"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/2"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/3"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/22"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/23"
+    },
+    {
+      "color": "#ffc000",
+      "date": "4/24"
+    },
+    {
+      "color": "#ff8100",
+      "date": "4/26"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/26"
+    },
+    {
+      "color": "#b1c882",
+      "date": "4/28"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/29"
+    },
+    {
+      "color": "#16a34a",
+      "date": "4/30"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/1"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/2"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/3"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/4"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/6"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/7"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/8"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/9"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/10"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/12"
+    },
+    {
+      "color": "#ff2200",
+      "date": "5/13"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/14"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/15"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/16"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/17"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/18"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/19"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/20"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/21"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/22"
+    },
+    {
+      "color": "#ff8100",
+      "date": "5/23"
+    },
+    {
+      "color": "#b1c882",
+      "date": "5/26"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/27"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/29"
+    },
+    {
+      "color": "#ffc000",
+      "date": "5/30"
+    },
+    {
+      "color": "#16a34a",
+      "date": "5/31"
+    },
+    {
+      "color": "#ff2200",
+      "date": "6/1"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/2"
+    },
+    {
+      "color": "#ff8100",
+      "date": "6/3"
+    },
+    {
+      "color": "#ff2200",
+      "date": "6/5"
+    },
+    {
+      "color": "#ff2200",
+      "date": "6/6"
+    },
+    {
+      "color": "#ff8100",
+      "date": "6/7"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/9"
+    },
+    {
+      "color": "#ff8100",
+      "date": "6/10"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/11"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/12"
+    },
+    {
+      "color": "#b1c882",
+      "date": "6/13"
+    },
+    {
+      "color": "#b1c882",
+      "date": "6/14"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/15"
+    },
+    {
+      "color": "#ffc000",
+      "date": "6/16"
+    },
+    {
+      "color": "#b1c882",
+      "date": "6/17"
+    },
+    {
+      "color": "#16a34a",
+      "date": "6/18"
+    }
+  ],
+  "legend": [
+    {
+      "label": "Demolished",
+      "color": "#16a34a"
+    },
+    {
+      "label": "Big day",
+      "color": "#b1c882"
+    },
+    {
+      "label": "Solid",
+      "color": "#ffc000"
+    },
+    {
+      "label": "Quiet",
+      "color": "#ff8100"
+    },
+    {
+      "label": "Ghost",
+      "color": "#ff2200"
+    }
+  ],
+  "legendNote": "Each dot is one game by that day's OPS: green **1.500+**, light-green **1.000+**, yellow **.500+**, orange **under .500**, red a **.000** ghost game.",
+  "footer": "baseballlens.com",
+  "edition": "2026 Season"
+}

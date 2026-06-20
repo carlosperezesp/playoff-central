@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg1:#0d2016; --bg2:#1a2e1f; --text:#ffffff; --muted:#9fb4a6; --line:rgba(255,255,255,.12); }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1080px;overflow:hidden}
+  body{
+    font-family:'Barlow Condensed',system-ui,sans-serif;
+    background:radial-gradient(120% 90% at 50% -10%, #214a30 0%, var(--bg2) 38%, var(--bg1) 78%);
+    color:var(--text); position:relative;
+  }
+  .card{position:absolute; inset:0; display:flex; flex-direction:column; padding:60px 64px 54px}
+
+  /* header */
+  .hd{display:flex; align-items:center; justify-content:space-between; margin-bottom:30px}
+  .brandwrap{display:flex; align-items:center; gap:14px}
+  .brand-logo{width:50px; height:50px; display:block; flex:none}
+  .brand{font-family:'Bebas Neue'; font-size:38px; letter-spacing:4px; line-height:1}
+  .brand b{font-weight:400; color:#16a34a}
+  .kicker{font-weight:700; font-size:19px; letter-spacing:2.5px; text-transform:uppercase;
+    color:var(--text); background:rgba(255,255,255,.08); border:1px solid var(--line); padding:9px 18px; border-radius:999px}
+
+  /* team-colored player banner (Haaland-style) */
+  .banner{position:relative; border-radius:28px; overflow:hidden; display:flex; align-items:stretch;
+    background:linear-gradient(110deg, var(--c1,#12284b) 0%, var(--c1,#12284b) 55%, var(--c2,#0b1830) 100%);
+    box-shadow:0 18px 50px rgba(0,0,0,.4); min-height:280px}
+  .banner::after{content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 50%, rgba(255,255,255,.06) 70%, transparent 88%)}
+  .banner .photo{width:268px; flex:none; position:relative; z-index:1; align-self:stretch;
+    display:flex; align-items:flex-end; justify-content:center}
+  .banner .photo img{width:100%; height:100%; object-fit:contain; object-position:bottom center; display:block}
+  .banner .photo .fb{width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    font-family:'Bebas Neue'; font-size:120px; color:rgba(255,255,255,.9)}
+  .banner .info{flex:1; z-index:1; padding:34px 40px; display:flex; flex-direction:column; justify-content:center}
+  .first{font-family:'Barlow Condensed'; font-weight:500; font-size:34px; letter-spacing:1px; color:rgba(255,255,255,.92); line-height:1}
+  .last{font-family:'Bebas Neue'; font-size:92px; letter-spacing:1.5px; line-height:.9; margin-top:2px;
+    color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.3)}
+  .teamline{display:flex; align-items:baseline; gap:12px; margin-top:16px; flex-wrap:wrap}
+  .tlogo{height:30px; display:inline-flex; align-items:flex-end; justify-content:center; flex:none; transform:translateY(4px)}
+  .tlogo img{height:30px; width:auto; object-fit:contain; display:block}
+  .teamline .num{font-family:'Bebas Neue'; font-size:26px; color:var(--accent,#ffc52f); letter-spacing:1px; line-height:1}
+  .teamline .tn{font-weight:600; font-size:24px; letter-spacing:1px; color:rgba(255,255,255,.85); text-transform:uppercase; line-height:1}
+  .teamline .pos{font-weight:700; font-size:18px; letter-spacing:1.5px; color:#1a1a1a;
+    background:var(--accent,#ffc52f); padding:2px 11px; border-radius:6px}
+
+  /* season stat strip */
+  .strip{display:flex; align-items:center; justify-content:center; gap:0; margin:26px 0 2px}
+  .strip .s{display:flex; flex-direction:column; align-items:center; padding:0 44px; position:relative}
+  .strip .s + .s::before{content:''; position:absolute; left:0; top:12%; bottom:12%; width:1px; background:var(--line)}
+  .strip .s .v{font-family:'Barlow Condensed'; font-weight:800; font-size:78px; line-height:1; letter-spacing:.5px; color:var(--stat,#fff)}
+  .strip .s .l{font-weight:700; font-size:21px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; margin-top:6px}
+  .strip .s.ops .v{color:var(--stat,#16a34a)}
+
+  /* games — one small colored dot per game, dense chronological strip */
+  .games-wrap{margin-top:14px}
+  .games-title{font-weight:700; font-size:21px; letter-spacing:2px; text-transform:uppercase; color:#fff;
+    text-align:center; margin-bottom:18px}
+  .hitstrip{max-width:902px; margin:0 auto; display:flex; flex-wrap:wrap; gap:13px; justify-content:center}
+  .hitstrip .o{width:37px; height:37px; border-radius:50%; position:relative;
+    box-shadow:inset 0 -5px 10px rgba(0,0,0,.22), 0 3px 7px rgba(0,0,0,.3); border:2px solid rgba(255,255,255,.16)}
+  .hitstrip .o::after{content:''; position:absolute; left:24%; top:15%; width:34%; height:24%; border-radius:50%;
+    background:rgba(255,255,255,.42); filter:blur(2px)}
+
+  /* legend */
+  .legend{display:flex; align-items:center; justify-content:center; gap:22px; margin-top:28px}
+  .legend .it{display:flex; align-items:center; gap:10px; font-weight:600; font-size:21px; letter-spacing:.4px; color:var(--muted)}
+  .legend .it i{width:20px; height:20px; border-radius:50%; display:inline-block}
+  .legend-note{max-width:900px; margin:13px auto 0; text-align:center; font-weight:500; font-size:21px;
+    line-height:1.4; letter-spacing:.2px; color:#fff}
+  .legend-note b{color:#fff; font-weight:700}
+
+  .ft{margin-top:auto; padding-top:22px; display:flex; align-items:center; justify-content:space-between; color:var(--muted)}
+  .ft .url{font-weight:700; font-size:22px; letter-spacing:2px; text-transform:uppercase}
+  .ft .edition{font-weight:500; font-size:21px; letter-spacing:1px}
+  .hidden{display:none!important}
+
+  /* editable mode */
+  body.edit [contenteditable]{outline:1px dashed rgba(255,255,255,.35); outline-offset:3px; border-radius:3px}
+  body.edit [contenteditable]:focus{outline:2px solid var(--accent,#ffc52f); background:rgba(255,255,255,.06)}
+  #edbar{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:99;
+    display:flex; align-items:center; gap:12px; background:rgba(8,16,12,.92); color:#fff;
+    padding:10px 16px; border-radius:12px; border:1px solid rgba(255,255,255,.15);
+    font-family:system-ui,sans-serif; font-size:13px; box-shadow:0 8px 28px rgba(0,0,0,.5)}
+  #edbar label{display:flex; align-items:center; gap:7px; font-weight:600}
+  #edbar input[type=color]{width:36px; height:28px; padding:0; border:1px solid #444; border-radius:6px; background:none; cursor:pointer}
+  #edbar button{font-size:12px; padding:5px 10px; cursor:pointer; border-radius:6px; border:1px solid #555; background:#1b2a20; color:#fff}
+  #edbar .hint{opacity:.55}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="hd">
+      <div class="brandwrap">
+        <img class="brand-logo" src="brand.png" alt="">
+        <div class="brand" data-edit>BASEBALL<b> LENS</b></div>
+      </div>
+      <div class="kicker" id="kicker" data-edit></div>
+    </div>
+
+    <div class="banner" id="banner">
+      <div class="photo"><img id="face" alt=""><div class="fb hidden" id="faceFb"></div></div>
+      <div class="info">
+        <div class="first" id="first" data-edit></div>
+        <div class="last" id="last" data-edit></div>
+        <div class="teamline">
+          <span class="tlogo hidden" id="teamLogo"></span>
+          <span class="num hidden" id="num"></span>
+          <span class="tn" id="team" data-edit></span>
+          <span class="pos hidden" id="pos"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip" id="strip"></div>
+
+    <div class="games-wrap">
+      <div class="games-title" id="gamesTitle" data-edit></div>
+      <div class="hitstrip" id="dots"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+    <div class="legend-note hidden" id="legendNote" data-edit></div>
+
+    <div class="ft">
+      <span class="url" id="url" data-edit></span>
+      <span class="edition" id="edition" data-edit></span>
+    </div>
+  </div>
+
+  <div id="edbar" class="hidden">
+    <label>🎨 Text color <input type="color" id="edcolor" value="#ffffff"></label>
+    <button id="edreset" type="button">reset</button>
+    <span class="hint">click any text, then pick a color</span>
+  </div>
+
+<script>
+const DATA = __DATA__;
+(function(){
+  const d = DATA || {};
+  const root = document.documentElement.style;
+  root.setProperty('--c1', d.cardColor || '#12284b');
+  root.setProperty('--c2', d.cardColor2 || '#0b1830');
+  root.setProperty('--accent', d.accent || '#ffc52f');
+  if(d.statColor) root.setProperty('--stat', d.statColor);
+
+  const txt=(id,v,keep)=>{const e=document.getElementById(id); if(!e)return;
+    if(v==null||v===''){ if(!keep)e.classList.add('hidden'); return;} e.textContent=v; e.classList.remove('hidden');};
+
+  txt('kicker', d.kicker);
+  txt('url', d.footer || 'baseballlens.com');
+  txt('edition', d.edition);
+
+  const parts=(d.name||'').split(/\s+/);
+  const last=parts.length>1?parts.slice(1).join(' '):parts[0];
+  const first=parts.length>1?parts[0]:'';
+  txt('first', first); txt('last', last);
+  txt('team', d.team, true);
+  if(d.number){ txt('num', '#'+String(d.number).replace(/^#/,'')); }
+  txt('pos', d.position);
+
+  // player photo (transparent silo cutout on the team color)
+  const face=document.getElementById('face'), fb=document.getElementById('faceFb');
+  if(d.photo){ face.src=d.photo; face.onerror=()=>{face.classList.add('hidden'); showFb();}; }
+  else { face.classList.add('hidden'); showFb(); }
+  function showFb(){ fb.textContent=(d.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); fb.classList.remove('hidden'); }
+
+  // team logo chip
+  if(d.teamLogo){
+    const tl=document.getElementById('teamLogo');
+    tl.innerHTML=`<img src="${d.teamLogo}" onerror="this.parentNode.classList.add('hidden')">`;
+    tl.classList.remove('hidden');
+  }
+
+  // season strip
+  const strip=d.strip || [];
+  const sw=document.getElementById('strip');
+  if(strip.length){ sw.innerHTML=strip.map(s=>
+    `<div class="s ${s.key||''}"><div class="v">${s.value}</div><div class="l">${s.label}</div></div>`).join(''); }
+  else sw.classList.add('hidden');
+
+  // games dots: one small colored circle per game, chronological
+  const games=d.games || [];
+  txt('gamesTitle', d.gamesTitle || (games.length+' games · color = how he hit that day'));
+  document.getElementById('dots').innerHTML = games.map(g=>
+    `<div class="o" style="background:${g.color}"></div>`).join('');
+
+  // legend
+  const lg=d.legend||[];
+  const lw=document.getElementById('legend');
+  if(lg.length){ lw.innerHTML=lg.map(x=>`<span class="it"><i style="background:${x.color}"></i>${x.label}</span>`).join(''); }
+  else lw.classList.add('hidden');
+
+  if(d.legendNote){
+    const ln=document.getElementById('legendNote');
+    ln.innerHTML=String(d.legendNote).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+    ln.classList.remove('hidden');
+  }
+
+  // editable mode: make text editable in the browser (text only) + color picker
+  if(d.editable){
+    document.body.classList.add('edit');
+    const eds=[...document.querySelectorAll('[data-edit], .strip .v, .strip .l, .legend .it')];
+    eds.forEach(e=>e.setAttribute('contenteditable','true'));
+    const bar=document.getElementById('edbar'); bar.classList.remove('hidden');
+    const ci=document.getElementById('edcolor');
+    let lastEl=null;
+    eds.forEach(e=>e.addEventListener('focus',()=>{
+      lastEl=e;
+      const c=getComputedStyle(e).color.match(/\d+/g);
+      if(c) ci.value='#'+c.slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join('');
+    }));
+    ci.addEventListener('input',ev=>{ if(lastEl) lastEl.style.color=ev.target.value; });
+    document.getElementById('edreset').addEventListener('click',()=>{ if(lastEl) lastEl.style.color=''; });
+  }
+
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>window.__ready=true);} else window.__ready=true;
+})();
+</script>
+</body>
+</html>

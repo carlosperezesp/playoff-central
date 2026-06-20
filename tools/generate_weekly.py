@@ -1467,8 +1467,8 @@ def main():
                              kicker=escape(kicker), canonical=canonical, site=SITE, rel="../",
                              datestr=pretty.upper(), dek=dek, related=related, body=body,
                              style=STYLE, jsonld=jsonld))
-    for old in os.listdir(BLOG_DIR):   # drop a prior file for the same date under a different slug
-        if old.endswith(".html") and old not in ("index.html", slug) and _fn_date(old) == date_iso:
+    for old in os.listdir(BLOG_DIR):   # drop this date's prior AUTO edition (different kicker -> different slug); leave hand-made specials alone
+        if old.startswith("mlb-") and old.endswith(".html") and old != slug and _fn_date(old) == date_iso:
             os.remove(os.path.join(BLOG_DIR, old))
 
     write_snapshot(date_iso, facts, narration)
