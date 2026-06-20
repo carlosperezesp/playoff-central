@@ -844,7 +844,8 @@ async function renderStandings() {
   const orderedDivs = [...alDivs, ...nlDivs];
 
   html += `
-    <div class="divisions-grid" id="divisionsGrid">`;
+    <div class="divisions-layout">
+      <div class="divisions-col" id="divisionsGrid">`;
 
   let alIdx = 0, nlIdx = 0;
   orderedDivs.forEach((divRecord, di) => {
@@ -930,7 +931,7 @@ async function renderStandings() {
     const isAL = leagueId === 103;
     const cardOrder = isAL ? (alIdx++) : (3 + nlIdx++); // AL: order 0,1,2 → left col; NL: order 3,4,5 → right col
     html += `<div class="division-card" id="divcard-${divId}" style="order:${cardOrder}">
-      <div class="division-header" id="divhdr-${divId}" onclick="toggleDivision(${divId})">
+      <div class="division-header" id="divhdr-${divId}" onclick="selectDivisionChart(${divId})">
         <div style="display:flex;align-items:center;gap:10px">
           <span class="division-name">${dm.name}</span>
           <span class="division-league">${isAL ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
@@ -949,7 +950,9 @@ async function renderStandings() {
     </div>`;
   });
 
-  html += `</div>`;
+  html += `</div>
+      <div class="division-chart-panel"><div id="trackerWidget"></div></div>
+    </div>`;
   el.innerHTML = html;
 
   // Update date info label
@@ -959,6 +962,15 @@ async function renderStandings() {
   const wcDateInfo = document.getElementById('standingsDateInfoWildcard');
   if (dateInfo) dateInfo.textContent = dateStr;
   if (wcDateInfo) wcDateInfo.textContent = dateStr;
+
+  // Default-select the first division and show its win% chart in the right panel
+  const firstDivId = orderedDivs[0]?.division?.id;
+  if (firstDivId && TRACKER_DIVISIONS[firstDivId]) {
+    trackerCurrentDiv = firstDivId;
+    const fhdr = document.getElementById(`divhdr-${firstDivId}`);
+    if (fhdr) fhdr.classList.add('selected');
+    initTracker();
+  }
 
   ensureStandingsNextGames(allTeamIds).then(() => renderStandingsNextGames(allTeamIds)).catch(()=>{});
 
@@ -988,6 +1000,15 @@ function toggleWildcardTeamRow(leagueKey, teamId) {
   const isOpen = detail.classList.contains('open');
   detail.classList.toggle('open', !isOpen);
   row.classList.toggle('open', !isOpen);
+}
+
+function selectDivisionChart(divId) {
+  if (!TRACKER_DIVISIONS[divId]) return;
+  trackerCurrentDiv = divId;
+  document.querySelectorAll('.division-header.selected').forEach(h => h.classList.remove('selected'));
+  const hdr = document.getElementById(`divhdr-${divId}`);
+  if (hdr) hdr.classList.add('selected');
+  initTracker();
 }
 
 function toggleDivision(divId) {
