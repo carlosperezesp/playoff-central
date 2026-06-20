@@ -198,9 +198,9 @@
   }
 
   .divisions-rows { display: flex; flex-direction: column; gap: 20px; margin-bottom: 32px; }
-  .division-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; align-items: stretch; }
+  .division-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; align-items: start; }
   .div-chart-card { min-width: 0; }
-  .div-chart-card .tracker-section { height: 100%; display: flex; flex-direction: column; }
+  .div-chart-card .tracker-section { display: flex; flex-direction: column; }
   @media (max-width: 900px) {
     .division-row { grid-template-columns: 1fr; }
     .div-chart-card { display: none; }

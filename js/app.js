@@ -949,7 +949,7 @@ async function renderStandings() {
     </div>
     <div class="div-chart-card"><div class="tracker-section">
       <div class="tracker-header"><span class="tracker-title">WIN% · ${dm.name}</span></div>
-      <div style="position:relative;flex:1;min-height:0;padding:8px 10px"><canvas id="divcanvas-${divId}" style="display:block;width:100%;height:100%"></canvas></div>
+      <div style="position:relative;flex:1;min-height:0;padding:8px 10px"><canvas id="divcanvas-${divId}" style="display:block;width:100%"></canvas></div>
     </div></div></div>`;
   });
 
@@ -999,9 +999,13 @@ function toggleWildcardTeamRow(leagueKey, teamId) {
 function drawDivChart(divId) {
   divId = parseInt(divId);
   const canvas = document.getElementById(`divcanvas-${divId}`);
-  if (!canvas || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
   const card = document.getElementById(`divcard-${divId}`);
-  const h = Math.max(200, (card?.clientHeight || 300) - 46); // match standings height (minus chart header)
+  if (!canvas || !card || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
+  // Make the chart exactly as tall as the standings table next to it (no empty space).
+  const section = canvas.closest('.tracker-section');
+  const headerH = section?.querySelector('.tracker-header')?.offsetHeight || 40;
+  const h = Math.max(200, card.offsetHeight - headerH - 18);
+  canvas.style.height = h + 'px';
   drawTracker(trackerDates.length - 1, divId, canvas, h);
 }
 
@@ -1331,7 +1335,7 @@ function drawWCTracker() {
   ctx.fillRect(0, 0, W, H);
 
   // Grid lines
-  ctx.font = '10px Barlow Condensed, sans-serif';
+  ctx.font = '11px Barlow Condensed, sans-serif';
   ctx.textAlign = 'right';
   const step = 0.01;
   for (let p = Math.ceil(minPct * 100) / 100; p <= maxPct + 0.001; p = Math.round((p + step) * 1000) / 1000) {
@@ -1395,7 +1399,7 @@ function drawWCTracker() {
 
     // Label
     ctx.textAlign = 'left';
-    ctx.font = 'bold 11px Barlow Condensed, sans-serif';
+    ctx.font = 'bold 12px Barlow Condensed, sans-serif';
     ctx.fillStyle = color;
     ctx.fillText(WC_LEAGUE_LABELS[lid], PAD.left + cW + 5, last.y + 4);
   });
@@ -1681,7 +1685,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  ctx.font = '10px Barlow Condensed, sans-serif';
+  ctx.font = '11px Barlow Condensed, sans-serif';
   ctx.textAlign = 'right';
   const gridPcts = [];
   for (let p = Math.ceil(minPct * 10) / 10; p <= maxPct + 0.001; p = Math.round((p + 0.1) * 10) / 10) gridPcts.push(p);
@@ -1800,7 +1804,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH) {
   sortedTeams.forEach((tid, i) => {
     if (labelY[i] === null) return;
     const meta = TEAM_META[tid] || { abbr: '???' };
-    ctx.font = 'bold 11px Barlow Condensed, sans-serif';
+    ctx.font = 'bold 12px Barlow Condensed, sans-serif';
     ctx.fillStyle = TEAM_COLORS_TRACKER[tid] || '#999';
     ctx.fillText(meta.abbr, PAD.left + cW + 5, labelY[i] + 4);
   });
