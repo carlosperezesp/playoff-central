@@ -949,7 +949,7 @@ async function renderStandings() {
     </div>
     <div class="div-chart-card"><div class="tracker-section">
       <div class="tracker-header"><span class="tracker-title">WIN% · ${dm.name}</span></div>
-      <div style="position:relative;flex:1;min-height:0;padding:8px 10px"><canvas id="divcanvas-${divId}" style="display:block;width:100%"></canvas></div>
+      <div class="div-chart-body"><canvas id="divcanvas-${divId}"></canvas></div>
     </div></div></div>`;
   });
 
@@ -1009,22 +1009,14 @@ function toggleWildcardTeamRow(leagueKey, teamId) {
 function drawDivChart(divId) {
   divId = parseInt(divId);
   const canvas = document.getElementById(`divcanvas-${divId}`);
-  const card = document.getElementById(`divcard-${divId}`);
-  if (!canvas || !card || !TRACKER_DIVISIONS[divId] || !trackerLoaded) return;
+  if (!canvas || !TRACKER_DIVISIONS[divId] || !trackerLoaded || !canvas.offsetHeight) return;
   const desktop = window.innerWidth > 900;
-  // Match the chart card to the standings height exactly (no empty space).
-  const targetH = card.offsetHeight;
-  const chartCard = canvas.closest('.div-chart-card');
-  if (chartCard) chartCard.style.height = targetH + 'px';
-  const section = canvas.closest('.tracker-section');
-  const headerH = section?.querySelector('.tracker-header')?.offsetHeight || 40;
-  const h = Math.max(180, targetH - headerH - 16);
-  canvas.style.height = h + 'px';
-  // hover (works on every chart, desktop and mobile)
+  // The canvas fills its card via CSS (absolute), so it's always exactly the
+  // standings height — just draw at its current rendered size.
   canvas.style.cursor = 'crosshair';
   canvas.onmousemove = (e) => onDivHover(e, divId);
   canvas.onmouseleave = () => onDivLeave(divId);
-  drawTracker(trackerDates.length - 1, divId, canvas, h,
+  drawTracker(trackerDates.length - 1, divId, canvas, canvas.offsetHeight,
     desktop ? { startDate: DESKTOP_TRACKER_START, showXAxis: false } : {});
 }
 
@@ -1744,7 +1736,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
 
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 600;
-  const H = chartH || 240;
+  const H = chartH || canvas.offsetHeight || 240;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
