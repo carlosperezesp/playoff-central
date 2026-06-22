@@ -4086,9 +4086,17 @@ function renderDiamondPanel(teamId, impact) {
     </div>`;
   }
 
+  // Some cap-on-dark logos clash with their own team-color banner — recolor them.
+  const dpFx = ({ 111:'white', 138:'white', 137:'black', 134:'black', 121:'#FF5910' })[teamId];
+  const dpCap = meta.logo.replace('/team-logos/', '/team-logos/team-cap-on-dark/');
+  const dpLogo = dpFx === 'white' ? `<img class="dp-logo dp-logo-white" src="${dpCap}" alt="${meta.abbr}" onerror="this.onerror=null;this.src='${meta.logo}'">`
+    : dpFx === 'black' ? `<img class="dp-logo dp-logo-black" src="${dpCap}" alt="${meta.abbr}" onerror="this.onerror=null;this.src='${meta.logo}'">`
+    : dpFx ? `<span class="dp-logo dp-logo-tint" style="background:${dpFx};-webkit-mask:url('${dpCap}') center/contain no-repeat;mask:url('${dpCap}') center/contain no-repeat"></span>`
+    : `<img class="dp-logo" src="${dpCap}" alt="${meta.abbr}" onerror="this.onerror=null;this.src='${meta.logo}'">`;
+
   panel.innerHTML = `
     <div class="diamond-panel-header" style="--dp-c1:${meta.color || '#1a2e1f'};--dp-c2:${shadeHex(meta.color || '#1a2e1f', 0.5)}">
-      <img class="dp-logo" src="${meta.logo.replace('/team-logos/', '/team-logos/team-cap-on-dark/')}" alt="${meta.abbr}" onerror="this.onerror=null;this.src='${meta.logo}'">
+      ${dpLogo}
       <div>
         <div class="dp-team-name">${meta.name}</div>
         <div class="dp-subtitle">SEASON IMPACT — ${CURRENT_YEAR}</div>

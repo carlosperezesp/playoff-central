@@ -624,6 +624,9 @@
   }
   .diamond-panel-header > * { position: relative; z-index: 1; }
   .dp-logo { width: 54px; height: 54px; object-fit: contain; flex-shrink: 0; }
+  .dp-logo-white { filter: brightness(0) invert(1); }   /* force solid white */
+  .dp-logo-black { filter: brightness(0); }              /* force solid black */
+  .dp-logo-tint { display: block; mask-size: contain; -webkit-mask-size: contain; }  /* color set inline */
   .dp-team-name { font-family: 'Bebas Neue'; font-size: 30px; letter-spacing: 2px; line-height: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.25); }
   .dp-subtitle { font-size: 11px; color: rgba(255,255,255,.78); font-weight: 500; letter-spacing: .5px; margin-top: 4px; }
 
@@ -1470,11 +1473,11 @@
   .tg-day-selector { display:flex; gap:8px; margin-bottom:16px; }
   .tg-day-btn { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 6px; cursor:pointer; text-align:center; transition:background .15s,border-color .15s; -webkit-tap-highlight-color:transparent; }
   .tg-day-btn:hover { background:var(--surface2); }
-  .tg-day-btn.active { background:#0d2016; border-color:#0d2016; }
+  .tg-day-btn.active { background:var(--accent-blue); border-color:var(--accent-blue); }
   .tg-day-btn-label { display:block; font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; color:var(--text); }
-  .tg-day-btn.active .tg-day-btn-label { color:var(--accent-blue); }
+  .tg-day-btn.active .tg-day-btn-label { color:#fff; }
   .tg-day-btn-date { display:block; font-family:'Barlow Condensed'; font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
-  .tg-day-btn.active .tg-day-btn-date { color:rgba(255,255,255,.6); }
+  .tg-day-btn.active .tg-day-btn-date { color:rgba(255,255,255,.75); }
 
   /* ── Dark page backdrop: keep text readable where it sits directly on the page background ── */
   .legend-item { color: rgba(255,255,255,.72); }
