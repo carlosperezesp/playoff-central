@@ -17,9 +17,15 @@ const COUNTRY_FLAG = {
   'Netherlands': '🇳🇱', 'Germany': '🇩🇪', 'Taiwan': '🇹🇼',
   'Bahamas': '🇧🇸', 'Aruba': '🇦🇼', 'Honduras': '🇭🇳',
   'Jamaica': '🇯🇲', 'Peru': '🇵🇪', 'Guatemala': '🇬🇹',
-  'Dominican Rep.': '🇩🇴', 'U.S.A.': '🇺🇸',
+  'Dominican Rep.': '🇩🇴', 'U.S.A.': '🇺🇸', 'Italy': '🇮🇹',
 };
-function countryFlag(country) {
+// Flag follows nationality, which isn't always birthCountry (born abroad to a
+// national family, etc.). Per-player overrides by MLB id correct those cases.
+const FLAG_OVERRIDES = {
+  695505: 'USA', // Chase Burns: born in Naples, Italy, but American.
+};
+function countryFlag(country, pid) {
+  if (pid && FLAG_OVERRIDES[pid]) country = FLAG_OVERRIDES[pid];
   if (!country) return '';
   return COUNTRY_FLAG[country] || '';
 }
@@ -2685,7 +2691,7 @@ async function selectTeam(teamId) {
     let fromStorage = false;
     if (!impact) {
       // Try localStorage bundle: impact + per-player caches, saved with daily expiry
-      const stored = cacheGet(`mlb_team_impact_v2_${teamId}`);
+      const stored = cacheGet(`mlb_team_impact_v3_${teamId}`);
       if (stored?.impact) {
         impact = stored.impact;
         teamsImpactCache[teamId] = impact;
@@ -2742,7 +2748,7 @@ async function selectTeam(teamId) {
         uniquePids.forEach(pid => { if (pid in src) o[pid] = src[pid]; });
         return o;
       };
-      cacheSet(`mlb_team_impact_v2_${teamId}`, {
+      cacheSet(`mlb_team_impact_v3_${teamId}`, {
         impact,
         career: pick(careerStatsCache),
         awards: pick(awardsCache),
@@ -3030,7 +3036,7 @@ async function fetchTeamImpact(teamId) {
       bats: p.person?.batSide?.code||'?',
       dhApps: dhCount[pid] || 0,
       isRookie: rookiePids.has(pid),
-      flag: countryFlag(p.person?.birthCountry),
+      flag: countryFlag(p.person?.birthCountry, p.person?.id),
       gamesPlayed,
       ops, stats: hs,
       rosterPos,
@@ -3200,7 +3206,7 @@ async function fetchTeamImpact(teamId) {
         restDays,
         qualityStarts: apps.qualityStarts || 0,
         isRookie: rookiePids.has(pid),
-        flag: countryFlag(p.person?.birthCountry),
+        flag: countryFlag(p.person?.birthCountry, p.person?.id),
         photoUrl: siloHeadshot(pid)
       };
     });
@@ -3280,7 +3286,7 @@ async function fetchTeamImpact(teamId) {
       ilType, ilDays: duration,
       daysRemaining, placedDate,
       isPitcher: pos === 'P' || pos === 'TWP',
-      flag: countryFlag(p.person?.birthCountry),
+      flag: countryFlag(p.person?.birthCountry, p.person?.id),
       throws: p.person?.pitchHand?.code || '?',
       ops, score,
       hasSeasonStats: (pos === 'P' || pos === 'TWP')
@@ -4081,8 +4087,8 @@ function renderDiamondPanel(teamId, impact) {
   }
 
   panel.innerHTML = `
-    <div class="diamond-panel-header">
-      <img class="dp-logo" src="${meta.logo}" alt="${meta.abbr}" onerror="this.style.display='none'">
+    <div class="diamond-panel-header" style="--dp-c1:${meta.color || '#1a2e1f'};--dp-c2:${shadeHex(meta.color || '#1a2e1f', 0.5)}">
+      <img class="dp-logo" src="${meta.logo.replace('/team-logos/', '/team-logos/team-cap-on-dark/')}" alt="${meta.abbr}" onerror="this.onerror=null;this.src='${meta.logo}'">
       <div>
         <div class="dp-team-name">${meta.name}</div>
         <div class="dp-subtitle">SEASON IMPACT — ${CURRENT_YEAR}</div>
