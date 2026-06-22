@@ -393,6 +393,12 @@
   }
 
   /* ── WILD CARD TABLE ── */
+  /* Mobile: AL then NL stacked. Desktop (≥901px): AL left, NL right. */
+  .wc-tables-grid > .division-card { margin-bottom: 20px; }
+  @media (min-width: 901px) {
+    .wc-tables-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; align-items: start; }
+    .wc-tables-grid > .division-card { margin-bottom: 0; }
+  }
   .wc-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 8px; }
   .wc-table th { font-family: 'Barlow Condensed'; font-weight: 600; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
   .wc-table th.r { text-align: right; }
@@ -627,7 +633,7 @@
   .aff-note { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); opacity: .55; }
 
   .diamond-box {
-    background: #eef3ea; border: 1px solid #dbe5d6; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 14px 14px 18px; margin-bottom: 4px;
   }
   .diamond-section-label {
@@ -659,6 +665,9 @@
     display: inline-flex; flex-direction: column; align-items: center; gap: 5px;
     background: transparent; border: none; padding: 0; cursor: pointer; min-width: 64px;
   }
+  /* No blue browser focus ring on the circles — the .active state is the indicator. */
+  .dfield-btn:focus, .dfield-btn:focus-visible,
+  .dfield-btn-inline:focus, .dfield-btn-inline:focus-visible { outline: none; }
 
   .dfield-circle {
     width: 42px; height: 42px; border-radius: 50%;
@@ -859,6 +868,12 @@
     font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
     background: rgba(220,38,38,.1); color: var(--loss); letter-spacing: .5px;
   }
+  .il-chip {
+    display: inline-block; font-family: 'Barlow Condensed'; font-weight: 700;
+    font-size: 9px; letter-spacing: .4px; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+  }
+  .il-chip-ok  { background: rgba(22,163,74,.15); color: var(--win); }
+  .il-chip-out { background: rgba(220,38,38,.12); color: var(--loss); }
 
   .alts-section-title {
     font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
@@ -866,7 +881,7 @@
   }
 
   /* Pitcher groups */
-  .pitcher-area { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .pitcher-area { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 14px 18px; }
   .pitcher-area-title {
     font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
     color: var(--muted); margin-bottom: 14px;
@@ -1410,7 +1425,7 @@
   .tg-day-chevron.open { transform: rotate(180deg); }
   .tg-day-body { display: none; }
   .tg-day-body.open { display: block; }
-  .tg-game-row { display: flex; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; gap: 0; }
+  .tg-game-row { display: flex; align-items: center; padding: 12px 16px; cursor: pointer; transition: background .1s; gap: 0; }
   .tg-game-row:last-child { border-bottom: none; }
   .tg-game-row:hover { background: var(--surface2); }
   .tg-score-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-right: 12px; }
@@ -1421,8 +1436,11 @@
   .tg-sep { font-family: 'Barlow Condensed'; color: var(--muted); font-size: 14px; font-weight: 600; margin: 0 3px; }
   .tg-time { font-family: 'Barlow Condensed'; font-size: 13px; font-weight: 700; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 10px; }
   .tg-badges { display: flex; gap: 5px; margin-left: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; max-width: min(360px, 44vw); }
+  /* Each game is a white card on the green backdrop; the detail expands inside it. */
+  .tg-game-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
   .tg-detail { display: none; background: #f6f8f3; border-top: 1px solid var(--border); padding: 14px 18px 16px; }
   .tg-detail.open { display: block; }
+  .tg-game-row.tg-row-open { background: var(--surface2); }
   .tg-detail .impact-detail-card { background: #ffffff; border-color: #e2e8dc; box-shadow: 0 1px 4px rgba(20,30,20,.04); }
   .tg-detail .impact-row { border-bottom-color: rgba(20,30,20,.08); }
   .tg-detail .impact-name, .tg-detail .impact-stats-line { color: inherit; }
@@ -1447,7 +1465,7 @@
   .tg-day-btn:hover { background:var(--surface2); }
   .tg-day-btn.active { background:#0d2016; border-color:#0d2016; }
   .tg-day-btn-label { display:block; font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; color:var(--text); }
-  .tg-day-btn.active .tg-day-btn-label { color:#fff; }
+  .tg-day-btn.active .tg-day-btn-label { color:var(--accent-blue); }
   .tg-day-btn-date { display:block; font-family:'Barlow Condensed'; font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
   .tg-day-btn.active .tg-day-btn-date { color:rgba(255,255,255,.6); }
 
@@ -1458,8 +1476,3 @@
   .info-title { color: #eef3ef; }
   .info-intro { color: rgba(255,255,255,.72); }
   .app-footer { color: rgba(255,255,255,.72); --muted: rgba(255,255,255,.5); }
-  /* Top Games rows live on the backdrop: re-scope the text vars so the inline
-     styles (tg-abbr/tg-time use var(--text)/var(--muted)) resolve light here. */
-  .tg-game-row { color:#e9eeeb; --text:#f1f5f3; --muted:rgba(255,255,255,.6); --win:#4ade80; --loss:#f87171;
-    border-bottom-color: rgba(255,255,255,.1); }
-  .tg-game-row:hover { background: rgba(255,255,255,.06); }

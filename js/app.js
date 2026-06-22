@@ -834,7 +834,7 @@ async function renderStandings() {
         <div class="legend-item"><div class="legend-dot wc"></div> Wild Card</div>
         <div class="legend-item"><div class="legend-dot out"></div> Eliminated</div>
       </div>
-      <div id="wcTablesContent"></div>
+      <div id="wcTablesContent" class="wc-tables-grid"></div>
     </div>`;
 
   const alDivs = allData.standings.filter(r => r.league?.id === 103);
@@ -1215,7 +1215,7 @@ function renderWildCardTables() {
     }).join('');
 
     return `
-      <div class="division-card" style="margin-bottom:20px">
+      <div class="division-card">
         <div class="division-header">
           <span class="division-name">${label}</span>
           <span class="division-league">PLAYOFF RACE</span>
@@ -2685,7 +2685,7 @@ async function selectTeam(teamId) {
     let fromStorage = false;
     if (!impact) {
       // Try localStorage bundle: impact + per-player caches, saved with daily expiry
-      const stored = cacheGet(`mlb_team_impact_${teamId}`);
+      const stored = cacheGet(`mlb_team_impact_v2_${teamId}`);
       if (stored?.impact) {
         impact = stored.impact;
         teamsImpactCache[teamId] = impact;
@@ -2742,7 +2742,7 @@ async function selectTeam(teamId) {
         uniquePids.forEach(pid => { if (pid in src) o[pid] = src[pid]; });
         return o;
       };
-      cacheSet(`mlb_team_impact_${teamId}`, {
+      cacheSet(`mlb_team_impact_v2_${teamId}`, {
         impact,
         career: pick(careerStatsCache),
         awards: pick(awardsCache),
@@ -2774,7 +2774,7 @@ async function fetchTeamImpact(teamId) {
     fetchWithTimeout(`${MLB_API}/schedule?sportId=1&teamId=${teamId}&season=${season}&gameType=R&startDate=${season}-03-01&endDate=${today}`)
       .then(r => r.json()).catch(() => ({ dates: [] })),
     // 40-man roster includes IL players with their status
-    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(birthCountry,stats(group=[hitting,pitching],type=season,season=${season}))`)
+    fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(birthCountry,pitchHand,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
   ]);
 
@@ -3280,6 +3280,8 @@ async function fetchTeamImpact(teamId) {
       ilType, ilDays: duration,
       daysRemaining, placedDate,
       isPitcher: pos === 'P' || pos === 'TWP',
+      flag: countryFlag(p.person?.birthCountry),
+      throws: p.person?.pitchHand?.code || '?',
       ops, score,
       hasSeasonStats: (pos === 'P' || pos === 'TWP')
         ? !!ps && [ps.era, ps.whip, ps.inningsPitched].some(v => v !== undefined && v !== null && String(v).trim() !== '')
@@ -4033,24 +4035,35 @@ function renderDiamondPanel(teamId, impact) {
     const ilHitters  = ilPlayers.filter(p => !p.isPitcher);
     const ilPitchers = ilPlayers.filter(p =>  p.isPitcher);
 
-    let groupsHTML = '';
-    if (ilHitters.length) {
-      groupsHTML += `<details class="il-group-accordion">
-        <summary class="il-group-summary">
-          <span>Batters (${ilHitters.length})</span>
-          <svg class="il-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </summary>
-        <div class="il-players-grid">${ilHitters.map(ilRowHTML).join('')}</div>
-      </details>`;
-    }
-    if (ilPitchers.length) {
-      groupsHTML += `<details class="il-group-accordion">
-        <summary class="il-group-summary">
-          <span>Pitchers (${ilPitchers.length})</span>
-          <svg class="il-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </summary>
-        <div class="il-players-grid">${ilPitchers.map(ilRowHTML).join('')}</div>
-      </details>`;
+    // IL players as colored circles (like the pitching staff) so the form/OPS
+    // color mix is visible at a glance. Keys start with 'il-' so a click lands
+    // on selectDiamondKey's generic detail-card branch (not the hitter branch).
+    function ilGroupHTML(list, label, keyPrefix) {
+      if (!list.length) return '';
+      const circles = list.map((p, i) => {
+        const key      = `${keyPrefix}-${i}`;
+        const color    = p.isPitcher ? getDiamondPlayerColor(p.score,'pitcher') : getDiamondPlayerColor(p.ops,'hitter');
+        const txtColor = diamondTextColor(color);
+        const circleLabel = p.isPitcher ? (p.throws && p.throws !== '?' ? p.throws : 'P') : (p.pos||'?');
+        const flagHtml = p.flag ? `<span style="font-size:14px;line-height:1">${p.flag}</span>` : '';
+        const days = p.daysRemaining === 0
+          ? `<span class="il-chip il-chip-ok">✓ ELIGIBLE</span>`
+          : (p.daysRemaining ? `<span class="il-chip il-chip-out">${p.daysRemaining}d remaining</span>` : '');
+        return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
+          onclick="selectDiamondKey('${key}',${teamId})">
+          <div class="dfield-circle" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px"><span style="font-size:12px;font-weight:800;line-height:1">${circleLabel}</span>${flagHtml}</div>
+          <div class="dfield-pill">${p.name}</div>
+          ${days}
+        </button>`;
+      }).join('');
+      const details = list.map((p, i) =>
+        `<div class="pitcher-detail-card" id="detail-${keyPrefix}-${i}" style="display:none">${ilRowHTML(p)}</div>`
+      ).join('');
+      return `<div class="pitcher-group-wrap">
+        <div class="pitcher-group-label">${label}</div>
+        <div class="pitcher-circles-row">${circles}</div>
+        ${details}
+      </div>`;
     }
 
     ilHTML = `<div class="il-section">
@@ -4059,7 +4072,10 @@ function renderDiamondPanel(teamId, impact) {
           <div class="il-section-title" style="margin-bottom:0">🏥 Injured List — ${ilPlayers.length} players</div>
           <svg class="il-summary-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
-        <div style="margin-top:14px">${groupsHTML}</div>
+        <div style="margin-top:14px">
+          ${ilGroupHTML(ilHitters, `Batters (${ilHitters.length})`, 'il-h')}
+          ${ilGroupHTML(ilPitchers, `Pitchers (${ilPitchers.length})`, 'il-p')}
+        </div>
       </details>
     </div>`;
   }
@@ -5332,7 +5348,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       const homeCands  = teamCandidates(tid_h, homeAbbr, mH.abbr).filter(_notSp);
       const allCands   = [...awayCands.map(c=>({...c,tm:mA})), ...homeCands.map(c=>({...c,tm:mH}))]
         .sort((a,b) => (a.rank||99)-(b.rank||99)).slice(0, 4);
-      return `<div>
+      return `<div class="tg-game-card">
         <div class="tg-game-row" id="tgr-${gameId}" data-gamepk="${g.gamePk}" onclick="tgToggleGame('${gameId}')">
           <div class="tg-teams">
             <img class="tg-team-logo" src="${mA.logo}" onerror="this.style.display='none'" alt="">
@@ -5628,7 +5644,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     const gameId = `ayer-${idx}`;
     const venue  = g.venue?.name || '';
     const status = g.status?.detailedState === 'Final' ? 'FINAL' : g.status?.detailedState || '';
-    return `<div>
+    return `<div class="tg-game-card">
       <div class="tg-game-row" id="tgr-${gameId}" data-gamepk="${g.gamePk}" onclick="tgToggleGame('${gameId}')">
         <div class="tg-teams">
           <img class="tg-team-logo" src="${mA.logo}" onerror="this.style.display='none'" alt="">
@@ -8279,11 +8295,15 @@ function getTeamLeagueId(teamId) {
   return AL.has(teamId) ? 103 : 104;
 }
 
-// Update disclaimer: keep the public fallback time clear.
+// Update disclaimer: show the daily refresh time in the visitor's local timezone.
 (function() {
   const el = document.getElementById('update-disclaimer');
   if (!el) return;
-  el.textContent = 'Stats update daily by 10:00 Amsterdam time';
+  // The refresh fires at 08:00 UTC (summer) / 09:00 UTC (winter) — 10:00 in Amsterdam.
+  const refresh = new Date();
+  refresh.setUTCHours(isPacificDST(refresh) ? 8 : 9, 0, 0, 0);
+  const time = refresh.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  el.textContent = `Stats update daily by ${time} your time`;
 })();
 
 // Map a player id to its diamond key, then open + scroll to that player's card.
