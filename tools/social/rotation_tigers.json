@@ -1,0 +1,234 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Tigers",
+  "subtitle": "Top-5 starter form · avg 70",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/116.svg",
+  "cardColor": "#0C2340",
+  "cardColor2": "#061220",
+  "avgForma": 70,
+  "avgColor": "#b1c882",
+  "starters": [
+    {
+      "name": "Troy Melton",
+      "throws": "R",
+      "forma": 82,
+      "rookie": true,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 675512,
+      "statline": [
+        {
+          "v": "2.56",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.95",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "4-0",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "31.2",
+          "l": "IP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "19",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    },
+    {
+      "name": "Casey Mize",
+      "throws": "R",
+      "forma": 79,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 663554,
+      "statline": [
+        {
+          "v": "2.58",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.01",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "2-4",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "52.1",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "52",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    },
+    {
+      "name": "Tarik Skubal",
+      "throws": "L",
+      "forma": 74,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 669373,
+      "statline": [
+        {
+          "v": "3.02",
+          "l": "ERA",
+          "c": "#b1c882"
+        },
+        {
+          "v": "1.02",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "3-3",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "53.2",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "57",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    },
+    {
+      "name": "Keider Montero",
+      "throws": "R",
+      "forma": 67,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 672456,
+      "statline": [
+        {
+          "v": "3.68",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.00",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "3-5",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "80.2",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "53",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    },
+    {
+      "name": "Framber Valdez",
+      "throws": "L",
+      "forma": 48,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 664285,
+      "statline": [
+        {
+          "v": "4.09",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.35",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "3-5",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "83.2",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "67",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    }
+  ],
+  "injured": [
+    {
+      "name": "Jack Flaherty",
+      "throws": "R",
+      "forma": 25,
+      "rookie": false,
+      "color": "#ff8100",
+      "tcolor": "#ffffff",
+      "pid": 656427,
+      "status": "15-DAY IL",
+      "statline": [
+        {
+          "v": "5.35",
+          "l": "ERA",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1.57",
+          "l": "WHIP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1-8",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "65.2",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "78",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    }
+  ],
+  "injLabel": "Key Injury",
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Jun 22, 2026"
+}

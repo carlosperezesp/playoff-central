@@ -1,0 +1,234 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Dodgers",
+  "subtitle": "Top-5 starter form · avg 68",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/119.svg",
+  "cardColor": "#005A9C",
+  "cardColor2": "#002d4e",
+  "avgForma": 68,
+  "avgColor": "#b1c882",
+  "starters": [
+    {
+      "name": "Shohei Ohtani",
+      "throws": "R",
+      "forma": 97,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 660271,
+      "statline": [
+        {
+          "v": "1.47",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.88",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "7-2",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "73.2",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "78",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    },
+    {
+      "name": "Yoshinobu Yamamoto",
+      "throws": "R",
+      "forma": 84,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 808967,
+      "statline": [
+        {
+          "v": "2.65",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.87",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "7-5",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "91.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "86",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Justin Wrobleski",
+      "throws": "L",
+      "forma": 78,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 680736,
+      "statline": [
+        {
+          "v": "2.72",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.01",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "8-2",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "79.1",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "50",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    },
+    {
+      "name": "Roki Sasaki",
+      "throws": "R",
+      "forma": 43,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 808963,
+      "statline": [
+        {
+          "v": "4.76",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.29",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "3-4",
+          "l": "",
+          "c": "#ffc000"
+        },
+        {
+          "v": "68.0",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "70",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    },
+    {
+      "name": "Emmet Sheehan",
+      "throws": "R",
+      "forma": 37,
+      "rookie": false,
+      "color": "#ff8100",
+      "tcolor": "#ffffff",
+      "pid": 686218,
+      "statline": [
+        {
+          "v": "5.32",
+          "l": "ERA",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1.30",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "3-5",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "67.2",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "76",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    }
+  ],
+  "injured": [
+    {
+      "name": "Tyler Glasnow",
+      "throws": "R",
+      "forma": 85,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 607192,
+      "status": "60-DAY IL",
+      "statline": [
+        {
+          "v": "2.72",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.83",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "3-0",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "39.2",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "49",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    }
+  ],
+  "injLabel": "Key Injury",
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Jun 22, 2026"
+}

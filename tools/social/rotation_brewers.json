@@ -1,0 +1,235 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Brewers",
+  "subtitle": "Top-5 starter form · avg 62",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/158.svg",
+  "cardColor": "#12284B",
+  "cardColor2": "#091426",
+  "avgForma": 62,
+  "avgColor": "#b1c882",
+  "starters": [
+    {
+      "name": "Jacob Misiorowski",
+      "throws": "R",
+      "forma": 100,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 694819,
+      "statline": [
+        {
+          "v": "1.45",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.75",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "8-3",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "93.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "138",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Kyle Harrison",
+      "throws": "L",
+      "forma": 78,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 690986,
+      "statline": [
+        {
+          "v": "2.50",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.06",
+          "l": "WHIP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "8-1",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "72.0",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "87",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Robert Gasser",
+      "throws": "L",
+      "forma": 47,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 688107,
+      "statline": [
+        {
+          "v": "4.50",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.27",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1-3",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "30.0",
+          "l": "IP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "31",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    },
+    {
+      "name": "Brandon Sproat",
+      "throws": "R",
+      "forma": 23,
+      "rookie": true,
+      "color": "#ff2200",
+      "tcolor": "#ffffff",
+      "pid": 687075,
+      "statline": [
+        {
+          "v": "5.94",
+          "l": "ERA",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1.46",
+          "l": "WHIP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1-4",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "63.2",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "63",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    }
+  ],
+  "injured": [
+    {
+      "name": "Brandon Woodruff",
+      "throws": "R",
+      "forma": 67,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 605540,
+      "status": "15-DAY IL",
+      "statline": [
+        {
+          "v": "3.60",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.03",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "2-1",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "30.0",
+          "l": "IP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "25",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    },
+    {
+      "name": "Logan Henderson",
+      "throws": "R",
+      "forma": 76,
+      "rookie": true,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 701656,
+      "status": "15-DAY IL",
+      "statline": [
+        {
+          "v": "2.74",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.04",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "2-1",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "23.0",
+          "l": "IP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "30",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    }
+  ],
+  "injLabel": "On the IL",
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Jun 22, 2026"
+}

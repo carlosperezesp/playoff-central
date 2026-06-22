@@ -1,0 +1,234 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Yankees",
+  "subtitle": "Top-5 starter form · avg 69",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
+  "cardColor": "#003087",
+  "cardColor2": "#001844",
+  "avgForma": 69,
+  "avgColor": "#b1c882",
+  "starters": [
+    {
+      "name": "Cam Schlittler",
+      "throws": "R",
+      "forma": 94,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 693645,
+      "statline": [
+        {
+          "v": "1.71",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.89",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "8-3",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "95.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "109",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Gerrit Cole",
+      "throws": "R",
+      "forma": 80,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 543037,
+      "statline": [
+        {
+          "v": "2.57",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.00",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "2-1",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "28.0",
+          "l": "IP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "24",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    },
+    {
+      "name": "Carlos Rodón",
+      "throws": "L",
+      "forma": 59,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 607074,
+      "statline": [
+        {
+          "v": "3.50",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.25",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "3-2",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "36.0",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "41",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    },
+    {
+      "name": "Ryan Weathers",
+      "throws": "L",
+      "forma": 57,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 677960,
+      "statline": [
+        {
+          "v": "4.13",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.13",
+          "l": "WHIP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "2-5",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "80.2",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "89",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Will Warren",
+      "throws": "R",
+      "forma": 56,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 701542,
+      "statline": [
+        {
+          "v": "3.45",
+          "l": "ERA",
+          "c": "#b1c882"
+        },
+        {
+          "v": "1.33",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "7-2",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "78.1",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "84",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    }
+  ],
+  "injured": [
+    {
+      "name": "Max Fried",
+      "throws": "L",
+      "forma": 72,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 608331,
+      "status": "15-DAY IL",
+      "statline": [
+        {
+          "v": "3.21",
+          "l": "ERA",
+          "c": "#b1c882"
+        },
+        {
+          "v": "1.01",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "4-3",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "61.2",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "50",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    }
+  ],
+  "injLabel": "Key Injury",
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Jun 22, 2026"
+}

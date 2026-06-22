@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg1:#0d2016; --bg2:#1a2e1f; --text:#ffffff; --muted:#9fb4a6; --line:rgba(255,255,255,.12); }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1080px;overflow:hidden}
+  body{
+    font-family:'Barlow Condensed',system-ui,sans-serif;
+    background:radial-gradient(120% 90% at 50% -10%, #214a30 0%, var(--bg2) 38%, var(--bg1) 78%);
+    color:var(--text); position:relative;
+  }
+  .card{position:absolute; inset:0; display:flex; flex-direction:column; padding:50px 56px 44px}
+
+  /* header */
+  .hd{display:flex; align-items:center; justify-content:space-between; margin-bottom:24px}
+  .brandwrap{display:flex; align-items:center; gap:13px}
+  .brand-logo{width:46px; height:46px; display:block; flex:none}
+  .brand{font-family:'Bebas Neue'; font-size:34px; letter-spacing:4px; line-height:1}
+  .brand b{font-weight:400; color:#16a34a}
+  .kicker{font-weight:700; font-size:18px; letter-spacing:2.5px; text-transform:uppercase;
+    color:var(--text); background:rgba(255,255,255,.08); border:1px solid var(--line); padding:8px 17px; border-radius:999px}
+
+  /* team header banner */
+  .team{position:relative; border-radius:24px; overflow:hidden; display:flex; align-items:center;
+    gap:24px; padding:20px 30px; margin-bottom:22px;
+    background:linear-gradient(110deg, var(--c1,#12284b) 0%, var(--c1,#12284b) 52%, var(--c2,#0b1830) 100%);
+    box-shadow:0 14px 40px rgba(0,0,0,.38)}
+  .team::after{content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 52%, rgba(255,255,255,.06) 72%, transparent 90%)}
+  .team .tlogo{width:88px; height:88px; flex:none; z-index:1; display:flex; align-items:center; justify-content:center}
+  .team .tlogo img{max-width:100%; max-height:100%; object-fit:contain}
+  .team .tname{z-index:1; flex:1; min-width:0}
+  .team .tname .nm{font-family:'Bebas Neue'; font-size:52px; letter-spacing:1.5px; line-height:.92;
+    text-shadow:0 2px 12px rgba(0,0,0,.3)}
+  .team .tname .sub{font-weight:600; font-size:19px; letter-spacing:1.5px; text-transform:uppercase;
+    color:rgba(255,255,255,.82); margin-top:7px}
+  .team .avg{z-index:1; text-align:center; flex:none; padding-left:26px;
+    border-left:1px solid rgba(255,255,255,.2)}
+  .team .avg .v{font-family:'Barlow Condensed'; font-weight:800; font-size:82px; line-height:.86;
+    color:var(--avgc,#fff)}
+  .team .avg .l{font-weight:700; font-size:16px; letter-spacing:2px; text-transform:uppercase;
+    color:rgba(255,255,255,.85); margin-top:4px}
+
+  /* section labels */
+  .sec{font-weight:700; font-size:18px; letter-spacing:2.5px; text-transform:uppercase;
+    color:var(--muted); margin:0 4px 8px; display:flex; align-items:center; gap:10px}
+  .sec.out{color:#ff7a6b}
+  .sec .ln{flex:1; height:1px; background:var(--line)}
+
+  /* starter rows */
+  .row{display:flex; align-items:center; gap:18px; padding:9px 8px;
+    border-bottom:1px solid rgba(255,255,255,.07)}
+  .row:last-child{border-bottom:none}
+  .chip{width:72px; height:72px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:'Barlow Condensed'; font-weight:800; font-size:37px; line-height:1;
+    box-shadow:inset 0 -6px 13px rgba(0,0,0,.22), 0 4px 10px rgba(0,0,0,.32);
+    border:2.5px solid rgba(255,255,255,.22)}
+  /* full player cutout, no circle */
+  .face{width:78px; height:90px; flex:none; display:flex; align-items:flex-end; justify-content:center}
+  .face img{max-width:100%; max-height:100%; object-fit:contain; object-position:bottom center; display:block;
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.45))}
+  .meta{flex:1; min-width:0}
+  .meta .nm{font-family:'Bebas Neue'; font-size:35px; letter-spacing:1px; line-height:1; display:flex; align-items:center; gap:11px}
+  .meta .nm .hand{font-family:'Barlow Condensed'; font-weight:800; font-size:15px; letter-spacing:1px;
+    color:rgba(255,255,255,.92); background:rgba(255,255,255,.14); border:1px solid var(--line);
+    padding:2px 9px; border-radius:6px; line-height:1.2}
+  .meta .nm .rk{font-family:'Barlow Condensed'; font-weight:800; font-size:15px; letter-spacing:1px;
+    color:#1c1300; background:#f5b53d; padding:2px 8px; border-radius:6px; line-height:1.2}
+  .meta .st{margin-top:8px; display:flex; align-items:baseline; white-space:nowrap}
+  .meta .st .sv{font-weight:800; font-size:23px; letter-spacing:.3px}
+  .meta .st .sl{color:var(--muted); font-weight:600; font-size:17px; letter-spacing:1px; text-transform:uppercase; margin-left:4px}
+  .meta .st .sep{color:rgba(255,255,255,.22); margin:0 10px; font-size:20px}
+  .ilbadge{flex:none; font-weight:800; font-size:15px; letter-spacing:1.2px; text-transform:uppercase; color:#fff;
+    background:#c0392b; padding:3px 11px; border-radius:7px; line-height:1.25; white-space:nowrap}
+
+  /* injured rows */
+  .row.inj .face{filter:grayscale(.55) brightness(.82)}
+  .row.inj .meta .nm{color:rgba(255,255,255,.78)}
+  .row.inj .meta .st{opacity:.92}
+  .chip.dim{filter:saturate(.55) brightness(.82); border-color:rgba(255,255,255,.14)}
+
+  .ft{margin-top:auto; padding-top:16px; display:flex; align-items:center; justify-content:space-between; color:var(--muted)}
+  .ft .url{font-weight:700; font-size:21px; letter-spacing:2px; text-transform:uppercase}
+  .ft .edition{font-weight:500; font-size:20px; letter-spacing:1px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="hd">
+      <div class="brandwrap">
+        <img class="brand-logo" src="brand.png" alt="">
+        <div class="brand">BASEBALL<b> LENS</b></div>
+      </div>
+      <div class="kicker" id="kicker"></div>
+    </div>
+
+    <div class="team" id="team">
+      <div class="tlogo" id="tlogo"></div>
+      <div class="tname">
+        <div class="nm" id="tnm"></div>
+        <div class="sub" id="tsub"></div>
+      </div>
+      <div class="avg">
+        <div class="v" id="avgv"></div>
+        <div class="l">Avg Form</div>
+      </div>
+    </div>
+
+    <div class="sec"><span>Current Rotation</span><span class="ln"></span></div>
+    <div id="starters"></div>
+
+    <div class="sec out hidden" id="secInj"><span id="injLabel">On the IL</span><span class="ln"></span></div>
+    <div id="injured"></div>
+
+    <div class="ft">
+      <span class="url" id="url"></span>
+      <span class="edition" id="edition"></span>
+    </div>
+  </div>
+
+<script>
+const DATA = __DATA__;
+(function(){
+  const d = DATA || {};
+  const root = document.documentElement.style;
+  root.setProperty('--c1', d.cardColor || '#12284b');
+  root.setProperty('--c2', d.cardColor2 || '#0b1830');
+  root.setProperty('--avgc', d.avgColor || '#fff');
+
+  const txt=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=(v==null?'':v);};
+  txt('kicker', d.kicker || 'Rotation Report');
+  txt('tnm', d.team);
+  txt('tsub', d.subtitle || '');
+  txt('avgv', d.avgForma);
+  txt('url', d.footer || 'baseballlens.com');
+  txt('edition', d.edition || '');
+
+  if(d.teamLogo){
+    document.getElementById('tlogo').innerHTML =
+      `<img src="${d.teamLogo}" onerror="this.parentNode.classList.add('hidden')">`;
+  }
+
+  const silo = pid => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/${pid}/headshot/silo/current`;
+
+  function statHTML(line){
+    return (line||[]).map(s =>
+      `<span class="sv" style="color:${s.c}">${s.v}</span>${s.l?`<span class="sl">${s.l}</span>`:''}`
+    ).join('<span class="sep">·</span>');
+  }
+  function rowHTML(p, injured){
+    const hand = p.throws==='L' ? 'LHP' : p.throws==='R' ? 'RHP' : (p.throws||'');
+    const photo = p.photo || (p.pid ? silo(p.pid) : '');
+    const il = injured && p.status ? `<span class="ilbadge">${p.status}</span>` : '';
+    return `<div class="row${injured?' inj':''}">
+      <div class="chip${injured?' dim':''}" style="background:${p.color};color:${p.tcolor||'#fff'}">${Math.round(p.forma)}</div>
+      <div class="face">${photo?`<img src="${photo}" onerror="this.style.display='none'">`:''}</div>
+      <div class="meta">
+        <div class="nm">${p.name}${hand?`<span class="hand">${hand}</span>`:''}${p.rookie?`<span class="rk">R</span>`:''}</div>
+        <div class="st">${statHTML(p.statline)}</div>
+      </div>
+      ${il}
+    </div>`;
+  }
+
+  document.getElementById('starters').innerHTML =
+    (d.starters||[]).map(p=>rowHTML(p,false)).join('');
+
+  const inj = d.injured||[];
+  if(inj.length){
+    document.getElementById('secInj').classList.remove('hidden');
+    txt('injLabel', d.injLabel || 'On the IL');
+    document.getElementById('injured').innerHTML = inj.map(p=>rowHTML(p,true)).join('');
+  }
+
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>window.__ready=true);} else window.__ready=true;
+})();
+</script>
+</body>
+</html>
