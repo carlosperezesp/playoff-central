@@ -290,6 +290,15 @@ def get_rookies(season, asof=None):
     return {"hitters": hit, "pitchers": pit}
 
 
+def season_leaders(hitters, n=5):
+    """Season top-N hitters by HR, RBI and batting average (from the qualified pool)."""
+    return {
+        "hr": sorted(hitters, key=lambda h: h["hr"], reverse=True)[:n],
+        "rbi": sorted(hitters, key=lambda h: h.get("rbi", 0), reverse=True)[:n],
+        "avg": sorted(hitters, key=lambda h: float(h["avg"] or 0), reverse=True)[:n],
+    }
+
+
 def _team_stat_rows(url, key, lower_better, top):
     try:
         d = fetch(url)
@@ -841,6 +850,26 @@ def sec_bats(f, n, limit=8):
     return _section("Swinging a green bat", g, _lead(n, "hitters_lead"), rows)
 
 
+def _leader_row(h, value, unit):
+    stat = f'<span class="bl-stat" style="color:{TEXT[h["tier"]]}">{value}<small>{unit}</small></span>'
+    return _player_row(h, stat)
+
+
+def sec_season_leaders(f, n, limit=5):
+    sl = f.get("season_leaders", {})
+
+    def block(label, lst, val_fn, unit):
+        return (f'<div class="bl-subhead">{label}</div><ul class="bl-list">'
+                + "".join(_leader_row(h, val_fn(h), unit) for h in lst[:limit]) + '</ul>') if lst else ""
+    body = (block("Home runs", sl.get("hr", []), lambda h: h["hr"], "HR")
+            + block("RBI", sl.get("rbi", []), lambda h: h.get("rbi", 0), "RBI")
+            + block("Batting average", sl.get("avg", []), lambda h: h["avg"], "AVG"))
+    if not body:
+        return ""
+    g = '<p class="bl-gloss">The season&rsquo;s top five in home runs, RBI and batting average.</p>'
+    return f'<h2>Season leaders</h2>{g}{_lead(n, "season_leaders_lead")}{body}'
+
+
 def sec_arms(f, n, limit=6):
     rows = "".join(pitcher_row(p) for p in f["aces"][:limit])
     g = ("Top arms by form — our 0–100 pitching score from ERA &amp; WHIP. "
@@ -927,7 +956,7 @@ def sec_gem_hitters(f, n, limit=5):
 
 
 SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "offense": sec_offense,
-            "bats": sec_bats, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
+            "bats": sec_bats, "season_leaders": sec_season_leaders, "arms": sec_arms, "hr": sec_hr, "risers": sec_risers,
             "fallers": sec_fallers, "colors": sec_colors, "rookies": sec_rookies,
             "rookie_surge": sec_rookie_surge, "mvp": sec_mvp, "cy": sec_cy, "roy": sec_roy,
             "pfallers": sec_pfallers, "hweek": sec_hweek,
@@ -940,7 +969,7 @@ TEAMSTAT_SECTIONS = {"bullpen", "offense"}
 THEME_CALENDAR = {
     0: ("Power Rankings", ["power"]),
     1: ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
-    2: ("Hitting Report", ["offense", "bats", "hr"]),
+    2: ("Hitting Report", ["offense", "bats", "season_leaders", "hr"]),
     3: ("Award Races", ["mvp", "cy", "roy"]),
     4: ("Risers & Fallers", ["risers", "pfallers", "hweek", "fallers", "colors"]),
     5: ("Rookie Report", ["rookies", "rookie_surge"]),
@@ -949,7 +978,7 @@ THEME_CALENDAR = {
 THEME_BY_KEY = {  # --theme override
     "power": ("Power Rankings", ["power"]),
     "pitching": ("Pitching Report", ["staffs", "bullpen", "arms", "risers"]),
-    "hitting": ("Hitting Report", ["offense", "bats", "hr"]),
+    "hitting": ("Hitting Report", ["offense", "bats", "season_leaders", "hr"]),
     "races": ("Award Races", ["mvp", "cy", "roy"]),
     "rookies": ("Rookie Report", ["rookies", "rookie_surge"]),
     "movers": ("Risers & Fallers", ["risers", "pfallers", "hweek", "fallers", "colors"]),
@@ -1039,7 +1068,7 @@ LLM_SYSTEM = (
     "headlines. 'intro' = 2–3 short sentences on the day's one real storyline. Each section 'lead' "
     "(only for sections_today) = 1–2 sentences of color — name a standout, don't restate the whole "
     "list, don't redefine terms. Return ONLY raw JSON (no markdown) with string keys from: title, "
-    "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, pitchers_lead, hr_lead, "
+    "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, season_leaders_lead, pitchers_lead, hr_lead, "
     "risers_lead, pfallers_lead, hweek_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
     "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead, gem_pitchers_lead, "
     "gem_hitters_lead — include title, intro, and a lead for each section in sections_today.\n"
@@ -1096,6 +1125,13 @@ def facts_for_llm(f, theme_title, section_ids):
     if f.get("offense"):
         payload["best_offenses_team_ops"] = [{"rank": i, "name": r["name"], "ops": round(r["val"], 3)}
                                              for i, r in enumerate(f["offense"], 1)]
+    if "season_leaders" in section_ids and f.get("season_leaders"):
+        sl = f["season_leaders"]
+        payload["season_leaders"] = {
+            "home_runs": [{"name": h["name"], "team": h["team"], "hr": h["hr"]} for h in sl["hr"]],
+            "rbi": [{"name": h["name"], "team": h["team"], "rbi": h.get("rbi", 0)} for h in sl["rbi"]],
+            "batting_average": [{"name": h["name"], "team": h["team"], "avg": h["avg"]} for h in sl["avg"]],
+        }
     rk = f.get("rookies", {})
     if rk.get("hitters") or rk.get("pitchers"):
         payload["rookie_standouts"] = {
@@ -1194,6 +1230,7 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
         "rookie_ids": rookie_ids,
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
+        "season_leaders": season_leaders(hitters),
         "aces": sorted([p for p in pitchers if p["tier"] == "green"],
                        key=lambda p: p["forma"], reverse=True)[:6],   # by form, to match the gloss
         "rookies": rookies,
