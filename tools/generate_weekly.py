@@ -42,6 +42,29 @@ TIER_LABEL = {"green": "elite", "lgreen": "above avg", "yellow": "average",
               "orange": "below avg", "red": "poor", "gray": "no data"}
 TIER_ORDER = {"green": 0, "lgreen": 1, "yellow": 2, "orange": 3, "red": 4, "gray": 5}
 
+# Team primary colors — backdrop for the transparent "silo" headshots, so every
+# player circle is filled with its team's color (ported from TEAM_META in app.js).
+TEAM_COLOR = {
+    108: "#BA0021", 109: "#A71930", 110: "#DF4601", 111: "#BD3039", 112: "#0E3386",
+    113: "#C6011F", 114: "#00385D", 115: "#33006F", 116: "#0C2340", 117: "#002D62",
+    118: "#004687", 119: "#005A9C", 120: "#AB0003", 121: "#002D72", 133: "#003831",
+    134: "#FDB827", 135: "#2F241D", 136: "#0C2C56", 137: "#FD5A1E", 138: "#C41E3A",
+    139: "#092C5C", 140: "#003278", 141: "#134A8E", 142: "#002B5C", 143: "#E81828",
+    144: "#CE1141", 145: "#27251F", 146: "#00A3E0", 147: "#003087", 158: "#12284B",
+}
+
+
+def _shade(hexc, ratio):                       # ratio 0..1 toward black
+    n = int(hexc.lstrip("#"), 16)
+    r, g, b = (n >> 16) & 255, (n >> 8) & 255, n & 255
+    return "#%02x%02x%02x" % (round(r * (1 - ratio)), round(g * (1 - ratio)), round(b * (1 - ratio)))
+
+
+def team_photo_bg(team_id):
+    """Team-colored gradient backdrop for a player's silo cutout (None if unknown)."""
+    c = TEAM_COLOR.get(team_id)
+    return f"linear-gradient(145deg,{c} 0%,{_shade(c, 0.45)} 100%)" if c else None
+
 
 def hitter_tier(ops):
     if not ops or ops <= 0: return "gray"
@@ -390,14 +413,16 @@ def logo_url(team_id):
 
 def headshot(pid):
     return (f"https://img.mlbstatic.com/mlb-photos/image/upload/"
-            f"d_people:generic:headshot:67:current.png/w_213,q_auto:best/"
-            f"v1/people/{pid}/headshot/67/current")
+            f"d_people:generic:headshot:silo:current.png/w_213,q_auto:best/"
+            f"v1/people/{pid}/headshot/silo/current")
 
 
-def face(pid, tier, historic=False):
+def face(pid, tier, historic=False, team_id=None):
     cls = "bl-face-wrap shiny" if historic else "bl-face-wrap"
+    bg = team_photo_bg(team_id)
+    bgstyle = f' style="background:{bg}"' if bg else ""
     return (f'<span class="{cls}" style="--ring:{BRIGHT[tier]}">'
-            f'<img class="bl-face" loading="lazy" alt="" src="{headshot(pid)}" '
+            f'<img class="bl-face" loading="lazy" alt="" src="{headshot(pid)}"{bgstyle} '
             f'onerror="this.onerror=null;this.src=\'{headshot(0)}\'"></span>')
 
 
@@ -487,9 +512,11 @@ def player_card(season, week=None):
         meter = _meter("OPS", f'{season["ops"]:.3f}', season["ops"] / 1.2 * 100, tier)
     wk = f'<div class="bl-card-week">This week: {_week_line(week)}</div>' if week else ""
     tint = BRIGHT[tier]   # card follows the player's tier color
+    bg = team_photo_bg(season.get("team_id"))
+    facebg = f' style="background:{bg}"' if bg else ""
     return (f'<div class="bl-card" hidden style="background:{tint}1a;border-color:{tint}59">'
             f'<div class="bl-card-body">'
-            f'<img class="bl-card-face" loading="lazy" alt="" src="{headshot(season["id"])}" '
+            f'<img class="bl-card-face" loading="lazy" alt="" src="{headshot(season["id"])}"{facebg} '
             f'onerror="this.onerror=null;this.src=\'{headshot(0)}\'">'
             f'<div class="bl-card-main"><div class="bl-card-stats">{l1}</div>'
             f'<div class="bl-card-stats2">{l2}</div>{wk}</div>{meter}</div></div>')
@@ -506,7 +533,7 @@ def _pwrap(inner, card):
 def _player_row(p, stat_html, extra="", card=None):
     info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
-    inner = f'{face(p["id"], p["tier"], p.get("historic"))}{info}{stat_html}{extra}'
+    inner = f'{face(p["id"], p["tier"], p.get("historic"), p.get("team_id"))}{info}{stat_html}{extra}'
     return _pwrap(inner, player_card(p) if card is None else card)
 
 
@@ -528,7 +555,7 @@ def hr_row(m):
     sub = " · ".join(f'{g["hr"]} vs {escape(g["opp"])}' for g in games) if games else f'{h["hr"]} HR total'
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
-    inner = (f'{face(h["id"], h["tier"], h.get("historic"))}{info}'
+    inner = (f'{face(h["id"], h["tier"], h.get("historic"), h.get("team_id"))}{info}'
              f'<span class="bl-delta" style="color:{TEXT["green"]}">+{d} HR</span>')
     return _pwrap(inner, player_card(h))
 
@@ -564,7 +591,7 @@ def cool_row(m, wk=None):
         right = _arrow_stat("OPS", b["ops"], h["ops"], hitter_tier, 3)
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{sub}</span></span>')
-    inner = f'{face(h["id"], h["tier"], h.get("historic"))}{info}{right}'
+    inner = f'{face(h["id"], h["tier"], h.get("historic"), h.get("team_id"))}{info}{right}'
     return _pwrap(inner, player_card(h, week=wk))
 
 
@@ -597,7 +624,7 @@ def rookie_surge_row(m):
 def hweek_row(h, season=None):   # best hitters of the week — show their 7-day game line
     info = (f'<span class="bl-player-info"><strong>{escape(h["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(h)}{_week_line(h)}</span></span>')
-    inner = (f'{face(h["id"], h["tier"])}{info}'
+    inner = (f'{face(h["id"], h["tier"], False, h.get("team_id"))}{info}'
              f'<span class="bl-stat" style="color:{TEXT[h["tier"]]}">{h["ops"]:.3f}<small>OPS&middot;WK</small></span>')
     return _pwrap(inner, player_card(season, week=h))
 
@@ -606,7 +633,7 @@ def pfaller_row(m):   # strong arm losing form
     p, b = m["p"], m["base"]
     info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
-    inner = f'{face(p["id"], p["tier"])}{info}{_arrow_stat("form", b["forma"], p["forma"], pitcher_tier, 0)}'
+    inner = f'{face(p["id"], p["tier"], False, p.get("team_id"))}{info}{_arrow_stat("form", b["forma"], p["forma"], pitcher_tier, 0)}'
     return _pwrap(inner, player_card(p))
 
 
