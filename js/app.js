@@ -8300,8 +8300,7 @@ async function _loadMVPTracker() {
         : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">${emptyMsg}</div>`;
       return `<div class="mvp-tracker-card">
         <div class="mvp-card-header">
-          <span class="mvp-card-title">${title}</span>
-          <span class="mvp-card-league">${league}</span>
+          <span class="mvp-card-title">${title} RANKING</span>
         </div>
         <div class="mvp-card-body">${rows}</div>
       </div>`;
@@ -8430,7 +8429,7 @@ async function _loadMVPTracker() {
       el.innerHTML = `
         <div class="mvp-page-header">
           <div>
-            <div class="mvp-page-title">MVP · CY YOUNG · ROOKIE OF THE YEAR</div>
+            <div class="mvp-page-title">AWARD TRACKING</div>
             <div class="mvp-page-subtitle">REAL-TIME CANDIDATES · ${CURRENT_YEAR} SEASON</div>
           </div>
           <div class="mvp-tabs-row">
