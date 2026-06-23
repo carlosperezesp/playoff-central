@@ -265,6 +265,19 @@ def build_gems_facts(season, asof, facts):
     }
 
 
+def get_rookie_ids(season, asof=None):
+    """Full set of rookie player ids (the standouts list is too small to tag from)."""
+    ids = set()
+    for group, sort in (("hitting", "atBats"), ("pitching", "inningsPitched")):
+        try:
+            d = fetch(_stats_url(season, group, sort, 500, "rookies", asof))
+            for s in d.get("stats", [{}])[0].get("splits", []):
+                ids.add(s["player"]["id"])
+        except Exception:
+            pass
+    return ids
+
+
 def get_rookies(season, asof=None):
     """Rookie standouts — filter out tiny samples so it's real risers, not 2-PA noise."""
     try:
@@ -296,8 +309,11 @@ def _team_span(season, asof):
     return (f"stats=byDateRange&startDate={season}-01-01&endDate={asof}" if asof else "stats=season")
 
 
-def get_team_pitching(season, top=5, asof=None):
-    rows = _team_stat_rows(f"{API}/teams/stats?{_team_span(season, asof)}&group=pitching"
+def get_team_rotation(season, top=5, asof=None):
+    # Starter split isn't available point-in-time; skip on past dates.
+    if asof:
+        return []
+    rows = _team_stat_rows(f"{API}/teams/stats?stats=statSplits&sitCodes=sp&group=pitching"
                            f"&season={season}&sportId=1&gameType=R", "era", True, top)
     for r in rows:
         r["tier"] = pitcher_tier(forma_score(r["val"], r["whip"]))
@@ -330,7 +346,7 @@ def get_team_arms(season, team_id, asof=None):
     try:
         d = fetch(url)
     except Exception:
-        return {"all": [], "rp": []}
+        return {"sp": [], "rp": []}
     arms = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s.get("stat", {})
@@ -349,8 +365,9 @@ def get_team_arms(season, team_id, asof=None):
                      "era": era, "whip": whip, "forma": forma, "tier": pitcher_tier(forma),
                      "role": role, "team_id": team_id})
     arms.sort(key=lambda r: r["forma"], reverse=True)
+    sp = [a for a in arms if a["role"] == "Starter"]
     pen = [a for a in arms if a["role"] != "Starter"]
-    return {"all": arms[:5], "rp": pen[:5]}
+    return {"sp": sp[:5], "rp": pen[:5]}
 
 
 def get_team_offense(season, top=5, asof=None):
@@ -500,6 +517,17 @@ def team_stat_row(i, r, value, unit, sub):
             f'<span class="bl-stat" style="color:{TEXT[r["tier"]]}">{value}<small>{unit}</small></span></li>')
 
 
+ROLE_COLOR = {"Starter": "#1565d8", "Reliever": "#6b7280", "Closer": "#e05a2b"}
+
+
+def _role_tag(p):
+    c = ROLE_COLOR.get(p["role"], "#6b7280")
+    s = f'<span style="color:{c}">{p["role"]}</span>'
+    if p.get("rookie"):
+        s += ' <span style="color:#b45309">&middot; Rookie</span>'
+    return s
+
+
 def _rface(p):
     bg = team_photo_bg(p.get("team_id"))
     style = f' style="background:{bg}"' if bg else ""
@@ -515,7 +543,7 @@ def _arms_card(roster, header):
     rows = "".join(
         f'<div class="bl-rrow">{_rface(p)}'
         f'<span class="bl-rname"><strong>{escape(p["name"])}</strong>'
-        f'<span class="bl-role">{p["role"]}</span></span>'
+        f'<span class="bl-role">{_role_tag(p)}</span></span>'
         f'<span class="bl-rstat" style="color:{TEXT[p["tier"]]}">{p["forma"]:.0f}</span>'
         f'<span class="bl-rstat" style="color:{TEXT[pitcher_tier(forma_score(p["era"], None))]}">{p["era"]:.2f}</span>'
         f'<span class="bl-rstat" style="color:{TEXT[pitcher_tier(forma_score(None, p["whip"]))]}">{p["whip"]:.2f}</span></div>'
@@ -608,22 +636,26 @@ def _pwrap(inner, card):
 
 
 def _player_row(p, stat_html, extra="", card=None):
+    if p.get("rookie") and "rookie</span>" not in extra:
+        extra += ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>'
     info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
             f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])}</span></span>')
     inner = f'{face(p["id"], p["tier"], p.get("historic"), p.get("team_id"))}{info}{stat_html}{extra}'
     return _pwrap(inner, player_card(p) if card is None else card)
 
 
+def _star_tags(p):
+    return ' <span class="bl-shimmer-tag">historic</span>' if p.get("historic") else ""
+
+
 def hitter_row(h):
     stat = f'<span class="bl-stat" style="color:{TEXT[h["tier"]]}">{h["ops"]:.3f}<small>OPS</small></span>'
-    star = ' <span class="bl-shimmer-tag">historic</span>' if h["historic"] else ""
-    return _player_row(h, stat + chip(h["tier"], TIER_LABEL[h["tier"]]), star)
+    return _player_row(h, stat + chip(h["tier"], TIER_LABEL[h["tier"]]), _star_tags(h))
 
 
 def pitcher_row(p):
     stat = f'<span class="bl-stat" style="color:{TEXT[p["tier"]]}">{p["era"]:.2f}<small>ERA</small></span>'
-    star = ' <span class="bl-shimmer-tag">historic</span>' if p["historic"] else ""
-    return _player_row(p, stat + chip(p["tier"], TIER_LABEL[p["tier"]]), star)
+    return _player_row(p, stat + chip(p["tier"], TIER_LABEL[p["tier"]]), _star_tags(p))
 
 
 def hr_row(m):
@@ -736,10 +768,10 @@ def sec_power(f, n, limit=10):
 
 
 def sec_staffs(f, n, limit=5):
-    rows = "".join(pitch_team_row(i, r, r.get("roster"), "Top arms by form", "Pitcher")
+    rows = "".join(pitch_team_row(i, r, r.get("roster"), "Top starters by form", "Starter")
                    for i, r in enumerate(f["staffs"][:limit], 1))
-    g = "Team ERA — the whole staff, starters and bullpen. Lower is better."
-    return _section("Best staffs on the mound", g, _lead(n, "staff_lead"), rows)
+    g = "Starting rotation ERA — starters only. Lower is better."
+    return _section("Best rotation", g, _lead(n, "staff_lead"), rows)
 
 
 def sec_bullpen(f, n, limit=5):
@@ -1047,8 +1079,8 @@ def facts_for_llm(f, theme_title, section_ids):
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
                                 "last10": t["l10"], "rank_change_vs_last_week": t.get("movement")}
                                for t in f["power_top"]],
-        "best_staffs_by_team_era": [{"rank": i, "name": s["name"], "era": s["val"], "whip": s["whip"]}
-                                    for i, s in enumerate(f["staffs"], 1)],
+        "best_rotations_by_starter_era": [{"rank": i, "name": s["name"], "era": s["val"], "whip": s["whip"]}
+                                          for i, s in enumerate(f["staffs"], 1)],
         "elite_hitters": [{"name": h["name"], "team": h["team"], "ops": round(h["ops"], 3),
                            "ops_a_week_ago": wk(h.get("ops_prev")), "hr": h["hr"],
                            "hr_a_week_ago": h.get("hr_prev"), "historic_pace": h["historic"]}
@@ -1144,6 +1176,9 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
     rookies = get_rookies(season, asof=asof)   # always — also feeds the snapshot baseline
     for lst in (hitters, pitchers, rookies["hitters"], rookies["pitchers"]):
         attach_team_meta(lst, id_by_name, abbr_by_name)
+    rookie_ids = get_rookie_ids(season, asof=asof)
+    for pl in hitters + pitchers:
+        pl["rookie"] = pl["id"] in rookie_ids
     bh = {x["name"]: x for x in baseline.get("hitters", [])} if baseline else {}
     bp = {x["name"]: x for x in baseline.get("pitchers", [])} if baseline else {}
     for h in hitters:                       # attach week-ago values for trend-aware prose
@@ -1155,7 +1190,8 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
         "team_abbr": abbr_by_name, "team_id_by_name": id_by_name,
         "hit_by_id": {h["id"]: h for h in hitters}, "pit_by_id": {p["id"]: p for p in pitchers},
         "baseline_date": baseline.get("date") if baseline else None, "asof": asof,
-        "staffs": get_team_pitching(season, 5, asof=asof),
+        "staffs": get_team_rotation(season, 5, asof=asof),
+        "rookie_ids": rookie_ids,
         "hitters_all": hitters, "pitchers_all": pitchers,
         "elite_hitters": [h for h in hitters if h["tier"] == "green"][:8],
         "aces": sorted([p for p in pitchers if p["tier"] == "green"],
@@ -1172,10 +1208,13 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
         if tid not in arms_cache:
             arms_cache[tid] = get_team_arms(season, tid, asof=asof)
         return arms_cache[tid]
-    for r in f["staffs"][:5]:                       # best arms overall, expands under each staff
-        r["roster"] = _arms(r["id"])["all"]
-    for r in f["bullpen"][:5]:                      # relievers, expands under each bullpen
+    for r in f["staffs"][:5]:                       # starters, expand under each rotation
+        r["roster"] = _arms(r["id"])["sp"]
+    for r in f["bullpen"][:5]:                      # relievers, expand under each bullpen
         r["roster"] = _arms(r["id"])["rp"]
+    for r in f["staffs"][:5] + f["bullpen"][:5]:    # mark rookie arms in the rosters
+        for pl in r.get("roster", []):
+            pl["rookie"] = pl["id"] in rookie_ids
     return f
 
 
@@ -1204,10 +1243,10 @@ def article_jsonld(title, date_iso, canonical, desc, image=None):
 
 
 STYLE = """
-  body { background: var(--bg); }
+  body { background: #0d2016 radial-gradient(125% 85% at 50% 0%, #214a30 0%, #1a2e1f 42%, #0d2016 78%) fixed; }
   .bl-wrap { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
   .bl-top { display:flex; align-items:center; gap:10px; padding:18px 0; }
-  .bl-top a { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+  .bl-top a { display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; }
   .bl-top img { width:34px; height:34px; }
   .bl-wordmark { font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; }
   .bl-wordmark span { color: var(--accent); }
@@ -1358,10 +1397,10 @@ INDEX_PAGE = """<!DOCTYPE html>
 <link rel="stylesheet" href="../css/main.css">
 {jsonld}
 <style>
-  body {{ background: var(--bg); }}
+  body {{ background: #0d2016 radial-gradient(125% 85% at 50% 0%, #214a30 0%, #1a2e1f 42%, #0d2016 78%) fixed; }}
   .bl-wrap {{ max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }}
   .bl-top {{ display:flex; align-items:center; gap:10px; padding:18px 0; }}
-  .bl-top a {{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }}
+  .bl-top a {{ display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; }}
   .bl-top img {{ width:34px; height:34px; }}
   .bl-wordmark {{ font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; }}
   .bl-wordmark span {{ color: var(--accent); }}
