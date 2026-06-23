@@ -330,7 +330,7 @@ def get_team_arms(season, team_id, asof=None):
     try:
         d = fetch(url)
     except Exception:
-        return {"sp": [], "rp": []}
+        return {"all": [], "rp": []}
     arms = []
     for s in d.get("stats", [{}])[0].get("splits", []):
         st = s.get("stat", {})
