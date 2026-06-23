@@ -5016,7 +5016,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
 // archived at git tag `topgames-classic`. ──────────────────────────────────────
 (function(){
   const API='https://statsapi.mlb.com/api/v1';
-  let curDay='hoy', pollTimer=null, lastGames=[], clockStarted=false;
+  let curDay='hoy', pollTimer=null, lastGames=[], clockStarted=false, mvpRaceTried=false;
   const expanded=new Set(), ptwCache={}, starsCache={};
   const $=id=>document.getElementById(id);
   const fj=u=>fetch(u).then(r=>r.json());
@@ -5109,7 +5109,14 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
       return hs.sort((a,b)=>b.ops-a.ops).slice(0,2);
     }catch(e){return [];}
   }
-  function ptwCard(p,abbr,teamId){return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(p.id)}" style="background:${teamBg(teamId)}" onerror="this.style.visibility='hidden'"><div><div class="wb-ptw-nm">${p.name}<span class="wb-ptw-tm">${abbr}</span></div><div class="wb-ptw-st">${fmt3(p.avg)} AVG · ${p.hr} HR · ${p.rbi} RBI · ${fmt3(p.ops)} OPS</div></div></div>`;}
+  function raceChip(pid){
+    const ml=window._mvpLists; if(!ml||!pid)return '';
+    const sets={MVP:[...(ml.alMVP||[]),...(ml.nlMVP||[])],CY:[...(ml.alCY||[]),...(ml.nlCY||[])],ROY:[...(ml.alROY||[]),...(ml.nlROY||[])]};
+    const th={MVP:10,CY:10,ROY:5}, lab={MVP:'MVP Race',CY:'CY Race',ROY:'ROY Race'};
+    for(const k of ['MVP','CY','ROY']){const f=sets[k].find(p=>p.pid===pid);if(f&&f.rank<=th[k])return `<span class="wb-race">${lab[k]}</span>`;}
+    return '';
+  }
+  function ptwCard(p,abbr,teamId){return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(p.id)}" style="background:${teamBg(teamId)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${p.name}<span class="wb-ptw-tm">${abbr}</span></div><div class="wb-ptw-st">${fmt3(p.avg)} AVG · ${p.hr} HR · ${p.rbi} RBI · ${fmt3(p.ops)} OPS</div></div>${raceChip(p.id)}</div>`;}
   async function fillPTW(g){
     const box=$('wbptw-'+g.gamePk); if(!box)return;
     let data=ptwCache[g.gamePk];
@@ -5120,6 +5127,11 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     if(!$('wbptw-'+g.gamePk))return;
     const all=[...data.a.map(p=>ptwCard(p,data.aAbbr,data.aId)),...data.h.map(p=>ptwCard(p,data.hAbbr,data.hId))].join('');
     box.innerHTML=all?`<div class="wb-dh">Players to watch</div><div class="wb-ptw-grid">${all}</div>`:'';
+    // award-race chips need _mvpLists; if not ready yet, load once then re-render
+    if(all && !window._mvpLists && !mvpRaceTried && typeof ensureMvpLists==='function'){
+      mvpRaceTried=true;
+      ensureMvpLists().then(()=>{ if($('wbptw-'+g.gamePk)) fillPTW(g); }).catch(()=>{});
+    }
   }
 
   // Key performances for finished games (boxscore-scored stars; mirrors the classic ayer view)
