@@ -1486,3 +1486,88 @@
   .info-title { color: #eef3ef; }
   .info-intro { color: rgba(255,255,255,.72); }
   .app-footer { color: rgba(255,255,255,.72); --muted: rgba(255,255,255,.5); }
+
+  /* ── Scoreboard (Wrigley-style TOP GAMES) ── all classes namespaced .wb-* ── */
+  .wb-sb{ --board:#3f6049; --board2:#365340; --ink:#f3efe0; --line:rgba(243,239,224,.55);
+    --line-soft:rgba(243,239,224,.22); --plate:#e9e4d0; --plate-ink:#1d2b21; --gold:#e8c23a;
+    font-family:'Barlow Condensed',system-ui,sans-serif; color:var(--ink); }
+  .wb-top{display:flex;justify-content:flex-end;margin-bottom:12px}
+  .wb-clock{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 50% 42%,#48684f,#2f4a38);
+    border:3px solid #f3efe0;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.35);flex:none}
+  .wb-tick{position:absolute;left:50%;top:5px;width:2px;height:5px;background:#f3efe0;transform-origin:50% 24px;border-radius:2px;opacity:.85}
+  .wb-hand{position:absolute;left:50%;bottom:50%;transform-origin:50% 100%;background:#f3efe0;border-radius:3px}
+  .wb-hh{width:3px;height:15px;margin-left:-1.5px}
+  .wb-mh{width:2px;height:21px;margin-left:-1px}
+  .wb-sh{width:1px;height:23px;margin-left:-.5px;background:var(--gold)}
+  .wb-pin{position:absolute;left:50%;top:50%;width:6px;height:6px;background:#f3efe0;border-radius:50%;transform:translate(-50%,-50%)}
+  .wb-days{display:flex;gap:10px;margin-bottom:16px}
+  .wb-day{flex:1;background:var(--board);border:2px solid var(--line);border-radius:8px;padding:12px 8px;cursor:pointer;text-align:center;transition:background .12s,border-color .12s;-webkit-tap-highlight-color:transparent}
+  .wb-day:hover{background:#48694f}
+  .wb-day.wb-active{background:#16539e;border-color:#cfe0f5}
+  .wb-day .wb-d{font-family:'Bebas Neue';font-size:24px;letter-spacing:2px;color:#fff;line-height:1;display:block}
+  .wb-day .wb-dt{font-weight:700;font-size:11px;letter-spacing:1px;color:rgba(255,255,255,.65);margin-top:3px;display:block;white-space:nowrap}
+  .wb-board{background:linear-gradient(180deg,var(--board) 0%,var(--board2) 100%);border:3px solid rgba(0,0,0,.25);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);padding:6px}
+  .wb-scroll{overflow-x:auto}
+  .wb-grid{min-width:0}
+  .wb-row{display:grid;grid-template-columns:30px minmax(86px,170px) repeat(9,minmax(26px,46px)) 30px minmax(0,1fr);align-items:center}
+  .wb-ghead{padding:9px 6px 3px}
+  .wb-ghead .wb-gh{font-weight:700;font-size:10px;letter-spacing:.5px;color:rgba(243,239,224,.5);text-align:center;text-transform:uppercase}
+  .wb-gstatus{text-align:left;padding-left:4px;font-weight:700;font-size:12px;letter-spacing:1px;color:rgba(243,239,224,.62);text-transform:uppercase;white-space:nowrap}
+  .wb-gstatus.wb-live{color:#7fe07f}
+  .wb-gstatus.wb-live::before{content:'● ';color:#5fe05f}
+  .wb-gi{text-align:center;font-weight:700;font-size:11px;color:rgba(243,239,224,.5)}
+  .wb-gi.wb-r{color:var(--gold)}
+  .wb-game{border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .1s}
+  .wb-game:hover{background:rgba(255,255,255,.04)}
+  .wb-game.wb-open{background:#33503c;border-bottom:none}
+  .wb-game .wb-trow{padding:2px 6px}
+  .wb-game .wb-trow.wb-away{padding-top:4px}
+  .wb-game .wb-trow.wb-home{padding-bottom:7px}
+  .wb-game .wb-trow.wb-loser{background:rgba(0,0,0,.16)}
+  .wb-game .wb-trow.wb-loser .wb-nm{color:rgba(243,239,224,.55)}
+  .wb-game .wb-trow.wb-loser .wb-inn,.wb-game .wb-trow.wb-loser .wb-rcol{color:rgba(243,239,224,.5)}
+  .wb-plate{width:28px;height:23px;margin:0 auto;background:var(--plate);color:var(--plate-ink);border-radius:3px;border:1px solid rgba(0,0,0,.3);box-shadow:inset 0 -2px 4px rgba(0,0,0,.12);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;line-height:1}
+  .wb-plate-p{text-align:center;font-family:'Barlow Condensed';font-weight:800;font-size:15px;color:rgba(243,239,224,.4);line-height:1}
+  .wb-tm{display:flex;align-items:center;gap:8px;min-width:0;padding-left:4px}
+  .wb-tm img{width:22px;height:22px;object-fit:contain;flex:none}
+  .wb-tm .wb-nm{font-family:'Bebas Neue';font-size:21px;letter-spacing:1.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wb-wl{font-family:'Barlow Condensed';font-weight:800;font-size:12px;line-height:1;padding:2px 6px;border-radius:3px;flex:none;letter-spacing:.5px}
+  .wb-wl.wb-w{background:#fff;color:#0e3386}
+  .wb-wl.wb-l{background:#0e3386;color:#fff}
+  .wb-inn{text-align:center;font-weight:700;font-size:16px;color:#fff}
+  .wb-inn.wb-cur{color:var(--gold)}
+  .wb-rcol{text-align:center;font-weight:800;font-size:17px;color:var(--gold)}
+  .wb-detail{display:none;background:#33503c;color:var(--ink);padding:14px 16px 16px}
+  .wb-detail.wb-open{display:block;border-bottom:2px solid var(--line)}
+  .wb-dh{font-family:'Barlow Condensed';font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(243,239,224,.7);margin-bottom:10px}
+  .wb-sp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .wb-sp{background:#fff;border:1px solid #dfe6dc;border-radius:10px;padding:11px 13px}
+  .wb-sp-head{display:flex;align-items:center;gap:11px}
+  .wb-sp-face{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:top center;border:2px solid rgba(255,255,255,.7);flex:none;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .wb-sp-id{flex:1;min-width:0}
+  .wb-sp .wb-lab{font-size:9px;font-weight:800;letter-spacing:1px;color:#7a8a7e;text-transform:uppercase}
+  .wb-sp .wb-nm{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:16px;color:#1b251d;line-height:1.2;margin-top:2px;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wb-sp .wb-num{font-family:'Barlow Condensed';font-size:12px;font-weight:700;color:#fff;background:#3f6049;border-radius:5px;padding:1px 6px;flex:none}
+  .wb-sp-form{flex:none;text-align:center;min-width:46px}
+  .wb-sp-form .wb-fv{font-family:'Barlow Condensed';font-weight:800;font-size:35px;line-height:1}
+  .wb-sp-form .wb-fl{font-size:9px;font-weight:800;letter-spacing:1.5px;color:#7a8a7e;margin-top:2px}
+  .wb-sp .wb-st{font-family:'Inter',system-ui,sans-serif;font-size:12px;color:#5a6b5e;margin-top:11px;font-weight:500;border-top:1px solid rgba(0,0,0,.08);padding-top:9px}
+  .wb-sp .wb-st b{color:#1b251d;font-weight:700}
+  .wb-ptw{margin-top:15px}
+  .wb-ptw-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .wb-ptw-p{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e3e9e0;border-radius:8px;padding:7px 10px}
+  .wb-ptw-face{width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:top center;flex:none;border:1.5px solid rgba(255,255,255,.7)}
+  .wb-ptw-nm{font-family:'Inter',system-ui;font-weight:600;font-size:13.5px;color:#1b251d;display:flex;align-items:center;gap:6px}
+  .wb-ptw-tm{font-family:'Barlow Condensed';font-size:10px;font-weight:700;color:#8a9a8e;letter-spacing:.5px}
+  .wb-ptw-st{font-family:'Inter',system-ui;font-size:11.5px;color:#6a7a6e;margin-top:2px;font-weight:500}
+  .wb-star-sc{margin-left:auto;font-family:'Barlow Condensed';font-weight:800;font-size:21px;flex:none;padding-left:8px}
+  .wb-ptw-loading{font-size:12px;color:rgba(243,239,224,.6);font-style:italic}
+  .wb-loading,.wb-empty{padding:40px 10px;text-align:center;color:rgba(243,239,224,.7);font-weight:600;letter-spacing:1px}
+  @media(max-width:620px){.wb-sp-grid,.wb-ptw-grid{grid-template-columns:1fr}}
+  @media(max-width:520px){
+    .wb-row{grid-template-columns:27px minmax(84px,1fr) repeat(9,21px) 27px 0px}
+    .wb-tm{gap:5px}.wb-tm img{width:18px;height:18px}.wb-tm .wb-nm{font-size:15px;letter-spacing:.5px}
+    .wb-wl{font-size:11px;padding:1px 5px}
+    .wb-inn{font-size:14px}.wb-rcol{font-size:15px}.wb-gi{font-size:10px}.wb-gstatus{font-size:11px;letter-spacing:.5px}
+    .wb-plate{width:24px;height:21px;font-size:13px}.wb-plate-p{font-size:13px}
+  }

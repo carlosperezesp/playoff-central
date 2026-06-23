@@ -5010,44 +5010,187 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
 }
 
 // ── Main entry: render day-selector UI ─────────────────────────────────────────
-async function loadTopGames() {
-  const el = document.getElementById('topGamesContent');
-  if (!el) return;
+// ── Scoreboard (Wrigley-style TOP GAMES) — integrated from the standalone prototype.
+// Self-contained module; only entry points are exposed on window.WB. The classic
+// TOP GAMES (loadTopGamesDay/_tgLoad*/_OLD_loadTopGames below) is now dead code,
+// archived at git tag `topgames-classic`. ──────────────────────────────────────
+(function(){
+  const API='https://statsapi.mlb.com/api/v1';
+  let curDay='hoy', pollTimer=null, lastGames=[], clockStarted=false;
+  const expanded=new Set(), ptwCache={}, starsCache={};
+  const $=id=>document.getElementById(id);
+  const fj=u=>fetch(u).then(r=>r.json());
+  function dateFor(day){const d=new Date();if(day==='ayer')d.setDate(d.getDate()-1);if(day==='manana')d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);}
+  function forma(era,whip){const p=[];if(era!=null)p.push(Math.max(0,Math.min(100,(6-era)/4.5*100)));if(whip!=null)p.push(Math.max(0,Math.min(100,(2-whip)/1.2*100)));return p.length?Math.round(p.reduce((a,b)=>a+b,0)/p.length):null;}
+  function tier(f){return f==null?'#9ca3af':f>=75?'#16a34a':f>=60?'#b1c882':f>=40?'#ffc000':f>=25?'#ff8100':'#ff2200';}
+  function lighten(h,r){const n=parseInt(h.slice(1),16),R=(n>>16)&255,G=(n>>8)&255,B=n&255;return '#'+((1<<24)+(Math.round(R+(255-R)*r)<<16)+(Math.round(G+(255-G)*r)<<8)+Math.round(B+(255-B)*r)).toString(16).slice(1);}
+  function shade(h,r){const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1);}
+  function fmt3(x){if(x==null||x==='')return '—';const s=(+x).toFixed(3);return s.startsWith('0.')?s.slice(1):s;}
+  const logo=id=>`https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg`;
+  const head=id=>`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_120,q_auto:best/v1/people/${id}/headshot/silo/current`;
+  const PRIMARY={108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0E3386',113:'#C6011F',114:'#00385D',115:'#33006F',116:'#0C2340',117:'#002D62',118:'#004687',119:'#005A9C',120:'#AB0003',121:'#002D72',133:'#003831',134:'#FDB827',135:'#2F241D',136:'#0C2C56',137:'#FD5A1E',138:'#C41E3A',139:'#092C5C',140:'#003278',141:'#134A8E',142:'#002B5C',143:'#E81828',144:'#CE1141',145:'#27251F',146:'#00A3E0',147:'#003087',158:'#12284B'};
+  const teamBg=id=>{const c=PRIMARY[id]||'#26324a';return `linear-gradient(145deg,${c} 0%,${shade(c,.45)} 100%)`;};
 
-  const todayD     = new Date();
-  const yesterdayD = new Date(todayD); yesterdayD.setDate(todayD.getDate() - 1);
-  const tomorrowD  = new Date(todayD); tomorrowD.setDate(todayD.getDate() + 1);
+  function tickClock(){if(!$('wb-clock'))return;const n=new Date(),s=n.getSeconds(),m=n.getMinutes(),h=n.getHours()%12+m/60;
+    const sh=$('wb-sh'),mh=$('wb-mh'),hh=$('wb-hh');if(sh)sh.style.transform=`rotate(${s*6}deg)`;if(mh)mh.style.transform=`rotate(${m*6}deg)`;if(hh)hh.style.transform=`rotate(${h*30}deg)`;}
+  function startClock(){const c=$('wb-clock');if(c&&!c.querySelector('.wb-tick')){for(let i=0;i<12;i++){const t=document.createElement('div');t.className='wb-tick';t.style.transform=`rotate(${i*30}deg)`;c.appendChild(t);}}tickClock();if(!clockStarted){clockStarted=true;setInterval(tickClock,1000);}}
 
-  function fmtDate(d) {
-    return d.toLocaleDateString('en-US', { day:'2-digit', month:'short' }).toUpperCase();
+  async function loadDay(day,silent){
+    curDay=day;
+    document.querySelectorAll('.wb-day').forEach(b=>b.classList.toggle('wb-active',b.dataset.day===day));
+    if(!$('wb-games'))return;
+    if(!silent)$('wb-games').innerHTML='<div class="wb-loading">LOADING…</div>';
+    let games=[];
+    try{const sched=await fj(`${API}/schedule?sportId=1&date=${dateFor(day)}&hydrate=probablePitcher,linescore,team`);
+      games=(sched.dates&&sched.dates[0]&&sched.dates[0].games)||[];
+    }catch(e){if($('wb-games'))$('wb-games').innerHTML='<div class="wb-empty">Could not load.</div>';return;}
+    const ids=new Set();
+    games.forEach(g=>{['away','home'].forEach(s=>{const pp=g.teams[s].probablePitcher;if(pp&&pp.id)ids.add(pp.id);});});
+    const people={};
+    if(ids.size){try{
+      const d=await fj(`${API}/people?personIds=${[...ids].join(',')}&hydrate=stats(group=pitching,type=season,season=${CURRENT_YEAR})`);
+      (d.people||[]).forEach(p=>{let st={};(p.stats||[]).forEach(b=>{if(b.group&&b.group.displayName==='pitching'&&b.type&&b.type.displayName==='season')st=(b.splits&&b.splits[0]&&b.splits[0].stat)||{};});
+        people[p.id]={num:p.primaryNumber||'',name:p.fullName,era:st.era?+st.era:null,whip:st.whip?+st.whip:null,ip:st.inningsPitched||'—',so:st.strikeOuts||0,w:st.wins||0,l:st.losses||0};});
+    }catch(e){}}
+    lastGames=games;
+    if($('wb-games')) render(games,people);
+    clearTimeout(pollTimer);
+    if($('wb-games') && games.some(g=>g.status.abstractGameState==='Live')) pollTimer=setTimeout(()=>loadDay(curDay,true),30000);
   }
 
-  el.innerHTML = `
-    <div class="tg-day-selector">
-      <button class="tg-day-btn" id="tgbtn-ayer"    onclick="loadTopGamesDay('ayer')">
-        <span class="tg-day-btn-label">YESTERDAY</span>
-        <span class="tg-day-btn-date">${fmtDate(yesterdayD)}</span>
-      </button>
-      <button class="tg-day-btn" id="tgbtn-hoy"     onclick="loadTopGamesDay('hoy')">
-        <span class="tg-day-btn-label">TODAY</span>
-        <span class="tg-day-btn-date">${fmtDate(todayD)}</span>
-      </button>
-      <button class="tg-day-btn" id="tgbtn-manana"  onclick="loadTopGamesDay('manana')">
-        <span class="tg-day-btn-label">TOMORROW</span>
-        <span class="tg-day-btn-date">${fmtDate(tomorrowD)}</span>
-      </button>
-    </div>
-    <div id="tg-day-content"></div>`;
+  function plate(num){return num?`<div class="wb-plate">${num}</div>`:`<div class="wb-plate-p">?</div>`;}
 
-  // Auto-select based on nav target date, then HOY, then keep current
+  function teamRow(g,side,people){
+    const t=g.teams[side], team=t.team, ls=g.linescore||{}, state=g.status.abstractGameState, live=state==='Live';
+    const starterId=t.probablePitcher&&t.probablePitcher.id, sp=starterId&&people[starterId];
+    let spNum=sp&&sp.num;
+    if(live && ls.defense && ls.defense.pitcher){const defending=ls.isTopInning?'home':'away';if(side===defending && ls.defense.pitcher.id!==starterId) spNum=null;}
+    const innings=ls.innings||[]; let cells='';
+    for(let i=1;i<=9;i++){const inn=innings[i-1], r=inn&&inn[side]&&inn[side].runs;const isCur=live&&ls.currentInning===i&&(ls.isTopInning?side==='away':side==='home');cells+=`<div class="wb-inn${isCur?' wb-cur':''}">${r!=null?r:''}</div>`;}
+    const started=state!=='Preview', tot=(ls.teams&&ls.teams[side])||{};
+    const opp=(ls.teams&&ls.teams[side==='away'?'home':'away'])||{};
+    const isFinal=state==='Final', won=isFinal&&tot.runs!=null&&opp.runs!=null&&tot.runs>opp.runs, lost=isFinal&&tot.runs!=null&&opp.runs!=null&&tot.runs<opp.runs;
+    const flag=won?'<span class="wb-wl wb-w">W</span>':lost?'<span class="wb-wl wb-l">L</span>':'';
+    const runs=started&&tot.runs!=null?tot.runs:'';
+    return `<div class="wb-row wb-trow wb-${side}${lost?' wb-loser':''}">${plate(spNum)}<div class="wb-tm"><img src="${logo(team.id)}" onerror="this.style.display='none'"><span class="wb-nm">${(team.teamName||team.name||'').toUpperCase()}</span>${flag}</div>${cells}<div class="wb-rcol">${runs}</div></div>`;
+  }
+
+  function statusText(g){const st=g.status,state=st.abstractGameState,ls=g.linescore||{};
+    if(state==='Live')return `${ls.isTopInning?'TOP':'BOT'} ${ls.currentInningOrdinal||ls.currentInning}`;
+    if(state==='Final')return (st.detailedState||'FINAL').toUpperCase();
+    return new Date(g.gameDate).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
+
+  function spCard(g,side,people){
+    const t=g.teams[side], pp=t.probablePitcher, p=pp&&people[pp.id];
+    const nm=(t.team.teamName||t.team.name||'').toUpperCase();
+    if(!p)return `<div class="wb-sp"><div class="wb-sp-head"><div class="wb-sp-id"><div class="wb-lab">${nm}</div><div class="wb-nm">TBD</div></div></div></div>`;
+    const f=forma(p.era,p.whip), c=tier(f);
+    return `<div class="wb-sp" style="background:${lighten(c,0.84)};border:1px solid ${lighten(c,0.48)}"><div class="wb-sp-head"><img class="wb-sp-face" src="${head(pp.id)}" style="background:${teamBg(t.team.id)}" onerror="this.style.visibility='hidden'"><div class="wb-sp-id"><div class="wb-lab">${nm}</div><div class="wb-nm">${p.name}${p.num?`<span class="wb-num">#${p.num}</span>`:''}</div></div><div class="wb-sp-form" style="color:${shade(c,0.18)}"><div class="wb-fv">${f!=null?f:'—'}</div><div class="wb-fl">FORM</div></div></div><div class="wb-st"><b>${p.era!=null?p.era.toFixed(2):'—'}</b> ERA · <b>${p.whip!=null?p.whip.toFixed(2):'—'}</b> WHIP · ${p.w}-${p.l} · ${p.ip} IP · ${p.so} K</div></div>`;
+  }
+
+  function render(games,people){
+    const el=$('wb-games'); if(!el)return;
+    if(!games.length){el.innerHTML='<div class="wb-empty">No games.</div>';return;}
+    el.innerHTML=games.map(g=>{
+      const live=g.status.abstractGameState==='Live', open=expanded.has(g.gamePk);
+      const ih=Array.from({length:9},(_,i)=>`<div class="wb-gi">${i+1}</div>`).join('')+`<div class="wb-gi wb-r">R</div>`;
+      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div>`:`<div class="wb-dh">${g.status.abstractGameState==='Preview'?'Probable starters':'Starting pitchers'}</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}</div>`;
+    }).join('');
+    expanded.forEach(pk=>{const g=games.find(x=>x.gamePk===pk);if(g)fillDetail(g);});
+  }
+
+  async function topHitters(teamId){
+    try{
+      const d=await fj(`${API}/teams/${teamId}/roster?rosterType=active&hydrate=person(stats(group=hitting,type=season,season=${CURRENT_YEAR}))`);
+      const hs=[];
+      (d.roster||[]).forEach(e=>{if((e.position&&e.position.abbreviation)==='P')return;
+        let st={};(e.person.stats||[]).forEach(b=>{if(b.group&&b.group.displayName==='hitting'&&b.type&&b.type.displayName==='season')st=(b.splits&&b.splits[0]&&b.splits[0].stat)||{};});
+        const ab=+st.atBats||0;if(ab>=40)hs.push({id:e.person.id,name:e.person.fullName,avg:st.avg,hr:st.homeRuns||0,rbi:st.rbi||0,ops:+st.ops||0});});
+      return hs.sort((a,b)=>b.ops-a.ops).slice(0,2);
+    }catch(e){return [];}
+  }
+  function ptwCard(p,abbr,teamId){return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(p.id)}" style="background:${teamBg(teamId)}" onerror="this.style.visibility='hidden'"><div><div class="wb-ptw-nm">${p.name}<span class="wb-ptw-tm">${abbr}</span></div><div class="wb-ptw-st">${fmt3(p.avg)} AVG · ${p.hr} HR · ${p.rbi} RBI · ${fmt3(p.ops)} OPS</div></div></div>`;}
+  async function fillPTW(g){
+    const box=$('wbptw-'+g.gamePk); if(!box)return;
+    let data=ptwCache[g.gamePk];
+    if(!data){box.innerHTML='<div class="wb-ptw-loading">Loading players to watch…</div>';
+      const [a,h]=await Promise.all([topHitters(g.teams.away.team.id),topHitters(g.teams.home.team.id)]);
+      data={a,h,aId:g.teams.away.team.id,hId:g.teams.home.team.id,aAbbr:g.teams.away.team.abbreviation||'',hAbbr:g.teams.home.team.abbreviation||''};
+      ptwCache[g.gamePk]=data;}
+    if(!$('wbptw-'+g.gamePk))return;
+    const all=[...data.a.map(p=>ptwCard(p,data.aAbbr,data.aId)),...data.h.map(p=>ptwCard(p,data.hAbbr,data.hId))].join('');
+    box.innerHTML=all?`<div class="wb-dh">Players to watch</div><div class="wb-ptw-grid">${all}</div>`:'';
+  }
+
+  // Key performances for finished games (boxscore-scored stars; mirrors the classic ayer view)
+  function ipOuts(ip){if(ip==null)return 0;const[w,f='0']=String(ip).split('.');return (+w||0)*3+(+f||0);}
+  const rIdx=(v,ref)=>!ref||ref<=0?0:Math.min(200,Math.max(0,(v/ref)*100));
+  const rIdxInv=(v,ref)=>!v||v<=0?200:(!ref||ref<=0?0:Math.min(200,Math.max(0,(ref/v)*100)));
+  function hitScore(s){const I=k=>+s[k]||0;const ab=I('atBats'),h=I('hits'),d=I('doubles'),t=I('triples'),hr=I('homeRuns'),bb=I('baseOnBalls'),hbp=I('hitByPitch'),sf=I('sacFlies'),rbi=I('rbi'),runs=I('runs'),sb=I('stolenBases'),cs=I('caughtStealing'),so=I('strikeOuts');
+    const singles=Math.max(0,h-d-t-hr),tb=singles+d*2+t*3+hr*4,pa=ab+bb+hbp+sf,tob=h+bb+hbp,obp=pa>0?tob/pa:0,slg=ab>0?tb/ab:0,ops=obp+slg,speed=sb+(cs===0&&sb>0?0.5:0);
+    const raw=0.35*rIdx(ops,1.4)+0.25*rIdx(tb,4)+0.20*rIdx(rbi+runs,4)+0.10*rIdx(tob,3)+0.10*rIdx(speed,2)-Math.min(12,so*2);
+    return Math.max(0,Math.min(99.9,raw*0.52));}
+  function pitScore(s){const outs=ipOuts(s.inningsPitched),ip=outs/3;if(ip<=0)return 0;const I=k=>+s[k]||0;const er=I('earnedRuns'),hits=I('hits'),bb=I('baseOnBalls'),so=I('strikeOuts'),gs=I('gamesStarted');
+    const qs=gs>0&&outs>=18&&er<=3?1:0,era=(er*9)/ip,whip=(hits+bb)/ip,k9=(so*9)/ip,kImpact=0.65*rIdx(so,6)+0.35*rIdx(k9,10.5),wf=Math.min(1,0.40+0.60*(ip/5));
+    const raw=0.34*rIdxInv(Math.max(era,0.1),4.0)+0.24*rIdxInv(Math.max(whip,0.1),1.2)+0.14*kImpact+0.28*rIdx(ip,6.0)+(qs?8:0);
+    return Math.max(0,Math.min(99.9,raw*0.50*wf));}
+  function hitLine(s){const o=[],I=k=>+s[k]||0;if(I('homeRuns'))o.push(I('homeRuns')+' HR');if(I('rbi'))o.push(I('rbi')+' RBI');if(I('hits'))o.push(I('hits')+' H');if(I('doubles'))o.push(I('doubles')+' 2B');if(I('triples'))o.push(I('triples')+' 3B');if(I('stolenBases'))o.push(I('stolenBases')+' SB');if(I('runs'))o.push(I('runs')+' R');if(I('baseOnBalls'))o.push(I('baseOnBalls')+' BB');return [...new Set(o)].slice(0,3).join(' · ');}
+  function pitLine(s){const o=[];if(s.inningsPitched)o.push(s.inningsPitched+' IP');o.push((+s.earnedRuns||0)+' ER');if((+s.strikeOuts||0)>0)o.push((+s.strikeOuts)+' K');return o.slice(0,3).join(' · ');}
+  async function loadStars(g){
+    const pk=g.gamePk; if(starsCache[pk])return starsCache[pk];
+    try{
+      const box=await fj(`${API}/game/${pk}/boxscore`); const stars=[];
+      ['away','home'].forEach(side=>{const tb=box.teams&&box.teams[side];if(!tb)return;const tid=tb.team.id,abbr=tb.team.abbreviation||'';
+        Object.values(tb.players||{}).forEach(pl=>{const pid=pl.person&&pl.person.id;if(!pid)return;
+          const bat=(pl.stats&&pl.stats.batting)||{},pit=(pl.stats&&pl.stats.pitching)||{};
+          if(ipOuts(pit.inningsPitched)>0){const sc=pitScore(pit);if(sc>=32)stars.push({pid,name:pl.person.fullName,tid,abbr,score:sc,line:pitLine(pit)});}
+          if((+bat.hits||0)>0||(+bat.rbi||0)>0||(+bat.runs||0)>0){const sc=hitScore(bat);if(sc>=28)stars.push({pid,name:pl.person.fullName,tid,abbr,score:sc,line:hitLine(bat)});}});});
+      stars.sort((a,b)=>b.score-a.score);
+      starsCache[pk]=stars.slice(0,3); return starsCache[pk];
+    }catch(e){return [];}
+  }
+  function starCard(s){const c=tier(s.score);return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(s.pid)}" style="background:${teamBg(s.tid)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${s.name}<span class="wb-ptw-tm">${s.abbr}</span></div><div class="wb-ptw-st">${s.line}</div></div><div class="wb-star-sc" style="color:${shade(c,0.12)}">${Math.round(s.score)}</div></div>`;}
+  async function fillStars(g){
+    const box=$('wbstars-'+g.gamePk); if(!box)return;
+    const stars=await loadStars(g);
+    if(!$('wbstars-'+g.gamePk))return;
+    box.innerHTML=stars.length?`<div class="wb-ptw-grid">${stars.map(starCard).join('')}</div>`:'<div class="wb-ptw-loading">No standout performances.</div>';
+  }
+  function fillDetail(g){ if(g.status.abstractGameState==='Final') fillStars(g); else fillPTW(g); }
+
+  function toggle(pk){
+    const wasOpen=expanded.has(pk);
+    if(wasOpen)expanded.delete(pk);else expanded.add(pk);
+    const game=document.querySelector(`.wb-game[data-pk="${pk}"]`), d=$('wbd-'+pk);
+    if(game)game.classList.toggle('wb-open',!wasOpen);
+    if(d)d.classList.toggle('wb-open',!wasOpen);
+    if(!wasOpen){const g=lastGames.find(x=>x.gamePk===pk);if(g)fillDetail(g);}
+  }
+
+  window.WB={ load:loadDay, day:loadDay, toggle, startClock };
+})();
+
+async function loadTopGames(){
+  const el = document.getElementById('topGamesContent');
+  if (!el || typeof window.WB === 'undefined') return;
+  const fmtD = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const todayD = new Date(), yD = new Date(todayD), tD = new Date(todayD);
+  yD.setDate(todayD.getDate()-1); tD.setDate(todayD.getDate()+1);
+  el.innerHTML = `
+    <div class="wb-sb">
+      <div class="wb-top"><div class="wb-clock" id="wb-clock"><div class="wb-hand wb-hh" id="wb-hh"></div><div class="wb-hand wb-mh" id="wb-mh"></div><div class="wb-hand wb-sh" id="wb-sh"></div><div class="wb-pin"></div></div></div>
+      <div class="wb-days" id="wb-days">
+        <button class="wb-day" data-day="ayer" onclick="WB.day('ayer')"><span class="wb-d">YESTERDAY</span><span class="wb-dt">${fmtD(yD)}</span></button>
+        <button class="wb-day wb-active" data-day="hoy" onclick="WB.day('hoy')"><span class="wb-d">TODAY</span><span class="wb-dt">${fmtD(todayD)}</span></button>
+        <button class="wb-day" data-day="manana" onclick="WB.day('manana')"><span class="wb-d">TOMORROW</span><span class="wb-dt">${fmtD(tD)}</span></button>
+      </div>
+      <div class="wb-board"><div class="wb-scroll"><div class="wb-grid"><div id="wb-games"><div class="wb-loading">LOADING…</div></div></div></div></div>
+    </div>`;
+  WB.startClock();
   const targetDate = window._topGamesTarget?.date;
-  const todayKey     = todayD.toISOString().split('T')[0];
-  const yesterdayKey = yesterdayD.toISOString().split('T')[0];
-  const tomorrowKey  = tomorrowD.toISOString().split('T')[0];
-  const autoDay = targetDate === yesterdayKey ? 'ayer'
-                : targetDate === tomorrowKey  ? 'manana'
-                : 'hoy';
-  loadTopGamesDay(window._tgCurrentDay || autoDay);
+  const yKey = yD.toISOString().split('T')[0], tKey = tD.toISOString().split('T')[0];
+  const autoDay = targetDate===yKey ? 'ayer' : targetDate===tKey ? 'manana' : 'hoy';
+  return WB.load(autoDay);
 }
 
 // ── Day router ──────────────────────────────────────────────────────────────────
