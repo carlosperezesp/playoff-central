@@ -5161,7 +5161,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
       starsCache[pk]=stars.slice(0,3); return starsCache[pk];
     }catch(e){return [];}
   }
-  function starCard(s){const c=tier(s.score);return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(s.pid)}" style="background:${teamBg(s.tid)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${s.name}<span class="wb-ptw-tm">${s.abbr}</span></div><div class="wb-ptw-st">${s.line}</div></div><div class="wb-star-sc" style="color:${shade(c,0.12)}">${Math.round(s.score)}</div></div>`;}
+  function starCard(s){return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(s.pid)}" style="background:${teamBg(s.tid)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${s.name}<span class="wb-ptw-tm">${s.abbr}</span></div><div class="wb-ptw-st">${s.line}</div></div></div>`;}
   async function fillStars(g){
     const box=$('wbstars-'+g.gamePk); if(!box)return;
     const stars=await loadStars(g);
