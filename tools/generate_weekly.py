@@ -315,6 +315,41 @@ def get_team_bullpen(season, top=5, asof=None):
     return rows
 
 
+def _ip(v):
+    try: return float(v)
+    except Exception: return 0.0
+
+
+def get_team_arms(season, team_id, asof=None):
+    """A team's pitchers split into starters and relievers, each ranked by FORM.
+    One call per team. Min-workload filters keep small-sample flukes out."""
+    span = (f"stats=byDateRange&startDate={season}-01-01&endDate={asof}" if asof
+            else "stats=season")
+    url = (f"{API}/stats?{span}&season={season}&sportId=1&group=pitching"
+           f"&gameType=R&teamId={team_id}&playerPool=all&limit=200")
+    try:
+        d = fetch(url)
+    except Exception:
+        return {"sp": [], "rp": []}
+    sp, rp = [], []
+    for s in d.get("stats", [{}])[0].get("splits", []):
+        st = s.get("stat", {})
+        era, whip = float(st.get("era", 99) or 99), float(st.get("whip", 9) or 9)
+        gs = int(st.get("gamesStarted", 0) or 0)
+        g = int(st.get("gamesPitched", 0) or 0)
+        ip = _ip(st.get("inningsPitched", 0))
+        forma = forma_score(era, whip)
+        rec = {"id": s["player"]["id"], "name": s["player"]["fullName"],
+               "era": era, "whip": whip, "forma": forma, "tier": pitcher_tier(forma)}
+        if gs >= 3 and ip >= 20:
+            sp.append(rec)
+        elif gs <= 2 and g >= 10 and ip >= 10:
+            rp.append(rec)
+    sp.sort(key=lambda r: r["forma"], reverse=True)
+    rp.sort(key=lambda r: r["forma"], reverse=True)
+    return {"sp": sp[:5], "rp": rp[:5]}
+
+
 def get_team_offense(season, top=5, asof=None):
     rows = _team_stat_rows(f"{API}/teams/stats?{_team_span(season, asof)}&group=hitting"
                            f"&season={season}&sportId=1&gameType=R", "ops", False, top)
@@ -460,6 +495,35 @@ def team_stat_row(i, r, value, unit, sub):
             f'<span class="bl-team-info"><strong>{escape(r["name"])}</strong>'
             f'<span class="bl-muted">{sub}</span></span>'
             f'<span class="bl-stat" style="color:{TEXT[r["tier"]]}">{value}<small>{unit}</small></span></li>')
+
+
+def _arms_card(roster, kind):
+    """Expanding roster under a pitching team row: arms ranked by FORM, with ERA/WHIP."""
+    head = (f'<div class="bl-rrow bl-rhead"><span class="bl-rname">{kind}</span>'
+            f'<span>FORM</span><span>ERA</span><span>WHIP</span></div>')
+    rows = "".join(
+        f'<div class="bl-rrow"><span class="bl-rname">{escape(p["name"])}</span>'
+        f'<span class="bl-rstat" style="color:{TEXT[p["tier"]]}">{p["forma"]:.0f}</span>'
+        f'<span class="bl-rstat" style="color:{TEXT[pitcher_tier(forma_score(p["era"], None))]}">{p["era"]:.2f}</span>'
+        f'<span class="bl-rstat" style="color:{TEXT[pitcher_tier(forma_score(None, p["whip"]))]}">{p["whip"]:.2f}</span></div>'
+        for p in roster)
+    return f'<div class="bl-card" hidden><div class="bl-roster">{head}{rows}</div></div>'
+
+
+def pitch_team_row(i, r, roster, sub, kind):
+    """Staff/bullpen row: ERA and WHIP as two equal stats; expands to its top arms."""
+    era_t = pitcher_tier(forma_score(r["val"], None))
+    whip_t = pitcher_tier(forma_score(None, r["whip"]))
+    head = (f'<span class="bl-rank">{i}</span>'
+            f'<img class="bl-team-logo" src="{logo_url(r["id"])}" alt="" loading="lazy">'
+            f'<span class="bl-team-info"><strong>{escape(r["name"])}</strong>'
+            f'<span class="bl-muted">{sub}</span></span>'
+            f'<span class="bl-stat" style="color:{TEXT[era_t]}">{r["val"]:.2f}<small>ERA</small></span>'
+            f'<span class="bl-stat" style="color:{TEXT[whip_t]}">{r["whip"]:.2f}<small>WHIP</small></span>')
+    if not roster:
+        return f'<li class="bl-pwrap"><div class="bl-rankrow">{head}</div></li>'
+    return (f'<li class="bl-pwrap"><div class="bl-rankrow bl-clickable" onclick="blToggleCard(this)">'
+            f'{head}<span class="bl-chev">&rsaquo;</span></div>{_arms_card(roster, kind)}</li>')
 
 
 def rookie_row(p, kind):
@@ -659,14 +723,14 @@ def sec_power(f, n, limit=10):
 
 
 def sec_staffs(f, n, limit=5):
-    rows = "".join(team_stat_row(i, r, f'{r["val"]:.2f}', "ERA", f'{r["whip"]:.2f} WHIP')
+    rows = "".join(pitch_team_row(i, r, r.get("roster"), "Top starters by form", "Starter")
                    for i, r in enumerate(f["staffs"][:limit], 1))
     g = "Team ERA — the whole staff, starters and bullpen. Lower is better."
     return _section("Best staffs on the mound", g, _lead(n, "staff_lead"), rows)
 
 
 def sec_bullpen(f, n, limit=5):
-    rows = "".join(team_stat_row(i, r, f'{r["val"]:.2f}', "ERA", f'{r["whip"]:.2f} WHIP')
+    rows = "".join(pitch_team_row(i, r, r.get("roster"), "Top relievers by form", "Reliever")
                    for i, r in enumerate(f.get("bullpen", [])[:limit], 1))
     g = "Bullpen ERA — relievers only. Lower is better."
     return _section("Best bullpens", g, _lead(n, "bullpen_lead"), rows)
@@ -1088,6 +1152,16 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
     if need_teamstats:
         f["bullpen"] = get_team_bullpen(season, 5, asof=asof)
         f["offense"] = get_team_offense(season, 5, asof=asof)
+
+    arms_cache = {}
+    def _arms(tid):
+        if tid not in arms_cache:
+            arms_cache[tid] = get_team_arms(season, tid, asof=asof)
+        return arms_cache[tid]
+    for r in f["staffs"][:5]:                       # rotation, expands under each staff
+        r["roster"] = _arms(r["id"])["sp"]
+    for r in f["bullpen"][:5]:                      # pen, expands under each bullpen
+        r["roster"] = _arms(r["id"])["rp"]
     return f
 
 
@@ -1148,6 +1222,14 @@ STYLE = """
   .bl-player { display:flex; align-items:center; gap:12px; }
   .bl-pwrap { list-style:none; }
   .bl-clickable { cursor:pointer; }
+  .bl-clickable:hover .bl-team-info strong { color:var(--accent-blue); }
+  .bl-roster { padding:4px 14px 10px; }
+  .bl-rrow { display:grid; grid-template-columns:1fr 42px 46px 50px; align-items:center; gap:8px; padding:7px 0; border-top:1px solid var(--border); font-size:13.5px; }
+  .bl-rrow:first-child { border-top:none; }
+  .bl-rhead { font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  .bl-rhead span:not(.bl-rname) { text-align:right; }
+  .bl-rname { font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bl-rstat { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
   .bl-clickable:hover .bl-player-info strong { color:var(--accent-blue); }
   .bl-clickable:hover .bl-face { border-color:var(--accent-blue); }
   .bl-chev { margin-left:4px; color:var(--muted); font-size:20px; font-weight:700; line-height:1; transition:transform .15s; flex-shrink:0; }
