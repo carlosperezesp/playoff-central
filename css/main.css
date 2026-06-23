@@ -819,7 +819,7 @@
 
   /* Impact rows (player detail cards) */
   .impact-detail-card {
-    background: #f9faf6; border: 1px solid #e2e8dc; border-radius: 10px; padding: 10px 12px;
+    background: #ffffff; border: 1px solid #e2e8dc; border-radius: 10px; padding: 10px 12px;
   }
   .impact-row {
     display: grid; grid-template-columns: 1fr 80px;
@@ -887,7 +887,7 @@
 
   .alts-section-title {
     font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--accent); margin: 8px 0 4px;
+    color: var(--accent-blue); margin: 8px 0 4px;
   }
 
   /* Pitcher groups */
@@ -900,11 +900,11 @@
   .pitcher-group-wrap:first-child { border-top: none; padding-top: 0; }
   .pitcher-group-label {
     font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 10px;
+    color: var(--accent-blue); margin-bottom: 10px;
   }
   .pitcher-circles-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .pitcher-detail-card {
-    margin-top: 10px; background: #f9faf6;
+    margin-top: 10px; background: #ffffff;
     border: 1px solid #e2e8dc; border-radius: 10px; padding: 10px 12px;
   }
 
