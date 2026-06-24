@@ -1441,8 +1441,8 @@ INDEX_PAGE = """<!DOCTYPE html>
   .bl-top img {{ width:34px; height:34px; }}
   .bl-wordmark {{ font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; }}
   .bl-wordmark span {{ color: var(--accent); }}
-  h1 {{ font-family:'Barlow Condensed','Inter',sans-serif; font-size:32px; letter-spacing:.5px; margin:6px 0 4px; }}
-  .bl-sub {{ color:var(--muted); margin-bottom:22px; }}
+  h1 {{ display:inline-block; font-family:'Barlow Condensed','Inter',sans-serif; font-size:30px; letter-spacing:.5px; margin:6px 0 10px; background:var(--accent-blue); color:#fff; padding:4px 16px; border-radius:10px; }}
+  .bl-sub {{ color:#fff; margin-bottom:22px; }}
   .bl-card {{ display:block; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:12px; text-decoration:none; color:var(--text); transition:border-color .15s; }}
   .bl-card:hover {{ border-color:var(--accent-blue); }}
   .bl-card h2 {{ font-size:18px; margin-bottom:4px; }}
