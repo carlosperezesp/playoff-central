@@ -93,6 +93,66 @@ def pitcher_tier(score):
     return "red"
 
 
+# ── Award Scores (ported verbatim from app.js renderMVPView: mvpScore/cyScore) ─
+# Our 0–100 MVP / Cy Young / Rookie Score. Each stat is normalized vs the league
+# average into an index (100 = league average), then blended by fixed weights and
+# rescaled. Same engine the app's "MVP Race" tab shows, so the article agrees with it.
+def _idx(val, ref):
+    if not ref: return 100.0
+    return min(200.0, max(0.0, (val / ref) * 100))
+
+
+def _idx_inv(val, ref):   # lower is better (ERA, WHIP, BB9)
+    if not val: return 200.0
+    return min(200.0, max(0.0, (ref / val) * 100))
+
+
+def mvp_score(s, lg, min_pa):
+    pa = int(s.get("plateAppearances", 0) or 0)
+    if pa < min_pa: return None
+    ab = int(s.get("atBats", 0) or 0) or 1
+    hr = int(s.get("homeRuns", 0) or 0)
+    d2, d3 = int(s.get("doubles", 0) or 0), int(s.get("triples", 0) or 0)
+    h1 = int(s.get("hits", 0) or 0) - (d2 + d3 + hr)
+    tb = h1 + 2 * d2 + 3 * d3 + 4 * hr
+    obp = float(s.get("obp", 0) or 0)
+    slg = tb / ab
+    ops = obp + slg
+    rbi, runs = int(s.get("rbi", 0) or 0), int(s.get("runs", 0) or 0)
+    sb, cs = int(s.get("stolenBases", 0) or 0), int(s.get("caughtStealing", 0) or 0)
+    sb_eff = sb / (sb + cs) if (sb + cs) > 0 else 0
+    raw = (0.30 * _idx(ops, lg["ops"]) + 0.15 * _idx(obp, lg["obp"])
+           + 0.10 * _idx(slg, lg["slg"]) + 0.15 * _idx(hr / max(pa, 1), lg["hrPA"])
+           + 0.10 * _idx(rbi / max(pa, 1), lg["rbiPA"]) + 0.05 * _idx(runs / max(pa, 1), lg["runsPA"])
+           + 0.05 * (_idx(sb_eff, lg["sbEff"]) if (sb + cs) >= 3 else 100)
+           + 0.10 * _idx(pa, lg["paShare"]))
+    return min(99.9, raw * 0.58)
+
+
+def cy_score(s, lg, min_gs, min_ip, max_ip, qs=None):
+    gs = int(s.get("gamesStarted", 0) or 0)
+    ip = float(s.get("inningsPitched", 0) or 0)
+    sv, svo = int(s.get("saves", 0) or 0), int(s.get("saveOpportunities", 0) or 0)
+    era = float(s.get("era", 99) or 99)
+    whip = float(s.get("whip", 99) or 99)
+    k, bb = int(s.get("strikeOuts", 0) or 0), int(s.get("baseOnBalls", 0) or 0)
+    k9 = (k / ip) * 9 if ip > 0 else 0
+    bb9 = (bb / ip) * 9 if ip > 0 else 0
+    if gs == 0 or (sv + svo > gs * 3):   # reliever path — only elite closers qualify
+        save_pct = sv / svo if svo > 0 else 0
+        if era >= 2.00 or save_pct < 0.90 or sv <= 40 or ip < 40: return None
+        raw = (0.30 * _idx_inv(era, lg["era"]) + 0.20 * _idx_inv(whip, lg["whip"])
+               + 0.20 * _idx(k9, lg["k9"]) + 0.10 * _idx_inv(bb9, lg["bb9"])
+               + 0.20 * _idx(save_pct, 0.85))
+        return min(70, raw * 0.56)
+    if gs < min_gs or ip < min_ip: return None   # starter path
+    qs_idx = _idx(qs / gs, 0.60) if (qs is not None and gs > 0) else 100
+    raw = (0.28 * _idx_inv(era, lg["era"]) + 0.20 * _idx_inv(whip, lg["whip"])
+           + 0.18 * _idx(k9, lg["k9"]) + 0.12 * _idx_inv(bb9, lg["bb9"])
+           + 0.12 * _idx(ip, max_ip) + 0.10 * qs_idx)
+    return min(99.9, raw * 0.56)
+
+
 # ── Data ──────────────────────────────────────────────────────────────────
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": "BaseballLens/1.0"})
@@ -610,15 +670,21 @@ def _meter(label, value, pct, tier):
             f'<div class="bl-meter-tier" style="color:{TEXT[tier]}">{TIER_LABEL[tier]}</div></div>')
 
 
-def player_card(season, week=None):
+def player_card(season, week=None, extra=""):
     """Essential inline card (photo + season line + form/OPS meter) — expands on click,
-    right inside the article. No navigation, no extra API calls."""
+    right inside the article. `extra` is appended inside the card (e.g. depth alternatives)."""
     if not season:
         return ""
     tier = season["tier"]
     if "era" in season:   # pitcher
         l1 = f'ERA {season["era"]:.2f} · WHIP {season["whip"]:.2f} · IP {season["ip"]:g}'
-        l2 = f'GS {season.get("gs", 0)} · {season.get("w", 0)} W · {season.get("so", 0)} K'
+        if season.get("reliever"):   # relievers: saves/holds/success, not starts/wins
+            succ = f' · {season["success"]}% clean' if season.get("success") is not None else ""
+            irs = f' · {season["irs_pct"]}% IRS' if season.get("irs_pct") is not None else ""
+            l2 = (f'{season.get("sv", 0)} SV · {season.get("hld", 0)} HLD · '
+                  f'{season.get("so", 0)} K{succ}{irs}')
+        else:
+            l2 = f'GS {season.get("gs", 0)} · {season.get("w", 0)} W · {season.get("so", 0)} K'
         meter = _meter("FORM", f'{season["forma"]:.0f}', season["forma"], tier)
     else:                 # hitter
         l1 = f'AVG {season.get("avg", ".000")} · HR {season["hr"]} · OPS {season["ops"]:.3f}'
@@ -633,7 +699,7 @@ def player_card(season, week=None):
             f'<img class="bl-card-face" loading="lazy" alt="" src="{headshot(season["id"])}"{facebg} '
             f'onerror="this.onerror=null;this.src=\'{headshot(0)}\'">'
             f'<div class="bl-card-main"><div class="bl-card-stats">{l1}</div>'
-            f'<div class="bl-card-stats2">{l2}</div>{wk}</div>{meter}</div></div>')
+            f'<div class="bl-card-stats2">{l2}</div>{wk}</div>{meter}</div>{extra}</div>')
 
 
 def _pwrap(inner, card):
@@ -812,36 +878,203 @@ def sec_rookie_surge(f, n, limit=5):
     return _section("Rookies breaking out", g, _lead(n, "rookie_surge_lead"), rows)
 
 
-def _by_league(items):
-    return [x for x in items if x.get("lg") == 103], [x for x in items if x.get("lg") == 104]
+def award_row(p, roy=False):
+    """A candidate ranked by our Score: Score is the headline number (tier-colored),
+    the raw stats ride underneath, and the inline card still expands on tap."""
+    t = p["tier"]
+    stat = f'<span class="bl-stat" style="color:{TEXT[t]}">{p["score"]:.1f}<small>SCORE</small></span>'
+    info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])} · {p["statline"]}</span></span>')
+    # The Score already grades the player — no ELITE / HISTORIC tags needed. ROY keeps
+    # the rookie tag (it's identity, not a grade).
+    extra = ' <span class="bl-shimmer-tag" style="color:#b45309">rookie</span>' if roy else ""
+    inner = f'{face(p["id"], t, p.get("historic"), p.get("team_id"))}{info}{stat}{extra}'
+    return _pwrap(inner, player_card(p))
 
 
-def _race(heading, gloss, lead, items, row_fn, each=3):
-    al, nl = _by_league(items)
+def _award_race(heading, gloss, lead, data, roy=False):
+    if not data:
+        return ""
 
     def block(label, lst):
         return (f'<div class="bl-subhead">{label}</div><ul class="bl-list">'
-                + "".join(row_fn(x) for x in lst[:each]) + '</ul>') if lst else ""
-    body = block("American League", al) + block("National League", nl)
+                + "".join(award_row(p, roy) for p in lst) + '</ul>') if lst else ""
+    body = block("American League", data.get("al", [])) + block("National League", data.get("nl", []))
     g = f'<p class="bl-gloss">{gloss}</p>' if gloss else ""
     return f'<h2>{heading}</h2>{g}{lead}{body}' if body else ""
 
 
 def sec_mvp(f, n):
-    g = "Best hitters by OPS, in each league."
-    return _race("MVP watch", g, _lead(n, "mvp_lead"), f["hitters_all"], hitter_row)
+    g = ("Our MVP Score (0&ndash;100) &mdash; each hitter&rsquo;s OPS, on-base, power, run "
+         "production and playing time graded against the league average, then blended. Higher is better.")
+    return _award_race("MVP watch", g, _lead(n, "mvp_lead"), f.get("awards", {}).get("mvp"))
 
 
 def sec_cy(f, n):
-    g = "Best starters by form — our 0–100 pitching score from ERA &amp; WHIP — in each league."
-    by_form = sorted(f["pitchers_all"], key=lambda p: p["forma"], reverse=True)  # match the "by form" gloss
-    return _race("Cy Young watch", g, _lead(n, "cy_lead"), by_form, pitcher_row)
+    g = ("Our Cy Young Score (0&ndash;100) &mdash; ERA, WHIP, strikeout and walk rates, workload and "
+         "quality starts, each graded against the league average, then blended. Higher is better.")
+    return _award_race("Cy Young watch", g, _lead(n, "cy_lead"), f.get("awards", {}).get("cy"))
 
 
 def sec_roy(f, n):
-    g = "Top first-year hitters by OPS, in each league."
-    return _race("Rookie of the Year watch", g, _lead(n, "roy_lead"),
-                 f.get("rookies", {}).get("hitters", []), lambda h: rookie_row(h, "hit"))
+    g = ("Our Rookie Score (0&ndash;100) &mdash; the MVP and Cy Young engines applied to first-year "
+         "players, hitters and pitchers ranked on one scale. Higher is better.")
+    return _award_race("Rookie of the Year watch", g, _lead(n, "roy_lead"),
+                       f.get("awards", {}).get("roy"), roy=True)
+
+
+def _cross_tag(old_t, new_t):
+    """A small tag only when a player crosses into or out of the elite (green) tier."""
+    if new_t == "green" and old_t != "green":
+        return ' <span class="bl-shimmer-tag" style="color:#16a34a">into the green</span>'
+    if old_t == "green" and new_t != "green":
+        return f' <span class="bl-shimmer-tag" style="color:{TEXT["orange"]}">out of the green</span>'
+    return ""
+
+
+def yoy_hit_row(m):
+    h = m["p"]
+    delta = _arrow_stat("OPS", m["prev"], h["ops"], hitter_tier, 3)
+    return _player_row(h, delta, _cross_tag(m["prev_tier"], h["tier"]))
+
+
+def yoy_pit_row(m):
+    p = m["p"]
+    delta = _arrow_stat("form", m["prev"], p["forma"], pitcher_tier, 0)
+    return _player_row(p, delta, _cross_tag(m["prev_tier"], p["tier"]))
+
+
+def reliever_row(p):
+    t = p["tier"]
+    stat = f'<span class="bl-stat" style="color:{TEXT[t]}">{p["forma"]:.0f}<small>FORM</small></span>'
+    bits = [f'{p["era"]:.2f} ERA', f'{p["whip"]:.2f} WHIP']
+    if p["sv"]:
+        bits.append(f'{p["sv"]} SV')
+    if p["hld"]:
+        bits.append(f'{p["hld"]} HLD')
+    bits.append(f'{p["so"]} K')
+    if p.get("success") is not None:
+        bits.append(f'{p["success"]}% clean')
+    if p.get("irs_pct") is not None:
+        bits.append(f'{p["irs_pct"]}% IRS')
+    info = (f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])} · {" · ".join(bits)}</span></span>')
+    inner = f'{face(p["id"], t, p.get("historic"), p.get("team_id"))}{info}{stat}'
+    return _pwrap(inner, player_card(p))
+
+
+def sec_yoy_hit_up(f, n):
+    y = f.get("yoy", {})
+    rows = "".join(yoy_hit_row(m) for m in y.get("hit_up", []))
+    g = f"The 10 hitters whose OPS jumped most from {y.get('prev', 'last year')} — old value &rarr; new, in tier colors."
+    return _section("Bats on the rise", g, _lead(n, "yoy_hit_up_lead"), rows)
+
+
+def sec_yoy_pit_up(f, n):
+    y = f.get("yoy", {})
+    rows = "".join(yoy_pit_row(m) for m in y.get("pit_up", []))
+    g = f"The 10 arms whose form score climbed most from {y.get('prev', 'last year')} — our 0&ndash;100 score from ERA &amp; WHIP."
+    return _section("Arms turning a corner", g, _lead(n, "yoy_pit_up_lead"), rows)
+
+
+def sec_yoy_hit_dn(f, n):
+    y = f.get("yoy", {})
+    rows = "".join(yoy_hit_row(m) for m in y.get("hit_dn", []))
+    g = f"Hitters who were elite or above-average in {y.get('prev', 'last year')} and have slipped the most this season."
+    return _section("Bats that cooled off", g, _lead(n, "yoy_hit_dn_lead"), rows)
+
+
+def sec_yoy_pit_dn(f, n):
+    y = f.get("yoy", {})
+    rows = "".join(yoy_pit_row(m) for m in y.get("pit_dn", []))
+    g = f"Arms who were strong in {y.get('prev', 'last year')} and have lost the most form this season."
+    return _section("Arms that lost their edge", g, _lead(n, "yoy_pit_dn_lead"), rows)
+
+
+def sec_relievers(f, n, limit=10):
+    rows = "".join(reliever_row(p) for p in f.get("relievers", [])[:limit])
+    g = ("The season's 10 best relievers by our form score (0&ndash;100, from ERA &amp; WHIP) &mdash; "
+         "pure bullpen arms, no starts. &ldquo;Clean&rdquo; is our metric: the share of outings with no "
+         "earned runs. &ldquo;IRS&rdquo; is inherited runners stranded &mdash; how often he keeps someone "
+         "else&rsquo;s runners from scoring. A shimmer means a historic pace (sub-2.00 ERA, sub-1.00 WHIP).")
+    return _section("Lights-out of the bullpen", g, _lead(n, "relievers_lead"), rows)
+
+
+def _slot_badge(slot):
+    return (f'<span style="display:inline-block;min-width:22px;text-align:center;font-size:9px;'
+            f'font-weight:800;padding:1px 5px;border-radius:3px;background:#15803d;color:#fff;'
+            f'margin-right:6px;letter-spacing:.4px">{slot}</span>')
+
+
+def _allstar_val(p, kind):
+    # Everything rides on one 0–100 Baseball Lens Score column: hitters' MVP Score,
+    # the starter's Cy Young Score, the relievers' form score — all labeled SCORE.
+    return f'{p["forma"]:.0f}' if kind == "rel" else f'{p["score"]:.1f}'
+
+
+def _allstar_line(p, kind):
+    if kind != "rel":
+        return p["statline"]
+    bits = [f'{p["era"]:.2f} ERA', f'{p["whip"]:.2f} WHIP']
+    if p["sv"]:
+        bits.append(f'{p["sv"]} SV')
+    if p["hld"]:
+        bits.append(f'{p["hld"]} HLD')
+    bits.append(f'{p["so"]} K')
+    if p.get("success") is not None:
+        bits.append(f'{p["success"]}% clean')
+    return " · ".join(bits)
+
+
+def _allstar_alt(p, kind):
+    """A compact runner-up row, shown inside the pick's card to reveal the depth at the slot."""
+    t = p["tier"]
+    sub = (f'{p["era"]:.2f} ERA · {p["whip"]:.2f} WHIP' if kind == "rel" else p["statline"])
+    return (f'<div class="bl-alt">{face(p["id"], t, False, p.get("team_id"))}'
+            f'<span class="bl-player-info"><strong>{escape(p["name"])}</strong>'
+            f'<span class="bl-muted">{escape(p["team"])} · {sub}</span></span>'
+            f'<span class="bl-alt-score" style="color:{TEXT[t]}">{_allstar_val(p, kind)}</span></div>')
+
+
+def allstar_row(slot, players, kind):
+    p = players[0]
+    t = p["tier"]
+    stat = f'<span class="bl-stat" style="color:{TEXT[t]}">{_allstar_val(p, kind)}<small>SCORE</small></span>'
+    info = (f'<span class="bl-player-info"><strong>{_slot_badge(slot)}{escape(p["name"])}</strong>'
+            f'<span class="bl-muted">{_logo_sm(p)}{escape(p["team"])} · {_allstar_line(p, kind)}</span></span>')
+    inner = f'{face(p["id"], t, p.get("historic"), p.get("team_id"))}{info}{stat}'
+    alts = players[1:]
+    extra = (f'<div class="bl-alts"><div class="bl-alts-label">Next in line at {slot}</div>'
+             + "".join(_allstar_alt(a, kind) for a in alts) + '</div>') if alts else ""
+    return _pwrap(inner, player_card(p, extra=extra))
+
+
+def _allstar_section(heading, data, lead):
+    if not data:
+        return ""
+    rows = "".join(allstar_row(pos, data["hitters"][pos], "hit")
+                   for pos in ALLSTAR_POS if data["hitters"].get(pos))
+    if data.get("sp"):
+        rows += allstar_row("SP", data["sp"], "pit")
+    if data.get("reliever"):
+        rows += allstar_row("RP", data["reliever"], "rel")
+    if data.get("closer"):
+        rows += allstar_row("CL", data["closer"], "rel")
+    if not rows:
+        return ""
+    g = ('<p class="bl-gloss">Our All-Star roster &mdash; the best bat at each position by our MVP Score, '
+         'the top starter by Cy Young Score, and a setup reliever and closer by form.</p>')
+    return f'<h2>{heading}</h2>{g}{lead}<ul class="bl-list">{rows}</ul>'
+
+
+def sec_allstars_al(f, n):
+    return _allstar_section("American League All-Stars", f.get("allstars", {}).get("al"),
+                            _lead(n, "allstars_al_lead"))
+
+
+def sec_allstars_nl(f, n):
+    return _allstar_section("National League All-Stars", f.get("allstars", {}).get("nl"),
+                            _lead(n, "allstars_nl_lead"))
 
 
 def sec_bats(f, n, limit=8):
@@ -962,8 +1195,13 @@ SECTIONS = {"power": sec_power, "staffs": sec_staffs, "bullpen": sec_bullpen, "o
             "pfallers": sec_pfallers, "hweek": sec_hweek,
             "gem_pitchers": sec_gem_pitchers, "gem_hitters": sec_gem_hitters,
             "month_hitters": sec_month_hitters, "month_hr": sec_month_hr,
-            "month_pitchers": sec_month_pitchers}
+            "month_pitchers": sec_month_pitchers,
+            "yoy_hit_up": sec_yoy_hit_up, "yoy_pit_up": sec_yoy_pit_up,
+            "yoy_hit_dn": sec_yoy_hit_dn, "yoy_pit_dn": sec_yoy_pit_dn,
+            "relievers": sec_relievers,
+            "allstars_al": sec_allstars_al, "allstars_nl": sec_allstars_nl}
 TEAMSTAT_SECTIONS = {"bullpen", "offense"}
+YOY_SECTIONS = {"yoy_hit_up", "yoy_pit_up", "yoy_hit_dn", "yoy_pit_dn"}
 
 # Weekday (0=Mon) → (edition title, [section ids])
 THEME_CALENDAR = {
@@ -984,6 +1222,9 @@ THEME_BY_KEY = {  # --theme override
     "movers": ("Risers & Fallers", ["risers", "pfallers", "hweek", "fallers", "colors"]),
     "league": ("Around the League", ["power", "offense", "staffs"]),
     "gems": ("Hidden Gems on the League's Worst Teams", ["gem_pitchers", "gem_hitters"]),
+    "yoy": ("Year-Over-Year Movers", ["yoy_hit_up", "yoy_pit_up", "yoy_hit_dn", "yoy_pit_dn"]),
+    "relievers": ("Best Relievers", ["relievers"]),
+    "allstars": ("All-Star Selections", ["allstars_al", "allstars_nl"]),
 }
 # One-off themed editions that override the weekday rotation on a specific date.
 SPECIAL_EDITIONS = {
@@ -997,11 +1238,14 @@ EDITION_DEK = {
     "Power Rankings": "Our team power ranking — record, run differential and recent form in one order.",
     "Pitching Report": "The best staffs and arms in the game right now, by team ERA and our form score.",
     "Hitting Report": "The league's hottest offenses and hitters, by OPS and home runs.",
-    "Award Races": "Where the MVP, Cy Young and Rookie of the Year races stand right now.",
+    "Award Races": "Our MVP, Cy Young and Rookie Scores — who leads each race, and by how much.",
     "Risers & Fallers": "Who climbed and who cooled over the past week.",
     "Rookie Report": "The first-year players worth watching.",
     "Around the League": "A quick lap of the standings, offenses and pitching staffs.",
     "Hidden Gems on the League's Worst Teams": "Good, healthy players having strong seasons on teams going nowhere.",
+    "Year-Over-Year Movers": "Who leaped and who slipped versus last season — the red-to-green stories, and back.",
+    "Best Relievers": "The season's most dominant bullpen arms, ranked by our form score.",
+    "All-Star Selections": "Our All-Star rosters — the best player at every position by our own metrics.",
 }
 
 
@@ -1070,14 +1314,55 @@ LLM_SYSTEM = (
     "list, don't redefine terms. Return ONLY raw JSON (no markdown) with string keys from: title, "
     "intro, power_lead, staff_lead, bullpen_lead, offense_lead, hitters_lead, season_leaders_lead, pitchers_lead, hr_lead, "
     "risers_lead, pfallers_lead, hweek_lead, fallers_lead, colors_lead, rookies_lead, rookie_surge_lead, mvp_lead, cy_lead, "
-    "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead, gem_pitchers_lead, "
-    "gem_hitters_lead — include title, intro, and a lead for each section in sections_today.\n"
+    "roy_lead, month_hitters_lead, month_hr_lead, month_pitchers_lead, gem_pitchers_lead, gem_hitters_lead, "
+    "yoy_hit_up_lead, yoy_pit_up_lead, yoy_hit_dn_lead, yoy_pit_dn_lead, relievers_lead, "
+    "allstars_al_lead, allstars_nl_lead "
+    "— include title, intro, and a lead for each section in sections_today.\n"
     "If edition_theme starts with 'Best of', this is a once-a-month wrap of the FINISHED month "
     "(data in month_recap): the intro looks back at who owned that month, and the leads recap, not "
     "preview. No week-over-week framing here.\n"
     "If hidden_gems is present, the angle is good, healthy players stuck on losing teams (the 5 worst "
     "by record in each league): the intro frames that, and the pitcher lead notes WHERE each arm shines "
-    "(low ERA, strikeouts, etc.) from the data. Don't mock the teams; it's about the players."
+    "(low ERA, strikeouts, etc.) from the data. Don't mock the teams; it's about the players.\n"
+    "If award_races is present, the edition IS the MVP / Cy Young / Rookie of the Year races as OUR "
+    "0-100 Scores rank them. The intro frames who's leading the awards conversation; mvp_lead, cy_lead "
+    "and roy_lead must NAME our current front-runner in each league (and the nearest challenger when "
+    "it's close), citing the Score and one telling stat. Don't just restate the list, and never crown a "
+    "winner the Scores don't support — the Score order is the story.\n"
+    "If year_over_year is present, the angle is the biggest swings from last season to this one — the "
+    "guy who was red and is now green, the star who slipped. This edition earns MORE PROSE than usual: "
+    "write a 3–4 sentence intro, and let each section lead run 3–4 sentences (not the usual 1–2). Tell "
+    "the story of the swing, not just the number — what a leap from poor to elite actually means for that "
+    "player and his team, who the surprise is, who was expected. yoy_hit_up_lead / yoy_pit_up_lead "
+    "celebrate the climbers (quote old-to-new OPS or form and the tier jump); yoy_hit_dn_lead / "
+    "yoy_pit_dn_lead are about good players sliding — candid but not cruel. Lean into the tier-crossing "
+    "imagery, and feel free to name two or three players per lead since there's room. For the HITTERS, don't just cite "
+    "the OPS change — EXPLAIN it from each player's 'why' (avg/obp/slg, prev->now): an OPS jump can be contact (avg up), "
+    "patience/on-base (obp up) or power (slg up far more than avg). Name the driver, e.g. 'it's all power, his slugging "
+    "leapt 110 points while his average barely moved' or 'pure contact, the average climbed 40 points'.\n"
+    "If best_relievers is present, the edition is the season's elite bullpen arms by our form score. "
+    "relievers_lead names the top one or two (their form score, ERA/WHIP, saves or holds, their clean-outing "
+    "rate — our metric, the share of appearances with no earned runs — and IRS%, inherited runners stranded, "
+    "when present), and captures what makes a shutdown reliever — leverage and consistency, not volume. Don't "
+    "mention wins or starts; relievers live on saves, holds and clean innings. It's a season-long board, not a week.\n"
+    "If all_stars is present, the edition is OUR All-Star rosters — the best player at each position by our "
+    "metrics. The intro frames it as our picks. allstars_al_lead and allstars_nl_lead each call out that "
+    "league's headliners — the most lopsided pick (a runaway best at his position), a surprise name, or a "
+    "position that was a genuine toss-up — citing the Score. Don't list all twelve; name the stars of the "
+    "roster and where the interesting calls were.\n"
+    "PLAYER CONTEXT: some players carry a 'context' block. Use it to sharpen the story, but weave in only ONE "
+    "or two threads per player — never list them mechanically. The fields:\n"
+    "  - best_on_team: he's the best bat or arm on his club ('the best bat on a thin Marlins lineup').\n"
+    "  - career: his lifetime OPS or ERA/WHIP — judge if he's above or below his own norm ('already past his "
+    ".740 career OPS', 'pitching better than he ever has').\n"
+    "  - last30: his last-30-days line — the in-season hot/cold read ('and he's only gotten hotter, a 1.050 "
+    "OPS this past month').\n"
+    "  - team: positional/role context. 'position' is where he plays; 'team_primary_ops_prior_years' is what "
+    "his TEAM got from that position in prior seasons (and team_primary_ops_prior_avg the average). When those "
+    "prior numbers are weak and his are strong, that's a real story — 'after years of sub-.700 production behind "
+    "the plate, the Yankees finally have a catcher who hits'. 'traded_in_this_year' means he arrived midseason in "
+    "a trade ('since the deadline deal that brought him over'). Only claim history the numbers actually show; "
+    "never invent injuries or trades that aren't in the data."
 )
 
 
@@ -1141,6 +1426,74 @@ def facts_for_llm(f, theme_title, section_ids):
             "pitchers": ([{"name": p["name"], "team": p["team"], "era": p["era"]}
                           for p in rk.get("pitchers", [])[:4]] if "rookies" in section_ids else []),
         }
+    if f.get("awards"):
+        aw = f["awards"]
+        def _cand(p):
+            return {"name": p["name"], "team": p["team"], "score": round(p["score"], 1),
+                    "stats": p["statline"], "context": _player_ctx(p)}
+        payload["award_races"] = {
+            "note": "OUR ranked candidates by our 0-100 MVP / Cy Young / Rookie Score (a Baseball Lens metric).",
+            "mvp": {lg: [_cand(p) for p in aw["mvp"][lg]] for lg in ("al", "nl")},
+            "cy":  {lg: [_cand(p) for p in aw["cy"][lg]] for lg in ("al", "nl")},
+            "roy": {lg: [_cand(p) for p in aw["roy"][lg]] for lg in ("al", "nl")},
+        }
+    if f.get("yoy"):
+        y = f["yoy"]
+        def _hmove(mv):
+            now, prev = mv["p"], mv["prev_p"]
+            return {"name": now["name"], "team": now["team"], "ops_prev": round(mv["prev"], 3),
+                    "ops_now": round(now["ops"], 3), "change": round(mv["d"], 3),
+                    "tier_prev": TIER_LABEL[mv["prev_tier"]], "tier_now": TIER_LABEL[now["tier"]],
+                    # OPS = OBP + SLG, so the split shows WHY it moved: contact (avg), on-base (obp), power (slg).
+                    "why": {"avg": [prev["avg"], now["avg"]],
+                            "obp": [round(prev["obp"], 3), round(now["obp"], 3)],
+                            "slg": [round(prev["slg"], 3), round(now["slg"], 3)]},
+                    "context": _player_ctx(now)}
+        def _pmove(mv):
+            return {"name": mv["p"]["name"], "team": mv["p"]["team"], "form_prev": round(mv["prev"]),
+                    "form_now": round(mv["p"]["forma"]), "change": round(mv["d"]),
+                    "era_now": mv["p"]["era"], "whip_now": mv["p"]["whip"],
+                    "tier_prev": TIER_LABEL[mv["prev_tier"]], "tier_now": TIER_LABEL[mv["p"]["tier"]],
+                    "context": _player_ctx(mv["p"])}
+        payload["year_over_year"] = {
+            "note": f"Change from {y['prev']} to this season. Hitters by OPS, pitchers by our 0-100 form score. "
+                    "A move from a lower tier (poor/red) to elite/green is the headline kind of story.",
+            "hitters_most_improved": [_hmove(x) for x in y["hit_up"]],
+            "pitchers_most_improved": [_pmove(x) for x in y["pit_up"]],
+            "hitters_fallen_most": [_hmove(x) for x in y["hit_dn"]],
+            "pitchers_fallen_most": [_pmove(x) for x in y["pit_dn"]],
+        }
+    if f.get("allstars"):
+        def _as_hit(lst):
+            p = lst[0] if lst else None
+            return {"name": p["name"], "team": p["team"], "score": round(p["score"], 1), "stats": p["statline"]} if p else None
+
+        def _as_arm(lst, kind):
+            p = lst[0] if lst else None
+            if not p:
+                return None
+            if kind == "sp":
+                return {"name": p["name"], "team": p["team"], "score": round(p["score"], 1), "stats": p["statline"]}
+            return {"name": p["name"], "team": p["team"], "form": round(p["forma"]),
+                    "stats": f'{p["era"]:.2f} ERA, {p["whip"]:.2f} WHIP, {p["sv"]} SV, {p["hld"]} HLD'}
+        a = f["allstars"]
+        payload["all_stars"] = {
+            "note": "OUR All-Star pick at each slot by our metrics — best hitter per position by MVP Score, "
+                    "top starter by Cy Young Score, plus a setup reliever and a closer by form.",
+            "leagues": {lg: {"position_players": {pos: _as_hit(a[lg]["hitters"].get(pos)) for pos in ALLSTAR_POS},
+                             "starter": _as_arm(a[lg].get("sp"), "sp"),
+                             "reliever": _as_arm(a[lg].get("reliever"), "rel"),
+                             "closer": _as_arm(a[lg].get("closer"), "rel")}
+                        for lg in ("al", "nl")}
+        }
+    if f.get("relievers"):
+        payload["best_relievers"] = [{"name": p["name"], "team": p["team"], "form": round(p["forma"]),
+                                      "era": p["era"], "whip": p["whip"], "saves": p["sv"],
+                                      "holds": p["hld"], "strikeouts": p["so"],
+                                      "clean_outing_pct": p.get("success"), "appearances": p.get("apps"),
+                                      "inherited_runners_stranded_pct": p.get("irs_pct"),
+                                      "inherited_runners": p.get("ir"), "context": _player_ctx(p)}
+                                     for p in f["relievers"]]
     if m:
         payload["movers_vs_last_week"] = {
             "hr_climbers": [{"name": x["p"]["name"], "hr_now": x["p"]["hr"], "hr_gained": x["d"],
@@ -1255,6 +1608,504 @@ def build_facts(season, baseline, asof=None, need_teamstats=False):
     return f
 
 
+# ── Award races: rank candidates by our MVP / Cy Young / Rookie Score ─────────
+def _award_league_avgs(season):
+    """League hitting/pitching averages from team-level stats (mirrors app.js
+    fetchLeagueTeamStats). Returns (lg_hit, lg_pitch) with fallbacks on failure."""
+    fb_hit = {"obp": 0.315, "slg": 0.405, "hrPA": 0.032}
+    fb_pitch = {"era": 4.10, "whip": 1.28, "k9": 8.5, "bb9": 3.2}
+    try:
+        hs = fetch(f"{API}/teams/stats?season={season}&sportId=1&group=hitting"
+                   f"&stats=season&gameType=R").get("stats", [{}])[0].get("splits", [])
+        ps = fetch(f"{API}/teams/stats?season={season}&sportId=1&group=pitching"
+                   f"&stats=season&gameType=R").get("stats", [{}])[0].get("splits", [])
+    except Exception:
+        return fb_hit, fb_pitch
+    obp = slg = 0.0; hr = pa = n = 0
+    for s in hs:
+        st = s.get("stat", {})
+        if not st.get("avg"): continue
+        obp += float(st.get("obp", 0) or 0); slg += float(st.get("slg", 0) or 0)
+        hr += int(st.get("homeRuns", 0) or 0); pa += int(st.get("plateAppearances", 0) or 0); n += 1
+    lg_hit = ({"obp": obp / n, "slg": slg / n, "hrPA": hr / pa} if n and pa else fb_hit)
+    era = whip = k9 = bb9 = 0.0; m = 0
+    for s in ps:
+        st = s.get("stat", {})
+        ip = float(st.get("inningsPitched", 0) or 0)
+        if ip <= 0: continue
+        era += float(st.get("era", 0) or 0); whip += float(st.get("whip", 0) or 0)
+        k9 += (int(st.get("strikeOuts", 0) or 0) / ip) * 9
+        bb9 += (int(st.get("baseOnBalls", 0) or 0) / ip) * 9; m += 1
+    lg_pitch = ({"era": era / m, "whip": whip / m, "k9": k9 / m, "bb9": bb9 / m} if m else fb_pitch)
+    return lg_hit, lg_pitch
+
+
+def _award_pool(season, group, player_pool=None):
+    """Full-season player pool with raw stat dicts (mirrors the app's limit=800 leaderboard).
+    Default pool matches the app (qualified); pass player_pool='all' to include relievers."""
+    pool = f"&playerPool={player_pool}" if player_pool else ""
+    url = (f"{API}/stats?stats=season&season={season}&sportId=1&group={group}"
+           f"&gameType=R&limit=800&offset=0{pool}&hydrate=team(league)")
+    out = []
+    for sp in fetch(url).get("stats", [{}])[0].get("splits", []):
+        team = sp.get("team", {})
+        out.append({"id": sp["player"]["id"], "name": sp["player"]["fullName"],
+                    "team": team.get("name", ""), "team_id": team.get("id"),
+                    "lg": _league(sp), "s": sp.get("stat", {})})
+    return out
+
+
+def _quality_starts(pid, season):
+    """QS from the pitcher's game log (≥6 IP, ≤3 ER as a starter) — the one stat the
+    season API doesn't expose. Only called for the handful of Cy Young contenders."""
+    try:
+        sp = fetch(f"{API}/people/{pid}/stats?stats=gameLog&group=pitching"
+                   f"&season={season}&gameType=R").get("stats", [{}])[0].get("splits", [])
+    except Exception:
+        return 0
+    return sum(1 for g in sp if int(g["stat"].get("gamesStarted", 0) or 0) >= 1
+               and float(g["stat"].get("inningsPitched", 0) or 0) >= 6
+               and int(g["stat"].get("earnedRuns", 0) or 0) <= 3)
+
+
+def _award_hit_player(h, score):
+    s = h["s"]
+    ops = float(s.get("ops", 0) or 0)
+    hr, rbi = int(s.get("homeRuns", 0) or 0), int(s.get("rbi", 0) or 0)
+    sb, avg = int(s.get("stolenBases", 0) or 0), s.get("avg", ".000")
+    return {"id": h["id"], "name": h["name"], "team": h["team"], "team_id": h["team_id"],
+            "lg": h["lg"], "score": score, "tier": pitcher_tier(score), "historic": ops >= 1.000,
+            "ops": ops, "avg": avg, "hr": hr, "rbi": rbi, "sb": sb,
+            "statline": f'{avg} AVG · {hr} HR · {rbi} RBI · {ops:.3f} OPS'}
+
+
+def _award_pit_player(p, score):
+    s = p["s"]
+    era, whip = float(s.get("era", 99) or 99), float(s.get("whip", 9) or 9)
+    ip, so = float(s.get("inningsPitched", 0) or 0), int(s.get("strikeOuts", 0) or 0)
+    gs, w = int(s.get("gamesStarted", 0) or 0), int(s.get("wins", 0) or 0)
+    return {"id": p["id"], "name": p["name"], "team": p["team"], "team_id": p["team_id"],
+            "lg": p["lg"], "score": score, "tier": pitcher_tier(score),
+            "historic": era <= 2.00 and whip <= 1.00, "forma": forma_score(era, whip),
+            "era": era, "whip": whip, "ip": ip, "so": so, "gs": gs, "w": w,
+            "statline": f'{era:.2f} ERA · {whip:.2f} WHIP · {so} K'}
+
+
+def _award_context(season):
+    """The shared scoring context for our award/All-Star metrics: the qualified
+    hitter/pitcher pools, the league-relative `lg` reference, and the dynamic
+    qualification thresholds. Used by both build_awards and build_allstars."""
+    lg_hit, lg_pitch = _award_league_avgs(season)
+    hitters, pitchers = _award_pool(season, "hitting"), _award_pool(season, "pitching")
+    max_pa = max([int(h["s"].get("plateAppearances", 0) or 0) for h in hitters] + [1])
+    min_pa = max(50, round(max_pa * 0.40))
+    max_ip = max([float(p["s"].get("inningsPitched", 0) or 0) for p in pitchers] + [1.0])
+    min_ip, min_gs = max(15, round(max_ip * 0.40)), 3
+    tot = {"rbi": 0, "runs": 0, "sb": 0, "cs": 0, "pa": 0}
+    for h in hitters:
+        s = h["s"]; pa = int(s.get("plateAppearances", 0) or 0)
+        if pa < 30: continue
+        tot["rbi"] += int(s.get("rbi", 0) or 0); tot["runs"] += int(s.get("runs", 0) or 0)
+        tot["sb"] += int(s.get("stolenBases", 0) or 0); tot["cs"] += int(s.get("caughtStealing", 0) or 0)
+        tot["pa"] += pa
+    lg = {"ops": lg_hit["obp"] + lg_hit["slg"], "obp": lg_hit["obp"], "slg": lg_hit["slg"],
+          "hrPA": lg_hit["hrPA"], "paShare": max_pa * 0.75,
+          "rbiPA": tot["rbi"] / tot["pa"] if tot["pa"] else 0.055,
+          "runsPA": tot["runs"] / tot["pa"] if tot["pa"] else 0.055,
+          "sbEff": tot["sb"] / (tot["sb"] + tot["cs"]) if (tot["sb"] + tot["cs"]) else 0.72,
+          "era": lg_pitch["era"], "whip": lg_pitch["whip"], "k9": lg_pitch["k9"], "bb9": lg_pitch["bb9"]}
+    return hitters, pitchers, lg, min_pa, min_gs, min_ip, max_ip
+
+
+def build_awards(season, rookie_ids, each=3, asof=None):
+    """Rank MVP / Cy Young / Rookie candidates by our Score, top `each` per league."""
+    hitters, pitchers, lg, min_pa, min_gs, min_ip, max_ip = _award_context(season)
+
+    def by_league(scored, lg_id):
+        return sorted([x for x in scored if x[0]["lg"] == lg_id], key=lambda x: x[1], reverse=True)
+
+    # MVP — all qualified hitters by Score
+    mvp_scored = [(h, mvp_score(h["s"], lg, min_pa)) for h in hitters]
+    mvp_scored = [(h, sc) for h, sc in mvp_scored if sc is not None]
+    mvp = {k: [_award_hit_player(h, sc) for h, sc in by_league(mvp_scored, lid)[:each]]
+           for k, lid in (("al", 103), ("nl", 104))}
+
+    # Cy Young — provisional rank, then exact QS for the top contenders, then re-rank
+    prov = [(p, cy_score(p["s"], lg, min_gs, min_ip, max_ip)) for p in pitchers]
+    prov = [(p, sc) for p, sc in prov if sc is not None]
+    cy = {}
+    for k, lid in (("al", 103), ("nl", 104)):
+        exact = []
+        for p, _ in by_league(prov, lid)[:8]:
+            qs = _quality_starts(p["id"], season) if int(p["s"].get("gamesStarted", 0) or 0) >= min_gs else None
+            sc = cy_score(p["s"], lg, min_gs, min_ip, max_ip, qs=qs)
+            if sc is not None:
+                exact.append((p, sc))
+        cy[k] = [_award_pit_player(p, sc) for p, sc in sorted(exact, key=lambda x: x[1], reverse=True)[:each]]
+
+    # ROY — rookies only; hitters and pitchers compete on one raw Score scale
+    roy = {}
+    for k, lid in (("al", 103), ("nl", 104)):
+        cands = []
+        for h in hitters:
+            if h["lg"] != lid or h["id"] not in rookie_ids: continue
+            sc = mvp_score(h["s"], lg, min_pa)
+            if sc is not None: cands.append(("hit", h, sc))
+        for p in pitchers:
+            if p["lg"] != lid or p["id"] not in rookie_ids: continue
+            if cy_score(p["s"], lg, min_gs, min_ip, max_ip) is None: continue
+            qs = _quality_starts(p["id"], season) if int(p["s"].get("gamesStarted", 0) or 0) >= min_gs else None
+            sc = cy_score(p["s"], lg, min_gs, min_ip, max_ip, qs=qs)
+            if sc is not None: cands.append(("pit", p, sc))
+        top = sorted(cands, key=lambda c: c[2], reverse=True)[:each]
+        roy[k] = [(_award_hit_player(pl, sc) if kind == "hit" else _award_pit_player(pl, sc))
+                  for kind, pl, sc in top]
+
+    team_best = _team_best_ids(hitters, pitchers)
+    for group in (mvp, cy, roy):
+        for k in ("al", "nl"):
+            enrich_context(group[k], season, asof, team_best)
+            enrich_team_ctx(group[k], season, asof)
+    return {"mvp": mvp, "cy": cy, "roy": roy}
+
+
+# ── Year-over-year movers + season-long reliever board ───────────────────────
+def _pool_hitter(e):
+    s = e["s"]
+    ops = float(s.get("ops", 0) or 0)
+    return {"id": e["id"], "name": e["name"], "team": e["team"], "team_id": e["team_id"],
+            "lg": e["lg"], "ops": ops, "avg": s.get("avg", ".000"),
+            "obp": _f(s.get("obp"), 0), "slg": _f(s.get("slg"), 0),
+            "hr": int(s.get("homeRuns", 0) or 0), "rbi": int(s.get("rbi", 0) or 0),
+            "sb": int(s.get("stolenBases", 0) or 0), "ab": int(s.get("atBats", 0) or 0),
+            "pa": int(s.get("plateAppearances", 0) or 0),
+            "tier": hitter_tier(ops), "historic": ops >= 1.000}
+
+
+def _f(v, default):   # MLB returns "-.--" / "*.**" for undefined rate stats
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _pool_pitcher(e):
+    s = e["s"]
+    era, whip = _f(s.get("era"), 99), _f(s.get("whip"), 9)
+    forma = forma_score(era, whip)
+    ir = int(s.get("inheritedRunners", 0) or 0)
+    ir_scored = int(s.get("inheritedRunnersScored", 0) or 0)
+    return {"id": e["id"], "name": e["name"], "team": e["team"], "team_id": e["team_id"],
+            "lg": e["lg"], "era": era, "whip": whip, "forma": forma,
+            "ip": float(s.get("inningsPitched", 0) or 0), "so": int(s.get("strikeOuts", 0) or 0),
+            "gs": int(s.get("gamesStarted", 0) or 0), "w": int(s.get("wins", 0) or 0),
+            "sv": int(s.get("saves", 0) or 0), "hld": int(s.get("holds", 0) or 0),
+            "ir": ir, "irs_pct": (round(100 * (ir - ir_scored) / ir) if ir > 0 else None),
+            "tier": pitcher_tier(forma), "historic": era <= 2.00 and whip <= 1.00}
+
+
+def build_yoy(season, min_pa=180, min_ip=35, asof=None):
+    """Biggest year-over-year swings: who jumped tiers (red→green) and who slid back.
+    Compares this season to last for players with real playing time in both."""
+    prev = season - 1
+    h_now = {e["id"]: _pool_hitter(e) for e in _award_pool(season, "hitting")}
+    h_prev = {e["id"]: _pool_hitter(e) for e in _award_pool(prev, "hitting")}
+    p_now = {e["id"]: _pool_pitcher(e) for e in _award_pool(season, "pitching")}
+    p_prev = {e["id"]: _pool_pitcher(e) for e in _award_pool(prev, "pitching")}
+
+    hit_moves, pit_moves = [], []
+    for pid, h in h_now.items():
+        b = h_prev.get(pid)
+        if b and h["pa"] >= min_pa and b["pa"] >= min_pa:
+            hit_moves.append({"p": h, "prev_p": b, "prev": b["ops"], "prev_tier": b["tier"],
+                              "d": h["ops"] - b["ops"]})
+    for pid, p in p_now.items():
+        b = p_prev.get(pid)
+        if b and p["ip"] >= min_ip and b["ip"] >= min_ip:
+            pit_moves.append({"p": p, "prev": b["forma"], "prev_tier": b["tier"], "d": p["forma"] - b["forma"]})
+
+    strong = ("green", "lgreen")   # "the best who fell most" — strong a year ago
+    out = {"prev": prev,
+           "hit_up": sorted(hit_moves, key=lambda m: m["d"], reverse=True)[:10],
+           "pit_up": sorted(pit_moves, key=lambda m: m["d"], reverse=True)[:10],
+           "hit_dn": sorted([m for m in hit_moves if m["prev_tier"] in strong], key=lambda m: m["d"])[:5],
+           "pit_dn": sorted([m for m in pit_moves if m["prev_tier"] in strong], key=lambda m: m["d"])[:5]}
+    best = {}
+    for h in h_now.values():
+        if h["pa"] >= 100 and h["team_id"] and h["ops"] > best.get(("h", h["team_id"]), (0,))[0]:
+            best[("h", h["team_id"])] = (h["ops"], h["id"])
+    for p in p_now.values():
+        if p["ip"] >= 30 and p["team_id"] and p["forma"] > best.get(("p", p["team_id"]), (0,))[0]:
+            best[("p", p["team_id"])] = (p["forma"], p["id"])
+    team_best = {v[1] for v in best.values()}
+    for lst in ("hit_up", "pit_up", "hit_dn", "pit_dn"):
+        enrich_context([m["p"] for m in out[lst]], season, asof, team_best)
+    for lst in ("hit_up", "hit_dn"):
+        enrich_team_ctx([m["p"] for m in out[lst]], season, asof)
+    return out
+
+
+def _reliever_success(pid, season):
+    """Success rate = share of relief outings with no earned runs (a 'clean' appearance).
+    From the game log, same as quality starts — only called for the top relievers."""
+    try:
+        sp = fetch(f"{API}/people/{pid}/stats?stats=gameLog&group=pitching"
+                   f"&season={season}&gameType=R").get("stats", [{}])[0].get("splits", [])
+    except Exception:
+        return None, 0
+    apps = [g for g in sp if float(g["stat"].get("inningsPitched", 0) or 0) > 0]
+    if not apps:
+        return None, 0
+    clean = sum(1 for g in apps if int(g["stat"].get("earnedRuns", 0) or 0) == 0)
+    return round(100 * clean / len(apps)), len(apps)
+
+
+def build_relievers(season, limit=10, min_ip=20, asof=None):
+    """The season's best pure relievers (no starts), ranked by our form score."""
+    rel = [_pool_pitcher(e) for e in _award_pool(season, "pitching", player_pool="all")]
+    rel = [p for p in rel if p["gs"] == 0 and p["ip"] >= min_ip]
+    top = sorted(rel, key=lambda p: p["forma"], reverse=True)[:limit]
+    for p in top:
+        p["reliever"] = True
+        p["success"], p["apps"] = _reliever_success(p["id"], season)
+    enrich_context(top, season, asof)
+    return top
+
+
+# ── Per-player context for the narration: own career, recent form, team standing ──
+# Feeds the LLM honest signals so it can say "above his career norm", "ice cold this
+# month", "the best bat on his team" — instead of inventing. Cached per run.
+_CTX_CACHE = {}
+
+
+def _career_rate(pid, season, kind):
+    """Career baseline (all seasons): OPS for hitters, ERA/WHIP→form for pitchers."""
+    group = "hitting" if kind == "hit" else "pitching"
+    try:
+        sp = fetch(f"{API}/people/{pid}/stats?stats=career&group={group}"
+                   f"&gameType=R").get("stats", [{}])[0].get("splits", [])
+    except Exception:
+        return None
+    if not sp:
+        return None
+    st = sp[-1]["stat"]
+    if kind == "hit":
+        ops = _f(st.get("ops"), None)
+        return {"ops": ops} if ops is not None else None
+    era, whip = _f(st.get("era"), None), _f(st.get("whip"), None)
+    return {"era": era, "whip": whip, "form": forma_score(era, whip)} if era is not None else None
+
+
+def _recent_line(pid, season, kind, asof, days=30):
+    """Last-N-days line — the in-season hot/cold read."""
+    end = asof or dt.date.today().isoformat()
+    start = (dt.date.fromisoformat(end) - dt.timedelta(days=days)).isoformat()
+    group = "hitting" if kind == "hit" else "pitching"
+    try:
+        sp = fetch(f"{API}/people/{pid}/stats?stats=byDateRange&startDate={start}&endDate={end}"
+                   f"&group={group}&gameType=R").get("stats", [{}])[0].get("splits", [])
+    except Exception:
+        return None
+    if not sp:
+        return None
+    st = sp[-1]["stat"]
+    if kind == "hit":
+        ops, ab = _f(st.get("ops"), None), int(st.get("atBats", 0) or 0)
+        return {"ops": ops, "ab": ab} if (ops is not None and ab >= 20) else None
+    era, ip = _f(st.get("era"), None), _f(st.get("inningsPitched"), 0)
+    return {"era": era, "ip": ip} if (era is not None and ip >= 5) else None
+
+
+def _team_best_ids(hit_pool, pit_pool):
+    """Each team's best qualified bat (by OPS) and best arm (by form) — a 'best on his team' flag."""
+    best, out = {}, set()
+    for e in hit_pool:
+        s = e["s"]
+        if int(s.get("plateAppearances", 0) or 0) < 100:
+            continue
+        ops, tid = _f(s.get("ops"), 0), e["team_id"]
+        if tid and ops > best.get(("h", tid), (0,))[0]:
+            best[("h", tid)] = (ops, e["id"])
+    for e in pit_pool:
+        s = e["s"]
+        if float(s.get("inningsPitched", 0) or 0) < 30:
+            continue
+        fm, tid = forma_score(_f(s.get("era"), 99), _f(s.get("whip"), 9)), e["team_id"]
+        if tid and fm > best.get(("p", tid), (0,))[0]:
+            best[("p", tid)] = (fm, e["id"])
+    return {v[1] for v in best.values()}
+
+
+def enrich_context(players, season, asof, team_best=frozenset()):
+    for p in players:
+        kind = "pit" if "era" in p else "hit"
+        key = (p["id"], kind)
+        if key not in _CTX_CACHE:
+            _CTX_CACHE[key] = {"career": _career_rate(p["id"], season, kind),
+                               "last30": _recent_line(p["id"], season, kind, asof)}
+        p.update(_CTX_CACHE[key])
+        p["team_best"] = p["id"] in team_best
+
+
+def _player_ctx(p):
+    """Compact context block for the LLM (omits anything we couldn't measure)."""
+    out = {}
+    if p.get("team_best"):
+        out["best_on_team"] = True
+    c = p.get("career")
+    if c:
+        out["career"] = (f'OPS {c["ops"]:.3f}' if "ops" in c
+                         else f'ERA {c["era"]:.2f}, WHIP {c["whip"]:.2f} (form {c["form"]:.0f})')
+    r = p.get("last30")
+    if r:
+        out["last30"] = (f'OPS {r["ops"]:.3f} in {r["ab"]} AB' if "ops" in r
+                         else f'ERA {r["era"]:.2f} in {r["ip"]:g} IP')
+    tc = p.get("team_ctx")
+    if tc:
+        out["team"] = tc
+    return out or None
+
+
+# ── Phase 2: team & role context — positional history and trades ─────────────
+# "After years of weak catching, the team finally has a bat behind the plate" /
+# "since arriving in the offseason trade". Reconstructs each team's primary player
+# at a position, year by year, from season rosters. Hitters only (a pitcher's role
+# is already starter/closer). Cached hard; the deep injury-causation read is not
+# attempted (we never assert a fill-in we can't prove).
+FIELD_POS = {"C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "OF"}
+_ROSTER_CACHE = {}
+_TRADED_CACHE = {}
+
+
+def _team_pos_roster(team_id, season):
+    """{position: [{id,name,pa,ops}, ...]} for a team's season (end-of-year active roster)."""
+    key = (team_id, season)
+    if key in _ROSTER_CACHE:
+        return _ROSTER_CACHE[key]
+    out = {}
+    try:
+        d = fetch(f"{API}/teams/{team_id}/roster?rosterType=active&season={season}"
+                  f"&hydrate=person(stats(group=[hitting],type=season,season={season}))")
+    except Exception:
+        _ROSTER_CACHE[key] = out
+        return out
+    for r in d.get("roster", []):
+        pos = (r.get("position") or {}).get("abbreviation")
+        st = next((sp["stat"] for s in r["person"].get("stats", []) for sp in s.get("splits", [])), None)
+        if not pos or not st:
+            continue
+        ops = _f(st.get("ops"), None)
+        if ops is None:
+            continue
+        out.setdefault(pos, []).append({"id": r["person"]["id"], "name": r["person"]["fullName"],
+                                        "pa": int(st.get("plateAppearances", 0) or 0), "ops": ops})
+    for lst in out.values():
+        lst.sort(key=lambda x: -x["pa"])
+    _ROSTER_CACHE[key] = out
+    return out
+
+
+def _traded_map(season, asof):
+    """{player_id: team_id} for players traded during the season (latest team wins)."""
+    if season in _TRADED_CACHE:
+        return _TRADED_CACHE[season]
+    end = asof or dt.date.today().isoformat()
+    m = {}
+    try:
+        d = fetch(f"{API}/transactions?startDate={season}-01-01&endDate={end}&sportId=1")
+        for t in sorted(d.get("transactions", []), key=lambda t: t.get("date", "")):
+            if t.get("typeDesc") == "Trade" and t.get("person") and t.get("toTeam"):
+                m[t["person"]["id"]] = t["toTeam"]["id"]
+    except Exception:
+        pass
+    _TRADED_CACHE[season] = m
+    return m
+
+
+def _team_ctx(p, season, traded):
+    tid = p.get("team_id")
+    if not tid:
+        return None
+    cur = _team_pos_roster(tid, season)
+    pos = next((ps for ps, lst in cur.items() if any(x["id"] == p["id"] for x in lst)), None)
+    ctx = {}
+    if traded.get(p["id"]) == tid:
+        ctx["traded_in_this_year"] = True
+    if pos in FIELD_POS:
+        prior = []
+        for yr in range(season - 1, season - 5, -1):
+            lst = _team_pos_roster(tid, yr).get(pos, [])
+            if lst:
+                prior.append({"year": yr, "ops": round(max(lst, key=lambda x: x["pa"])["ops"], 3)})
+        if prior:
+            ctx["position"] = pos
+            ctx["team_primary_ops_prior_years"] = prior
+            ctx["team_primary_ops_prior_avg"] = round(sum(x["ops"] for x in prior) / len(prior), 3)
+    return ctx or None
+
+
+def enrich_team_ctx(players, season, asof):
+    traded = _traded_map(season, asof)
+    for p in players:
+        if "era" in p:   # pitchers: role is starter/closer, positional history N/A
+            continue
+        p["team_ctx"] = _team_ctx(p, season, traded)
+
+
+# ── Our All-Stars: best player at each position by our metrics ───────────────
+ALLSTAR_POS = ["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"]
+
+
+def _mark_reliever(p, season, with_success):
+    p = dict(p)
+    p["reliever"] = True
+    if with_success:   # only the pick needs the game-log fetch for clean%
+        p["success"], p["apps"] = _reliever_success(p["id"], season)
+    return p
+
+
+def build_allstars(season, asof=None):
+    """Our All-Star roster per league: best hitter at each position by MVP Score,
+    top starter by Cy Young Score, plus a setup reliever and closer by form. Each
+    slot keeps the pick plus the next two (the depth shown when a row is expanded)."""
+    hitters, pitchers, lg, min_pa, min_gs, min_ip, max_ip = _award_context(season)
+    posmap = {}   # player id -> listed position, from every team's active roster
+    for tid in {h["team_id"] for h in hitters if h["team_id"]}:
+        for pos, lst in _team_pos_roster(tid, season).items():
+            for x in lst:
+                posmap[x["id"]] = "DH" if pos == "TWP" else pos
+    out = {}
+    for k, lid in (("al", 103), ("nl", 104)):
+        hit = {}
+        for pos in ALLSTAR_POS:
+            scored = [(h, mvp_score(h["s"], lg, min_pa)) for h in hitters
+                      if h["lg"] == lid and posmap.get(h["id"]) == pos]
+            scored = sorted([(h, sc) for h, sc in scored if sc is not None],
+                            key=lambda x: x[1], reverse=True)[:3]
+            hit[pos] = [_award_hit_player(h, sc) for h, sc in scored]
+        # Starters — provisional rank, exact QS for the top few, then top 3
+        prov = [(p, cy_score(p["s"], lg, min_gs, min_ip, max_ip)) for p in pitchers if p["lg"] == lid]
+        prov = sorted([(p, sc) for p, sc in prov if sc is not None], key=lambda x: x[1], reverse=True)[:6]
+        exact = []
+        for p, _ in prov:
+            qs = _quality_starts(p["id"], season) if int(p["s"].get("gamesStarted", 0) or 0) >= min_gs else None
+            sc = cy_score(p["s"], lg, min_gs, min_ip, max_ip, qs=qs)
+            if sc is not None:
+                exact.append((p, sc))
+        exact.sort(key=lambda x: x[1], reverse=True)
+        out[k] = {"hitters": hit, "sp": [_award_pit_player(p, sc) for p, sc in exact[:3]]}
+    # Relievers + closers from the full pool (relievers aren't in the qualified pool)
+    rel = [_pool_pitcher(e) for e in _award_pool(season, "pitching", player_pool="all")]
+    rel = [p for p in rel if p["gs"] == 0 and p["ip"] >= 20]
+    for k, lid in (("al", 103), ("nl", 104)):
+        pool = [p for p in rel if p["lg"] == lid]
+        closers = sorted([p for p in pool if p["sv"] >= 10], key=lambda p: p["forma"], reverse=True)[:3]
+        setups = sorted([p for p in pool if p["sv"] < 10], key=lambda p: p["forma"], reverse=True)[:3]
+        out[k]["closer"] = [_mark_reliever(p, season, i == 0) for i, p in enumerate(closers)]
+        out[k]["reliever"] = [_mark_reliever(p, season, i == 0) for i, p in enumerate(setups)]
+    return out
+
+
 def article_jsonld(title, date_iso, canonical, desc, image=None):
     post = {
         "@type": "BlogPosting",
@@ -1336,6 +2187,11 @@ STYLE = """
   .bl-card-stats { font-weight:800; font-size:15px; }
   .bl-card-stats2 { color:var(--muted); font-weight:600; font-size:13px; margin-top:3px; }
   .bl-card-week { color:var(--muted); font-size:12.5px; margin-top:5px; }
+  .bl-alts { border-top:1px solid var(--border); padding:8px 16px 12px; }
+  .bl-alts-label { font-size:10px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .bl-alt { display:flex; align-items:center; gap:10px; padding:5px 0; }
+  .bl-alt .bl-face { width:34px; height:34px; }
+  .bl-alt-score { font-weight:800; font-size:15px; flex-shrink:0; }
   .bl-meter { width:118px; flex-shrink:0; }
   .bl-meter-top { display:flex; justify-content:space-between; align-items:baseline; }
   .bl-meter-label { font-size:10px; font-weight:800; letter-spacing:1px; color:var(--muted); }
@@ -1622,6 +2478,14 @@ def main():
         facts.update(build_month_facts(args.season, m_start.isoformat(), m_end.isoformat(), m_label))
         for lst in (facts["month_hitters"], facts["month_hr"], facts["month_pitchers"]):
             attach_team_meta(lst, facts["team_id_by_name"], facts["team_abbr"])
+    if {"mvp", "cy", "roy"} & set(section_ids):
+        facts["awards"] = build_awards(args.season, facts["rookie_ids"], asof=asof)
+    if YOY_SECTIONS & set(section_ids):
+        facts["yoy"] = build_yoy(args.season, asof=asof)
+    if "relievers" in section_ids:
+        facts["relievers"] = build_relievers(args.season, asof=asof)
+    if {"allstars_al", "allstars_nl"} & set(section_ids):
+        facts["allstars"] = build_allstars(args.season, asof=asof)
     facts["recent_headlines"] = recent_headlines(date_iso)
     facts["recent_prose"] = recent_prose(date_iso)
     if {"hweek", "fallers"} & set(section_ids):   # last-7-days hitter lines (hot bats + cooling)
