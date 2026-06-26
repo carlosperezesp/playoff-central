@@ -18,15 +18,15 @@
       "rank": 4
     },
     {
-      "name": "Atlanta Braves",
+      "name": "Philadelphia Phillies",
       "rank": 5
     },
     {
-      "name": "Miami Marlins",
+      "name": "Atlanta Braves",
       "rank": 6
     },
     {
-      "name": "Philadelphia Phillies",
+      "name": "Miami Marlins",
       "rank": 7
     },
     {
@@ -46,7 +46,7 @@
       "rank": 11
     },
     {
-      "name": "Washington Nationals",
+      "name": "Houston Astros",
       "rank": 12
     },
     {
@@ -58,15 +58,15 @@
       "rank": 14
     },
     {
-      "name": "Houston Astros",
+      "name": "Chicago White Sox",
       "rank": 15
     },
     {
-      "name": "Chicago White Sox",
+      "name": "Seattle Mariners",
       "rank": 16
     },
     {
-      "name": "Seattle Mariners",
+      "name": "Washington Nationals",
       "rank": 17
     },
     {
@@ -94,27 +94,27 @@
       "rank": 23
     },
     {
-      "name": "Kansas City Royals",
+      "name": "Boston Red Sox",
       "rank": 24
     },
     {
-      "name": "San Francisco Giants",
+      "name": "Athletics",
       "rank": 25
     },
     {
-      "name": "Cincinnati Reds",
+      "name": "Kansas City Royals",
       "rank": 26
     },
     {
-      "name": "Colorado Rockies",
+      "name": "Cincinnati Reds",
       "rank": 27
     },
     {
-      "name": "Boston Red Sox",
+      "name": "San Francisco Giants",
       "rank": 28
     },
     {
-      "name": "Athletics",
+      "name": "Colorado Rockies",
       "rank": 29
     },
     {
@@ -125,17 +125,12 @@
   "hitters": [
     {
       "name": "Yordan Alvarez",
-      "ops": 1.069,
+      "ops": 1.055,
       "hr": 25
     },
     {
-      "name": "Ben Rice",
-      "ops": 0.972,
-      "hr": 22
-    },
-    {
       "name": "Juan Soto",
-      "ops": 0.965,
+      "ops": 0.966,
       "hr": 17
     },
     {
@@ -145,13 +140,18 @@
     },
     {
       "name": "Kyle Schwarber",
-      "ops": 0.961,
+      "ops": 0.963,
       "hr": 29
     },
     {
       "name": "Nick Kurtz",
       "ops": 0.959,
       "hr": 19
+    },
+    {
+      "name": "Ben Rice",
+      "ops": 0.956,
+      "hr": 22
     },
     {
       "name": "Munetaka Murakami",
@@ -169,11 +169,6 @@
       "hr": 25
     },
     {
-      "name": "James Wood",
-      "ops": 0.909,
-      "hr": 20
-    },
-    {
       "name": "Aaron Judge",
       "ops": 0.908,
       "hr": 17
@@ -185,7 +180,7 @@
     },
     {
       "name": "CJ Abrams",
-      "ops": 0.899,
+      "ops": 0.897,
       "hr": 17
     },
     {
@@ -194,9 +189,14 @@
       "hr": 19
     },
     {
-      "name": "Willson Contreras",
-      "ops": 0.895,
-      "hr": 16
+      "name": "Bryce Harper",
+      "ops": 0.896,
+      "hr": 18
+    },
+    {
+      "name": "James Wood",
+      "ops": 0.896,
+      "hr": 20
     },
     {
       "name": "Bryan Reynolds",
@@ -205,7 +205,7 @@
     },
     {
       "name": "Pete Crow-Armstrong",
-      "ops": 0.886,
+      "ops": 0.888,
       "hr": 17
     },
     {
@@ -214,9 +214,19 @@
       "hr": 14
     },
     {
-      "name": "Bryce Harper",
-      "ops": 0.877,
-      "hr": 17
+      "name": "Willson Contreras",
+      "ops": 0.884,
+      "hr": 16
+    },
+    {
+      "name": "Dillon Dingler",
+      "ops": 0.879,
+      "hr": 19
+    },
+    {
+      "name": "Brandon Marsh",
+      "ops": 0.875,
+      "hr": 12
     },
     {
       "name": "Max Muncy",
@@ -229,11 +239,6 @@
       "hr": 20
     },
     {
-      "name": "Dillon Dingler",
-      "ops": 0.868,
-      "hr": 18
-    },
-    {
       "name": "Mike Trout",
       "ops": 0.866,
       "hr": 17
@@ -242,11 +247,6 @@
       "name": "Jordan Walker",
       "ops": 0.863,
       "hr": 18
-    },
-    {
-      "name": "Brandon Marsh",
-      "ops": 0.86,
-      "hr": 11
     },
     {
       "name": "Freddie Freeman",
@@ -309,11 +309,6 @@
       "hr": 14
     },
     {
-      "name": "Cody Bellinger",
-      "ops": 0.834,
-      "hr": 11
-    },
-    {
       "name": "Shea Langeliers",
       "ops": 0.834,
       "hr": 19
@@ -322,6 +317,11 @@
       "name": "Bobby Witt Jr.",
       "ops": 0.833,
       "hr": 10
+    },
+    {
+      "name": "Liam Hicks",
+      "ops": 0.831,
+      "hr": 13
     }
   ],
   "pitchers": [
@@ -332,18 +332,18 @@
     },
     {
       "name": "Cam Schlittler",
-      "era": 1.71,
-      "forma": 93.9
-    },
-    {
-      "name": "Cristopher S\u00e1nchez",
-      "era": 1.8,
-      "forma": 84.6
+      "era": 1.62,
+      "forma": 93.7
     },
     {
       "name": "Chase Burns",
       "era": 2.0,
       "forma": 84.0
+    },
+    {
+      "name": "Cristopher S\u00e1nchez",
+      "era": 2.13,
+      "forma": 80.1
     },
     {
       "name": "Chris Sale",
@@ -466,24 +466,19 @@
       "forma": 60.5
     },
     {
+      "name": "Connelly Early",
+      "era": 3.59,
+      "forma": 58.0
+    },
+    {
       "name": "Emerson Hancock",
       "era": 3.6,
       "forma": 67.5
     },
     {
-      "name": "Connelly Early",
-      "era": 3.64,
-      "forma": 56.6
-    },
-    {
       "name": "Kyle Bradish",
       "era": 3.64,
       "forma": 49.1
-    },
-    {
-      "name": "Keider Montero",
-      "era": 3.68,
-      "forma": 67.4
     },
     {
       "name": "Robbie Ray",
@@ -524,6 +519,11 @@
       "name": "Reid Detmers",
       "era": 3.93,
       "forma": 62.6
+    },
+    {
+      "name": "George Kirby",
+      "era": 3.94,
+      "forma": 50.8
     }
   ],
   "rookies": [
@@ -549,7 +549,7 @@
     },
     {
       "name": "Kevin McGonigle",
-      "ops": 0.816,
+      "ops": 0.812,
       "hr": 6
     },
     {
@@ -561,6 +561,11 @@
       "name": "Sam Antonacci",
       "ops": 0.799,
       "hr": 4
+    },
+    {
+      "name": "Kazuma Okamoto",
+      "ops": 0.793,
+      "hr": 18
     },
     {
       "name": "Sal Stewart",
@@ -583,18 +588,13 @@
       "hr": 12
     },
     {
-      "name": "Kazuma Okamoto",
-      "ops": 0.779,
-      "hr": 17
-    },
-    {
       "name": "JJ Wetherholt",
       "ops": 0.775,
       "hr": 12
     },
     {
       "name": "Brandon Valenzuela",
-      "ops": 0.774,
+      "ops": 0.769,
       "hr": 7
     },
     {
@@ -614,7 +614,7 @@
     },
     {
       "name": "A.J. Ewing",
-      "ops": 0.738,
+      "ops": 0.735,
       "hr": 3
     },
     {
@@ -638,14 +638,14 @@
       "hr": 4
     },
     {
-      "name": "Carson Benge",
-      "ops": 0.72,
-      "hr": 9
-    },
-    {
       "name": "Nathan Church",
       "ops": 0.72,
       "hr": 5
+    },
+    {
+      "name": "Carson Benge",
+      "ops": 0.718,
+      "hr": 9
     },
     {
       "name": "Owen Caissie",
@@ -654,11 +654,12 @@
     }
   ],
   "narration": {
-    "title": "A Year Later: Who Climbed, Who Slipped",
-    "intro": "Forget the last seven days; today we measure the long arc from 2025 to now. Some players walked into this season as different hitters and pitchers entirely, a tier or two above where they finished last year. Others, including some big names, are still trying to find the thread they had a year ago. Here's the swing, both directions.",
-    "yoy_hit_up_lead": "Otto Lopez leads the climb, up from a .673 OPS to .857, and it's broad-based: the average jumped from .246 to .340 and the slugging from .368 to .483, turning the best bat on a thin Marlins lineup into a genuine threat at shortstop. Bryan Reynolds' .169 leap is patience as much as anything, his on-base climbing from .318 to .405, and he's been scorching with a 1.141 OPS over the last month. The headline tier-cross belongs to Ben Rice, who went from above-average to elite, his slugging leaping nearly 100 points to .594 to give the Yankees a first baseman who hits after years of sub-.730 work there. CJ Abrams and Michael Harris II round out a group that mostly added power without sacrificing contact.",
-    "yoy_pit_up_lead": "Andre Pallante owns the biggest jump on the mound, a form score from 31 all the way to 61, dragging him from below-average into above-average territory with a 3.59 ERA. Nick Martinez climbed 21 points to 71 on the back of a 2.73 ERA, though his last 30 days have been bumpier. The most encouraging name may be Sandy Alcantara: still only average at a 54 form, but his 2.60 ERA over his last 34.2 innings says the old Marlins ace is rounding back into form after a rough 2025.",
-    "yoy_hit_dn_lead": "George Springer is the steepest fall, his OPS sliding 266 points from an elite .959 to a .693 that ranks merely average, with the average dropping from .309 to .223 across the board. Aaron Judge is the eye-opener, down 237 points from his absurd 1.145 to .908 and a slugging that fell from .688 to .533 \u2014 and yet he's still elite, which tells you how high the bar was. Trea Turner's drop to a .615 OPS and a .591 mark over the last month is the most worrying, a former above-average shortstop now well below where Philadelphia needs him. None of these are finished hitters, just stars wrestling a season that won't cooperate.",
-    "yoy_pit_dn_lead": "Freddy Peralta is the cautionary tale, his form score collapsing 37 points from elite to below-average, a 4.83 ERA made uglier by an 8.14 mark over his last 24.1 innings. Bryan Woo lost his elite tag too, sliding 19 points to a 59 as the ERA crept to 4.26. The gentler reminders sit at the top: Paul Skenes is down nine points and Jacob deGrom eleven, but both remain elite or above-average arms \u2014 proof that even a real decline can still leave you among the game's best."
+    "title": "Schwarber Surges, Soriano Slides, May Cools Off",
+    "intro": "The week's needle moved in both directions. Kyle Schwarber turned a four-homer run into the loudest bat in baseball, while a handful of arms quietly gave back ground they'd worked hard to earn.",
+    "risers_lead": "Schwarber was unstoppable, a 1.714 OPS on a 7-for-16 week with four homers and nine driven in. Right behind him, his teammate Bryce Harper went 12-for-25 with three of his own, and Dansby Swanson somehow packed three homers, three steals and 16 RBI into six Cubs games.",
+    "pfallers_lead": "Jos\u00e9 Soriano took the hardest fall, his form down 11 to 57. Bryce Elder slipped nine to 58, and even Jacob deGrom gave back six, landing at 68 \u2014 still good, just less untouchable than the week before.",
+    "hweek_lead": "Schwarber and Harper turned Philadelphia into a one-week wrecking crew, but don't overlook Luis Garc\u00eda Jr., who quietly stacked four homers in six games for the Nationals at a 1.484 clip.",
+    "fallers_lead": "Drake Baldwin had a week to forget, 0-for-22 over six games and an .086 season OPS dip to show for it. James Wood (3-for-30) and Hunter Goodman (2-for-21) cooled off too, though nothing a good homestand won't fix.",
+    "colors_lead": "A quartet of arms eased from above-average to average this week \u2014 Nolan McLean, Bryan Woo, Dustin May and Kevin Gausman. No alarms, just a tier slide worth noting."
   }
 }
