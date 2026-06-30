@@ -274,6 +274,101 @@ def get_week_hitters(season, start, end, limit=500, min_ab=15):
     return out
 
 
+def get_week_pitchers(season, start, end, limit=700, min_ip=3.0):
+    """Per-pitcher stats over the last 7 days — for each team's standout arm of the week."""
+    d = fetch(_stats_url(season, "pitching", "earnedRunAverage", limit, "all", end, start))
+    out = []
+    for s in d.get("stats", [{}])[0].get("splits", []):
+        st = s["stat"]
+        ip = float(st.get("inningsPitched", 0) or 0)
+        era, whip = _f(st.get("era"), 99), _f(st.get("whip"), 9)
+        forma = forma_score(era, whip)
+        out.append({"id": s["player"]["id"], "name": s["player"]["fullName"],
+                    "team": s.get("team", {}).get("name", ""), "ip": ip, "era": era, "whip": whip,
+                    "so": int(st.get("strikeOuts", 0) or 0), "w": int(st.get("wins", 0) or 0),
+                    "sv": int(st.get("saves", 0) or 0), "gs": int(st.get("gamesStarted", 0) or 0),
+                    "forma": forma, "tier": pitcher_tier(forma), "ok": ip >= min_ip})
+    return out
+
+
+def get_week_schedule(season, start, end):
+    """Per-team record + game list over [start, end], from one league-wide schedule call."""
+    try:
+        d = fetch(f"{API}/schedule?sportId=1&startDate={start}&endDate={end}&gameType=R&hydrate=team")
+    except Exception:
+        return {}
+    wk = {}
+    for day in d.get("dates", []):
+        for g in day.get("games", []):
+            if g.get("status", {}).get("abstractGameState") != "Final":
+                continue
+            away, home = g["teams"]["away"], g["teams"]["home"]
+            asc, hsc = away.get("score"), home.get("score")
+            if asc is None or hsc is None:
+                continue
+            for side, opp, rs, ra, is_home in ((away, home, asc, hsc, False), (home, away, hsc, asc, True)):
+                e = wk.setdefault(side["team"]["id"], {"w": 0, "l": 0, "rs": 0, "ra": 0, "games": []})
+                win = rs > ra
+                e["w" if win else "l"] += 1
+                e["rs"] += rs; e["ra"] += ra
+                e["games"].append({"date": day.get("date"), "opp_id": opp["team"]["id"],
+                                   "win": win, "rs": rs, "ra": ra, "home": is_home})
+    return wk
+
+
+def _week_hit_star(h, tid):
+    bits = [f'{h["hits"]}-for-{h["ab"]}']
+    if h["hr"]:
+        bits.append(f'{h["hr"]} HR')
+    if h.get("rbi"):
+        bits.append(f'{h["rbi"]} RBI')
+    if h["sb"]:
+        bits.append(f'{h["sb"]} SB')
+    bits.append(f'{h["ops"]:.3f} OPS')
+    return {"id": h["id"], "name": h["name"], "team_id": tid, "tier": h["tier"], "line": " · ".join(bits)}
+
+
+def _week_pit_star(p, tid):
+    bits = []
+    if p["w"]:
+        bits.append(f'{p["w"]} W')
+    if p["sv"]:
+        bits.append(f'{p["sv"]} SV')
+    bits += [f'{p["era"]:.2f} ERA', f'{p["ip"]:g} IP', f'{p["so"]} K']
+    return {"id": p["id"], "name": p["name"], "team_id": tid, "tier": p["tier"], "line": " · ".join(bits)}
+
+
+def attach_power_week(facts, season, start, end):
+    """For each ranked team, attach its week record, game results and 2–3 standout players —
+    so the Power Rankings show WHY a team sits where it does, not just a number."""
+    sched = get_week_schedule(season, start, end)
+    id_by_name = facts["team_id_by_name"]
+    abbr_by_id = {t["id"]: t.get("abbr", "") for t in facts["power_all"]}
+    hit_by_team, pit_by_team = {}, {}
+    for h in get_week_hitters(season, start, end, min_ab=10):
+        tid = id_by_name.get(h["team"])
+        if tid and h["ab"] >= 10:
+            hit_by_team.setdefault(tid, []).append(h)
+    for p in get_week_pitchers(season, start, end, min_ip=5):
+        tid = id_by_name.get(p["team"])
+        if tid and p["ip"] >= 5:
+            pit_by_team.setdefault(tid, []).append(p)
+    for t in facts["power_top"]:
+        tid = t["id"]
+        stars = [_week_hit_star(h, tid) for h in
+                 sorted(hit_by_team.get(tid, []), key=lambda x: x["ops"], reverse=True)[:2]]
+        arms = sorted(pit_by_team.get(tid, []), key=lambda x: x["forma"], reverse=True)
+        if arms:
+            stars.append(_week_pit_star(arms[0], tid))
+        w = sched.get(tid)
+        if not w and not stars:
+            continue
+        games = [{"abbr": abbr_by_id.get(g["opp_id"], ""), "win": g["win"], "rs": g["rs"],
+                  "ra": g["ra"], "home": g["home"]} for g in sorted((w or {}).get("games", []), key=lambda g: g["date"])]
+        t["week"] = {"rec": f'{w["w"]}-{w["l"]}' if w else None,
+                     "rd": (w["rs"] - w["ra"]) if w else 0, "games": games, "stars": stars}
+
+
 def attach_team_meta(players, id_by_name, abbr_by_name):
     for p in players:
         p["team_id"] = id_by_name.get(p["team"])
@@ -568,14 +663,48 @@ def movement_badge(m):
     return '<span class="bl-mv bl-muted">&ndash;</span>'
 
 
+def _week_star_row(s):
+    t = s["tier"]
+    return (f'<div class="bl-alt">{face(s["id"], t, False, s.get("team_id"))}'
+            f'<span class="bl-player-info"><strong>{escape(s["name"])}</strong>'
+            f'<span class="bl-muted">{s["line"]}</span></span></div>')
+
+
+def _power_card(t):
+    w = t.get("week")
+    if not w or (not w["games"] and not w["stars"]):
+        return ""
+    parts = []
+    if w.get("rec") or w["games"]:
+        rd = w["rd"]
+        rdc = TEXT["green"] if rd > 0 else (TEXT["red"] if rd < 0 else TEXT["gray"])
+        rec = (f'<strong>{w["rec"]}</strong> this week · '
+               f'<span style="color:{rdc}">{"+" if rd >= 0 else ""}{rd} run diff</span>') if w.get("rec") else ""
+        chips = "".join(
+            f'<span class="bl-gchip {"win" if g["win"] else "loss"}">{"W" if g["win"] else "L"} '
+            f'{g["rs"]}-{g["ra"]} {"@" if not g["home"] else "vs "}{escape(g["abbr"])}</span>'
+            for g in w["games"])
+        parts.append(f'<div class="bl-week">{f"<div class=bl-week-rec>{rec}</div>" if rec else ""}'
+                     f'{f"<div class=bl-week-games>{chips}</div>" if chips else ""}</div>')
+    if w["stars"]:
+        parts.append(f'<div class="bl-alts"><div class="bl-alts-label">Who carried them this week</div>'
+                     + "".join(_week_star_row(s) for s in w["stars"]) + '</div>')
+    return f'<div class="bl-card" hidden>{"".join(parts)}</div>'
+
+
 def power_row(t, show_mv):
     rd = t["runDiff"]
     mv = movement_badge(t.get("movement")) if show_mv else ""
     driver = f'{t["wins"]}-{t["losses"]} · {"+" if rd >= 0 else ""}{rd} run diff · L10 {escape(t["l10"])}'
-    return (f'<li class="bl-rankrow"><span class="bl-rank">{t["rank"]}</span>{mv}'
+    head = (f'<span class="bl-rank">{t["rank"]}</span>{mv}'
             f'<img class="bl-team-logo" src="{logo_url(t["id"])}" alt="" loading="lazy">'
             f'<span class="bl-team-info"><strong>{escape(t["name"])}</strong>'
-            f'<span class="bl-muted">{driver}</span></span></li>')
+            f'<span class="bl-muted">{driver}</span></span>')
+    card = _power_card(t)
+    if not card:
+        return f'<li class="bl-rankrow">{head}</li>'
+    return (f'<li class="bl-pwrap"><div class="bl-rankrow bl-clickable" onclick="blToggleCard(this)">'
+            f'{head}<span class="bl-chev">&rsaquo;</span></div>{card}</li>')
 
 
 def team_stat_row(i, r, value, unit, sub):
@@ -1293,7 +1422,9 @@ LLM_SYSTEM = (
     "a proprietary term (form, elite green, recolored) before it's clear. A fixed one-line definition "
     "already sits under each section heading — do NOT redefine terms in your leads; add the human angle.\n"
     "5. Be specific about WHICH ranking you mean (the power ranking vs. the team-ERA ranking, etc.). "
-    "Never write a bare 'the rankings'.\n"
+    "Never write a bare 'the rankings'. For the power_lead, ground a team's spot in what actually happened: "
+    "lean on week_record / week_run_diff and a week_standout (e.g. 'the Dodgers went 6-1 behind a huge week "
+    "from X') so the order reads earned, not arbitrary.\n"
     "6. Ignore noise. A change under ~.015 OPS, a fraction of an ERA, or a one-spot wiggle is NOT a "
     "story — never dramatize it. 'Down three-thousandths of OPS' is never worth a sentence.\n"
     "7. BE WEEK-AWARE but honest: season totals are given alongside each featured player's value a "
@@ -1391,7 +1522,11 @@ def facts_for_llm(f, theme_title, section_ids):
         "week_window": {"from": f.get("baseline_date"), "to": f.get("asof") or dt.date.today().isoformat()},
         "power_rankings_top": [{"rank": t["rank"], "name": t["name"],
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
-                                "last10": t["l10"], "rank_change_vs_last_week": t.get("movement")}
+                                "last10": t["l10"], "rank_change_vs_last_week": t.get("movement"),
+                                "week_record": (t.get("week") or {}).get("rec"),
+                                "week_run_diff": (t.get("week") or {}).get("rd"),
+                                "week_standouts": [f'{s["name"]} ({s["line"]})'
+                                                   for s in (t.get("week") or {}).get("stars", [])]}
                                for t in f["power_top"]],
         "best_rotations_by_starter_era": [{"rank": i, "name": s["name"], "era": s["val"], "whip": s["whip"]}
                                           for i, s in enumerate(f["staffs"], 1)],
@@ -2192,6 +2327,12 @@ STYLE = """
   .bl-alt { display:flex; align-items:center; gap:10px; padding:5px 0; }
   .bl-alt .bl-face { width:34px; height:34px; }
   .bl-alt-score { font-weight:800; font-size:15px; flex-shrink:0; }
+  .bl-week { padding:12px 16px 10px; }
+  .bl-week-rec { font-weight:700; font-size:14px; margin-bottom:8px; }
+  .bl-week-games { display:flex; flex-wrap:wrap; gap:5px; }
+  .bl-gchip { font-size:11px; font-weight:700; padding:2px 7px; border-radius:5px; background:var(--surface); border:1px solid var(--border); white-space:nowrap; }
+  .bl-gchip.win { color:#16a34a; }
+  .bl-gchip.loss { color:#e51f00; }
   .bl-meter { width:118px; flex-shrink:0; }
   .bl-meter-top { display:flex; justify-content:space-between; align-items:baseline; }
   .bl-meter-label { font-size:10px; font-weight:800; letter-spacing:1px; color:var(--muted); }
@@ -2488,6 +2629,10 @@ def main():
         facts["allstars"] = build_allstars(args.season, asof=asof)
     facts["recent_headlines"] = recent_headlines(date_iso)
     facts["recent_prose"] = recent_prose(date_iso)
+    if "power" in section_ids:   # each ranked team's week record, results and standout players
+        end_d = asof or dt.date.today().isoformat()
+        start_d = (dt.date.fromisoformat(end_d) - dt.timedelta(days=7)).isoformat()
+        attach_power_week(facts, args.season, start_d, end_d)
     if {"hweek", "fallers"} & set(section_ids):   # last-7-days hitter lines (hot bats + cooling)
         end_d = asof or dt.date.today().isoformat()
         start_d = (dt.date.fromisoformat(end_d) - dt.timedelta(days=7)).isoformat()
