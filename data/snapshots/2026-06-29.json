@@ -38,15 +38,15 @@
       "rank": 9
     },
     {
-      "name": "San Diego Padres",
+      "name": "Boston Red Sox",
       "rank": 10
     },
     {
-      "name": "Boston Red Sox",
+      "name": "Chicago White Sox",
       "rank": 11
     },
     {
-      "name": "Chicago White Sox",
+      "name": "San Diego Padres",
       "rank": 12
     },
     {
@@ -106,11 +106,11 @@
       "rank": 26
     },
     {
-      "name": "Kansas City Royals",
+      "name": "Toronto Blue Jays",
       "rank": 27
     },
     {
-      "name": "Toronto Blue Jays",
+      "name": "Kansas City Royals",
       "rank": 28
     },
     {
@@ -130,12 +130,12 @@
     },
     {
       "name": "Juan Soto",
-      "ops": 0.973,
+      "ops": 0.975,
       "hr": 17
     },
     {
       "name": "Kyle Schwarber",
-      "ops": 0.962,
+      "ops": 0.954,
       "hr": 30
     },
     {
@@ -164,24 +164,19 @@
       "hr": 22
     },
     {
-      "name": "Aaron Judge",
-      "ops": 0.908,
-      "hr": 17
+      "name": "Bryce Harper",
+      "ops": 0.912,
+      "hr": 20
     },
     {
-      "name": "Bryce Harper",
-      "ops": 0.905,
-      "hr": 19
+      "name": "Willson Contreras",
+      "ops": 0.909,
+      "hr": 18
     },
     {
       "name": "Byron Buxton",
       "ops": 0.898,
       "hr": 25
-    },
-    {
-      "name": "Willson Contreras",
-      "ops": 0.898,
-      "hr": 17
     },
     {
       "name": "Corbin Carroll",
@@ -190,8 +185,13 @@
     },
     {
       "name": "James Wood",
-      "ops": 0.887,
-      "hr": 20
+      "ops": 0.892,
+      "hr": 21
+    },
+    {
+      "name": "Brandon Marsh",
+      "ops": 0.883,
+      "hr": 14
     },
     {
       "name": "Matt Olson",
@@ -214,27 +214,22 @@
       "hr": 17
     },
     {
-      "name": "Mike Trout",
-      "ops": 0.866,
-      "hr": 17
-    },
-    {
       "name": "Miguel Vargas",
       "ops": 0.866,
       "hr": 19
     },
     {
-      "name": "CJ Abrams",
-      "ops": 0.865,
+      "name": "Mike Trout",
+      "ops": 0.866,
       "hr": 17
     },
     {
-      "name": "Jake Bauers",
-      "ops": 0.863,
-      "hr": 14
+      "name": "CJ Abrams",
+      "ops": 0.864,
+      "hr": 17
     },
     {
-      "name": "Brandon Marsh",
+      "name": "TJ Rumfield",
       "ops": 0.863,
       "hr": 12
     },
@@ -244,9 +239,9 @@
       "hr": 16
     },
     {
-      "name": "TJ Rumfield",
+      "name": "Jake Bauers",
       "ops": 0.863,
-      "hr": 12
+      "hr": 14
     },
     {
       "name": "Jordan Walker",
@@ -254,14 +249,14 @@
       "hr": 18
     },
     {
-      "name": "Jonathan Aranda",
-      "ops": 0.856,
-      "hr": 13
-    },
-    {
       "name": "Dillon Dingler",
       "ops": 0.856,
       "hr": 19
+    },
+    {
+      "name": "Jonathan Aranda",
+      "ops": 0.856,
+      "hr": 13
     },
     {
       "name": "Luis Garc\u00eda Jr.",
@@ -294,24 +289,19 @@
       "hr": 13
     },
     {
-      "name": "Brandon Lowe",
-      "ops": 0.826,
-      "hr": 20
-    },
-    {
       "name": "Michael Harris II",
       "ops": 0.825,
       "hr": 14
     },
     {
-      "name": "Alec Burleson",
-      "ops": 0.824,
-      "hr": 13
-    },
-    {
       "name": "Casey Schmitt",
       "ops": 0.824,
       "hr": 16
+    },
+    {
+      "name": "Alec Burleson",
+      "ops": 0.824,
+      "hr": 13
     },
     {
       "name": "Oneil Cruz",
@@ -320,8 +310,18 @@
     },
     {
       "name": "Ryan O'Hearn",
-      "ops": 0.821,
+      "ops": 0.82,
       "hr": 13
+    },
+    {
+      "name": "Elly De La Cruz",
+      "ops": 0.819,
+      "hr": 12
+    },
+    {
+      "name": "Bobby Witt Jr.",
+      "ops": 0.819,
+      "hr": 10
     }
   ],
   "pitchers": [
@@ -381,34 +381,19 @@
       "forma": 83.2
     },
     {
-      "name": "Sonny Gray",
-      "era": 2.69,
-      "forma": 73.9
-    },
-    {
-      "name": "Justin Wrobleski",
-      "era": 2.71,
-      "forma": 77.8
-    },
-    {
-      "name": "Ranger Suarez",
-      "era": 2.83,
-      "forma": 71.1
-    },
-    {
       "name": "Foster Griffin",
       "era": 2.93,
       "forma": 74.1
     },
     {
+      "name": "Ranger Suarez",
+      "era": 2.94,
+      "forma": 70.2
+    },
+    {
       "name": "Davis Martin",
       "era": 3.0,
       "forma": 67.5
-    },
-    {
-      "name": "Braxton Ashcraft",
-      "era": 3.07,
-      "forma": 70.5
     },
     {
       "name": "Logan Webb",
@@ -444,6 +429,11 @@
       "name": "Jos\u00e9 Soriano",
       "era": 3.32,
       "forma": 58.1
+    },
+    {
+      "name": "Braxton Ashcraft",
+      "era": 3.33,
+      "forma": 68.0
     },
     {
       "name": "Robbie Ray",
@@ -482,13 +472,8 @@
     },
     {
       "name": "Sean Burke",
-      "era": 3.71,
-      "forma": 58.4
-    },
-    {
-      "name": "Will Warren",
-      "era": 3.75,
-      "forma": 51.7
+      "era": 3.69,
+      "forma": 58.2
     },
     {
       "name": "Kyle Bradish",
@@ -511,11 +496,6 @@
       "forma": 56.2
     },
     {
-      "name": "Joey Cantillo",
-      "era": 3.87,
-      "forma": 50.8
-    },
-    {
       "name": "Reid Detmers",
       "era": 3.88,
       "forma": 62.7
@@ -524,6 +504,26 @@
       "name": "Jes\u00fas Luzardo",
       "era": 3.88,
       "forma": 52.7
+    },
+    {
+      "name": "Andrew Abbott",
+      "era": 3.9,
+      "forma": 47.9
+    },
+    {
+      "name": "George Kirby",
+      "era": 3.94,
+      "forma": 50.4
+    },
+    {
+      "name": "Nathan Eovaldi",
+      "era": 3.95,
+      "forma": 57.8
+    },
+    {
+      "name": "Sandy Alcantara",
+      "era": 4.01,
+      "forma": 53.8
     }
   ],
   "rookies": [
@@ -568,14 +568,14 @@
       "hr": 19
     },
     {
-      "name": "Travis Bazzana",
-      "ops": 0.781,
-      "hr": 7
-    },
-    {
       "name": "A.J. Ewing",
       "ops": 0.781,
       "hr": 4
+    },
+    {
+      "name": "Travis Bazzana",
+      "ops": 0.781,
+      "hr": 7
     },
     {
       "name": "Wade Meckler",
@@ -643,19 +643,19 @@
       "hr": 4
     },
     {
-      "name": "Dylan Beavers",
-      "ops": 0.693,
-      "hr": 2
-    },
-    {
       "name": "Nathan Church",
       "ops": 0.693,
       "hr": 5
+    },
+    {
+      "name": "Dylan Beavers",
+      "ops": 0.693,
+      "hr": 2
     }
   ],
   "narration": {
-    "title": "The Cubs and Rangers Make Their Move",
-    "intro": "The Dodgers are still on top, but the action this week is in the middle of the board. The Cubs and Rays surged on hot last-ten runs, while the Braves and Yankees both stumbled to 3-7 and gave back ground.",
-    "power_lead": "Los Angeles sits comfortably at number one, 54-30 with a run differential of plus-152 nobody else is near. The real climbers are the Cubs, up three to third on an 8-2 stretch, and the Rangers, who leapt 14 spots to ninth at .500 despite a minus-8 differential. Atlanta and New York remain strong on paper, plus-88 and plus-101, but a 3-7 last ten dropped them to seventh and eighth."
+    "title": "Cubs and Rays Climb, the East Settles Down",
+    "intro": "The Dodgers are still the standard, 5-1 this week behind a scorching Freddie Freeman. But the real movement is below them: the Cubs and Rays surged on the back of monster weeks, while the Braves and Yankees gave ground.",
+    "power_lead": "Los Angeles holds at number one with a run differential of plus-152, and Freddie Freeman's 11-for-23 week kept any doubt at bay. The Cubs jumped three spots to third on a 6-1 run powered by Dansby Swanson's 15 RBI, and the Rays climbed five to fourth as Junior Caminero went a preposterous 11-for-26 with seven homers. Underneath, the Braves slid three spots and the Yankees six after each lost five of six, while the Rangers (up 14) and Red Sox (up 16) made the week's biggest leaps."
   }
 }

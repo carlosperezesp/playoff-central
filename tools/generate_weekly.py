@@ -695,7 +695,11 @@ def _power_card(t):
 def power_row(t, show_mv):
     rd = t["runDiff"]
     mv = movement_badge(t.get("movement")) if show_mv else ""
-    driver = f'{t["wins"]}-{t["losses"]} · {"+" if rd >= 0 else ""}{rd} run diff · L10 {escape(t["l10"])}'
+    # Show the week record (the same number the expanded card details) so the row and
+    # card agree; fall back to L10 only when this team has no games in the window.
+    wk = t.get("week") or {}
+    recent = f'{wk["rec"]} this wk' if wk.get("rec") else f'L10 {escape(t["l10"])}'
+    driver = f'{t["wins"]}-{t["losses"]} · {"+" if rd >= 0 else ""}{rd} run diff · {recent}'
     head = (f'<span class="bl-rank">{t["rank"]}</span>{mv}'
             f'<img class="bl-team-logo" src="{logo_url(t["id"])}" alt="" loading="lazy">'
             f'<span class="bl-team-info"><strong>{escape(t["name"])}</strong>'
@@ -967,7 +971,7 @@ def _section(heading, gloss, lead, rows):
 
 def sec_power(f, n, limit=10):
     rows = "".join(power_row(t, f["has_movement"]) for t in f["power_top"][:limit])
-    g = "Power ranking — record, run differential and last-10 form, blended into one order."
+    g = "Power ranking — record, run differential and recent form, blended into one order. Tap a team for its week."
     return _section("Power Rankings", g, _lead(n, "power_lead"), rows)
 
 
@@ -1437,8 +1441,8 @@ LLM_SYSTEM = (
     "signature line (e.g. a WHIP that 'looks like a typo'); and never flip a framing you used days ago. "
     "Find a fresh picture.\n"
     "10. HOUSE STYLE for numbers and names in prose: write run differential as 'plus-142' / 'minus-16'; "
-    "name teams exactly as the data does (e.g. 'Athletics', not 'Oakland'); write last-10 as '7-3 over "
-    "their last ten'. Never reformat or re-round a number the lists already show.\n\n"
+    "name teams exactly as the data does (e.g. 'Athletics', not 'Oakland'); write a week record as '5-1 "
+    "this week'. Never reformat or re-round a number the lists already show.\n\n"
     "FORMAT: 'title' = a punchy 6–10 word headline, true to today's theme and fresh vs the recent "
     "headlines. 'intro' = 2–3 short sentences on the day's one real storyline. Each section 'lead' "
     "(only for sections_today) = 1–2 sentences of color — name a standout, don't restate the whole "
@@ -1522,7 +1526,7 @@ def facts_for_llm(f, theme_title, section_ids):
         "week_window": {"from": f.get("baseline_date"), "to": f.get("asof") or dt.date.today().isoformat()},
         "power_rankings_top": [{"rank": t["rank"], "name": t["name"],
                                 "record": f'{t["wins"]}-{t["losses"]}', "run_diff": t["runDiff"],
-                                "last10": t["l10"], "rank_change_vs_last_week": t.get("movement"),
+                                "rank_change_vs_last_week": t.get("movement"),
                                 "week_record": (t.get("week") or {}).get("rec"),
                                 "week_run_diff": (t.get("week") or {}).get("rd"),
                                 "week_standouts": [f'{s["name"]} ({s["line"]})'
