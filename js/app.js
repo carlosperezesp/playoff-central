@@ -5017,6 +5017,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
 (function(){
   const API='https://statsapi.mlb.com/api/v1';
   let curDay='hoy', pollTimer=null, lastGames=[], clockStarted=false, mvpRaceTried=false;
+  let topPks=new Set(), topRetry=false;
   const expanded=new Set(), ptwCache={}, starsCache={};
   const $=id=>document.getElementById(id);
   const fj=u=>fetch(u).then(r=>r.json());
@@ -5034,6 +5035,27 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   function tickClock(){if(!$('wb-clock'))return;const n=new Date(),s=n.getSeconds(),m=n.getMinutes(),h=n.getHours()%12+m/60;
     const sh=$('wb-sh'),mh=$('wb-mh'),hh=$('wb-hh');if(sh)sh.style.transform=`rotate(${s*6}deg)`;if(mh)mh.style.transform=`rotate(${m*6}deg)`;if(hh)hh.style.transform=`rotate(${h*30}deg)`;}
   function startClock(){const c=$('wb-clock');if(c&&!c.querySelector('.wb-tick')){for(let i=0;i<12;i++){const t=document.createElement('div');t.className='wb-tick';t.style.transform=`rotate(${i*30}deg)`;c.appendChild(t);}}tickClock();if(!clockStarted){clockStarted=true;setInterval(tickClock,1000);}}
+
+  // ── TOP GAME badge: mark games passing the shared top-match formula ──
+  // (pitcher duel + division/wild-card race + award candidates → isTopMatch)
+  function buildCandsByTeam(){
+    const ml=window._mvpLists; if(!ml)return null;
+    const flat=[...(ml.alMVP||[]),...(ml.nlMVP||[]),...(ml.alCY||[]),...(ml.nlCY||[]),...(ml.alROY||[]),...(ml.nlROY||[])];
+    const by={};
+    flat.forEach(c=>{[c.teamId,c.teamAbbr].filter(Boolean).map(String).forEach(k=>{(by[k]=by[k]||[]).push(c);});});
+    return by;
+  }
+  function computeTop(games,people){
+    topPks=new Set();
+    if(typeof calcTopMatchScore!=='function')return;
+    const fm={};
+    Object.keys(people).forEach(pid=>{const p=people[pid];const f=calcBaseScore(p.era??NaN,p.whip??NaN);if(f!=null){fm[pid]=f;if(p.name)fm[p.name]=f;}});
+    const cands=buildCandsByTeam();
+    games.forEach(g=>{
+      const probables={away:g.teams.away.probablePitcher||null,home:g.teams.home.probablePitcher||null};
+      try{if(calcTopMatchScore({teams:g.teams,probables},fm,cands).isTopMatch)topPks.add(g.gamePk);}catch(e){}
+    });
+  }
 
   async function loadDay(day,silent){
     curDay=day;
@@ -5053,7 +5075,13 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
         people[p.id]={num:p.primaryNumber||'',name:p.fullName,era:st.era?+st.era:null,whip:st.whip?+st.whip:null,ip:st.inningsPitched||'—',so:st.strikeOuts||0,w:st.wins||0,l:st.losses||0};});
     }catch(e){}}
     lastGames=games;
+    computeTop(games,people);
     if($('wb-games')) render(games,people);
+    // Award-race lists may load after first paint — recompute badges once they land.
+    if(!window._mvpLists && !topRetry && typeof ensureMvpLists==='function'){
+      topRetry=true;
+      ensureMvpLists().then(()=>{if($('wb-games')){computeTop(games,people);render(games,people);}}).catch(()=>{});
+    }
     clearTimeout(pollTimer);
     if($('wb-games') && games.some(g=>g.status.abstractGameState==='Live')) pollTimer=setTimeout(()=>loadDay(curDay,true),30000);
   }
@@ -5094,7 +5122,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     el.innerHTML=games.map(g=>{
       const live=g.status.abstractGameState==='Live', open=expanded.has(g.gamePk);
       const ih=Array.from({length:9},(_,i)=>`<div class="wb-gi">${i+1}</div>`).join('')+`<div class="wb-gi wb-r">R</div>`;
-      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div>`:`<div class="wb-dh">${g.status.abstractGameState==='Preview'?'Probable starters':'Starting pitchers'}</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}</div>`;
+      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div>`:`<div class="wb-dh">${g.status.abstractGameState==='Preview'?'Probable starters':'Starting pitchers'}</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}</div>`;
     }).join('');
     expanded.forEach(pk=>{const g=games.find(x=>x.gamePk===pk);if(g)fillDetail(g);});
   }
