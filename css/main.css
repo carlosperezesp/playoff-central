@@ -1512,7 +1512,7 @@
   .wb-board{background:linear-gradient(180deg,var(--board) 0%,var(--board2) 100%);border:3px solid rgba(0,0,0,.25);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);padding:6px}
   .wb-scroll{overflow-x:auto}
   .wb-grid{min-width:0}
-  .wb-row{display:grid;grid-template-columns:30px minmax(86px,170px) repeat(9,minmax(26px,46px)) 30px minmax(0,1fr);align-items:center}
+  .wb-row{display:grid;grid-template-columns:32px minmax(160px,1fr) repeat(9,minmax(32px,54px)) 38px;align-items:center}
   .wb-ghead{padding:9px 6px 3px}
   .wb-ghead .wb-gh{font-weight:700;font-size:10px;letter-spacing:.5px;color:rgba(243,239,224,.5);text-align:center;text-transform:uppercase}
   .wb-gstatus{text-align:left;padding-left:4px;font-weight:700;font-size:12px;letter-spacing:1px;color:rgba(243,239,224,.62);text-transform:uppercase;white-space:nowrap}
@@ -1532,17 +1532,17 @@
   .wb-game .wb-trow.wb-home{padding-bottom:7px}
   .wb-game .wb-trow.wb-loser .wb-nm{color:rgba(243,239,224,.5)}
   .wb-game .wb-trow.wb-loser .wb-inn,.wb-game .wb-trow.wb-loser .wb-rcol{color:rgba(243,239,224,.5)}
-  .wb-plate{width:28px;height:23px;margin:0 auto;background:var(--plate);color:var(--plate-ink);border-radius:3px;border:1px solid rgba(0,0,0,.3);box-shadow:inset 0 -2px 4px rgba(0,0,0,.12);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;line-height:1}
+  .wb-plate{width:30px;height:25px;margin:0 auto;background:var(--plate);color:var(--plate-ink);border-radius:3px;border:1px solid rgba(0,0,0,.3);box-shadow:inset 0 -2px 4px rgba(0,0,0,.12);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1}
   .wb-plate-p{text-align:center;font-family:'Barlow Condensed';font-weight:800;font-size:15px;color:rgba(243,239,224,.4);line-height:1}
   .wb-tm{display:flex;align-items:center;gap:8px;min-width:0;padding-left:4px}
   .wb-tm img{width:22px;height:22px;object-fit:contain;flex:none}
-  .wb-tm .wb-nm{font-family:'Bebas Neue';font-size:21px;letter-spacing:1.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wb-tm .wb-nm{font-family:'Bebas Neue';font-size:23px;letter-spacing:1.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wb-wl{font-family:'Barlow Condensed';font-weight:800;font-size:12px;line-height:1;padding:2px 6px;border-radius:3px;flex:none;letter-spacing:.5px;transform:translateY(-2px)}
   .wb-wl.wb-w{background:#fff;color:#0e3386}
   .wb-wl.wb-l{background:#0e3386;color:#fff}
-  .wb-inn{text-align:center;font-weight:700;font-size:16px;color:#fff}
+  .wb-inn{text-align:center;font-weight:700;font-size:18px;color:#fff}
   .wb-inn.wb-cur{color:var(--gold)}
-  .wb-rcol{text-align:center;font-weight:800;font-size:17px;color:var(--gold)}
+  .wb-rcol{text-align:center;font-weight:800;font-size:19px;color:var(--gold)}
   .wb-detail{display:none;background:#33503c;color:var(--ink);padding:14px 16px 16px}
   .wb-detail.wb-open{display:block;border-bottom:2px solid var(--line)}
   .wb-dh{font-family:'Barlow Condensed';font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(243,239,224,.7);margin-bottom:10px}
@@ -1571,7 +1571,7 @@
   .wb-loading,.wb-empty{padding:40px 10px;text-align:center;color:rgba(243,239,224,.7);font-weight:600;letter-spacing:1px}
   @media(max-width:620px){.wb-sp-grid,.wb-ptw-grid{grid-template-columns:1fr}}
   @media(max-width:520px){
-    .wb-row{grid-template-columns:27px minmax(84px,1fr) repeat(9,21px) 27px 0px}
+    .wb-row{grid-template-columns:27px minmax(84px,1fr) repeat(9,21px) 27px}
     .wb-tm{gap:5px}.wb-tm img{width:18px;height:18px}.wb-tm .wb-nm{font-size:15px;letter-spacing:.5px}
     .wb-wl{font-size:11px;padding:1px 5px}
     .wb-inn{font-size:14px}.wb-rcol{font-size:15px}.wb-gi{font-size:10px}.wb-gstatus{font-size:11px;letter-spacing:.5px}
