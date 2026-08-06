@@ -1,99 +1,25 @@
 {
   "kicker": "Rotation Report",
-  "team": "Yankees",
-  "subtitle": "64-50 · 2nd AL East",
-  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
-  "cardColor": "#003087",
-  "cardColor2": "#001844",
-  "avgForma": 66,
-  "avgColor": "#b1c882",
+  "team": "Marlins",
+  "subtitle": "58-56 · 3rd NL East",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/146.svg",
+  "cardColor": "#00A3E0",
+  "cardColor2": "#005270",
+  "avgForma": 53,
+  "avgColor": "#ffc000",
   "starters": [
     {
-      "name": "Cam Schlittler",
-      "throws": "R",
-      "forma": 85,
-      "rookie": false,
-      "color": "#16a34a",
-      "tcolor": "#ffffff",
-      "pid": 693645,
-      "acq": "",
-      "statline": [
-        {
-          "v": "2.26",
-          "l": "ERA",
-          "c": "#16a34a"
-        },
-        {
-          "v": "0.95",
-          "l": "WHIP",
-          "c": "#16a34a"
-        },
-        {
-          "v": "10-6",
-          "l": "",
-          "c": "#16a34a"
-        },
-        {
-          "v": "139.2",
-          "l": "IP",
-          "c": "#16a34a"
-        },
-        {
-          "v": "171",
-          "l": "K",
-          "c": "#16a34a"
-        }
-      ]
-    },
-    {
-      "name": "Max Fried",
-      "throws": "L",
-      "forma": 74,
-      "rookie": false,
-      "color": "#b1c882",
-      "tcolor": "#15351c",
-      "pid": 608331,
-      "acq": "",
-      "statline": [
-        {
-          "v": "3.12",
-          "l": "ERA",
-          "c": "#b1c882"
-        },
-        {
-          "v": "0.99",
-          "l": "WHIP",
-          "c": "#16a34a"
-        },
-        {
-          "v": "4-3",
-          "l": "",
-          "c": "#b1c882"
-        },
-        {
-          "v": "75.0",
-          "l": "IP",
-          "c": "#b1c882"
-        },
-        {
-          "v": "68",
-          "l": "K",
-          "c": "#ffc000"
-        }
-      ]
-    },
-    {
-      "name": "Gerrit Cole",
+      "name": "Eury Pérez",
       "throws": "R",
       "forma": 66,
       "rookie": false,
       "color": "#b1c882",
       "tcolor": "#15351c",
-      "pid": 543037,
+      "pid": 691587,
       "acq": "",
       "statline": [
         {
-          "v": "3.42",
+          "v": "3.44",
           "l": "ERA",
           "c": "#b1c882"
         },
@@ -103,73 +29,147 @@
           "c": "#b1c882"
         },
         {
-          "v": "5-5",
+          "v": "5-8",
           "l": "",
-          "c": "#b1c882"
+          "c": "#ff8100"
         },
         {
-          "v": "73.2",
+          "v": "104.2",
           "l": "IP",
-          "c": "#ffc000"
+          "c": "#16a34a"
         },
         {
-          "v": "78",
+          "v": "112",
           "l": "K",
-          "c": "#ffc000"
+          "c": "#16a34a"
         }
       ]
     },
     {
-      "name": "Ryan Weathers",
-      "throws": "L",
-      "forma": 57,
+      "name": "Sandy Alcantara",
+      "throws": "R",
+      "forma": 59,
       "rookie": false,
       "color": "#ffc000",
       "tcolor": "#3a2c00",
-      "pid": 677960,
+      "pid": 645261,
       "acq": "",
       "statline": [
         {
-          "v": "3.79",
+          "v": "3.68",
           "l": "ERA",
           "c": "#ffc000"
         },
         {
-          "v": "1.22",
+          "v": "1.20",
           "l": "WHIP",
           "c": "#ffc000"
         },
         {
-          "v": "5-7",
+          "v": "12-6",
           "l": "",
-          "c": "#ffc000"
+          "c": "#16a34a"
         },
         {
-          "v": "121.0",
+          "v": "156.2",
           "l": "IP",
           "c": "#16a34a"
         },
         {
-          "v": "132",
+          "v": "120",
           "l": "K",
           "c": "#16a34a"
         }
       ]
     },
     {
-      "name": "Will Warren",
+      "name": "Tyler Phillips",
       "throws": "R",
-      "forma": 47,
+      "forma": 55,
       "rookie": false,
       "color": "#ffc000",
       "tcolor": "#3a2c00",
-      "pid": 701542,
+      "pid": 663969,
       "acq": "",
       "statline": [
         {
-          "v": "4.14",
+          "v": "3.53",
           "l": "ERA",
           "c": "#ffc000"
+        },
+        {
+          "v": "1.35",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "3-5",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "89.1",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "66",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    },
+    {
+      "name": "Janson Junk",
+      "throws": "R",
+      "forma": 44,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 676083,
+      "acq": "",
+      "statline": [
+        {
+          "v": "4.58",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.33",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "5-6",
+          "l": "",
+          "c": "#ffc000"
+        },
+        {
+          "v": "78.2",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "61",
+          "l": "K",
+          "c": "#ffc000"
+        }
+      ]
+    },
+    {
+      "name": "Ryan Gusto",
+      "throws": "R",
+      "forma": 40,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 687473,
+      "acq": "",
+      "statline": [
+        {
+          "v": "4.80",
+          "l": "ERA",
+          "c": "#ff8100"
         },
         {
           "v": "1.36",
@@ -177,65 +177,73 @@
           "c": "#ff8100"
         },
         {
-          "v": "8-5",
+          "v": "0-3",
           "l": "",
-          "c": "#16a34a"
+          "c": "#ff2200"
         },
         {
-          "v": "108.2",
+          "v": "45.0",
           "l": "IP",
-          "c": "#16a34a"
+          "c": "#ff8100"
         },
         {
-          "v": "109",
+          "v": "39",
           "l": "K",
-          "c": "#16a34a"
+          "c": "#ff2200"
         }
       ]
     }
   ],
   "injured": [
     {
-      "name": "Carlos Rodón",
-      "throws": "L",
-      "forma": 61,
+      "name": "Max Meyer",
+      "throws": "R",
+      "forma": 73,
       "rookie": false,
       "color": "#b1c882",
       "tcolor": "#15351c",
-      "pid": 607074,
+      "pid": 676974,
       "status": "15-DAY IL",
       "acq": "",
       "statline": [
         {
-          "v": "3.30",
+          "v": "2.68",
           "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.14",
+          "l": "WHIP",
           "c": "#b1c882"
         },
         {
-          "v": "1.25",
-          "l": "WHIP",
-          "c": "#ffc000"
-        },
-        {
-          "v": "4-2",
+          "v": "9-1",
           "l": "",
           "c": "#16a34a"
         },
         {
-          "v": "46.1",
+          "v": "111.0",
           "l": "IP",
-          "c": "#ff8100"
+          "c": "#16a34a"
         },
         {
-          "v": "52",
+          "v": "121",
           "l": "K",
-          "c": "#ff8100"
+          "c": "#16a34a"
         }
       ]
     }
   ],
   "injLabel": "Key Injury",
-  "gone": [],
+  "gone": [
+    {
+      "name": "Lake Bachar",
+      "gs": 4,
+      "forma": 62,
+      "to": "PIT",
+      "color": "#b1c882"
+    }
+  ],
   "footer": "baseballlens.com",
   "edition": "The Lens · Aug 5, 2026"
 }

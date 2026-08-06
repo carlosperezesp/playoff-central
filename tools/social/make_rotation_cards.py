@@ -1,15 +1,27 @@
 #!/usr/bin/env python3
-"""Build 'rotation report' social cards for the top-5 rotations by FORM.
-Active rotation (top-5 starters by IP, incl. two-way), displayed most->least FORM,
-plus key injured starters. Each stat colored by quality tier."""
-import json, re, subprocess, urllib.request
+"""Build 'rotation report' social cards for the best rotations by FORM.
+All 30 rotations are scanned; the current rotation is the 5 starters with the most
+starts in the last 30 days (game logs, so post-deadline pickups count on their new
+team), displayed most->least FORM, plus key injured starters. Stats colored by tier.
+In-season trades are marked in purple: an arrow badge on the pitchers who came in,
+a strip along the bottom for the starters who were traded away."""
+import concurrent.futures as cf, datetime, json, re, subprocess, urllib.parse, urllib.request
 
 API = "https://statsapi.mlb.com/api/v1"; SEASON = 2026
-TEAMS = [(116, "Tigers"), (147, "Yankees"), (119, "Dodgers"), (158, "Brewers"), (144, "Braves")]
+TOP_PER_LEAGUE = 6        # best rotations per league that get a card (ties included)
+TRADE_SINCE = "2026-03-01"  # in-season moves only; winter signings are not marked
+GONE_MIN_GS = 3           # a departure only counts if he was starting games
+TODAY = datetime.date(2026, 8, 5)
+RECENT_SINCE = (TODAY - datetime.timedelta(days=30)).isoformat()
+EDITION = "The Lens · Aug 5, 2026"
 
 BRIGHT = {"green":"#16a34a","lgreen":"#b1c882","yellow":"#ffc000","orange":"#ff8100","red":"#ff2200","gray":"#9aa0a6"}
 TCOLOR = {"green":"#ffffff","lgreen":"#15351c","yellow":"#3a2c00","orange":"#ffffff","red":"#ffffff","gray":"#ffffff"}
-PRIMARY = {116:"#0C2340",147:"#003087",119:"#005A9C",158:"#12284B",144:"#CE1141"}
+PRIMARY = {108:"#BA0021",109:"#A71930",110:"#DF4601",111:"#BD3039",112:"#0E3386",113:"#C6011F",
+  114:"#00385D",115:"#33006F",116:"#0C2340",117:"#002D62",118:"#004687",119:"#005A9C",120:"#AB0003",
+  121:"#002D72",133:"#003831",134:"#FDB827",135:"#2F241D",136:"#0C2C56",137:"#FD5A1E",138:"#C41E3A",
+  139:"#092C5C",140:"#003278",141:"#134A8E",142:"#002B5C",143:"#E81828",144:"#CE1141",145:"#27251F",
+  146:"#00A3E0",147:"#003087",158:"#12284B"}
 CURRENT_YEAR = 2026; ROOKIE_IP_LIMIT = 50
 NON_ROOKIE_OVERRIDES = {808963}  # Roki Sasaki — exceeded service-time limit, not a rookie
 
@@ -106,20 +118,119 @@ def statline(r, full=True):
     return line
 
 HYD=f"person(pitchHand,stats(group=[pitching],type=season,season={SEASON}))"
-out=[]
-for tid,tname in TEAMS:
+GLOG=urllib.parse.quote(f"stats(group=[pitching],type=gameLog,season={SEASON})")
+HYD_STATS=urllib.parse.quote(f"stats(group=[pitching],type=season,season={SEASON})")
+
+def recent_starts(pids):
+    """{pid: (starts in the last 30 days, date of last start)} from game logs, so a
+    pitcher traded at the deadline keeps the starts he made for his old team."""
+    pids=[p for p in set(pids) if p]
+    if not pids: return {}
+    d=fetch(f"{API}/people?personIds={','.join(map(str,pids))}&hydrate={GLOG}")
+    out={}
+    for p in d.get("people",[]):
+        n,last=0,""
+        for blk in p.get("stats",[]):
+            for sp in blk.get("splits",[]):
+                if not int(sp.get("stat",{}).get("gamesStarted",0) or 0): continue
+                dt=sp.get("date","")
+                if dt>last: last=dt
+                if dt>=RECENT_SINCE: n+=1
+        out[p["id"]]=(n,last)
+    return out
+
+def scan(team):
+    """Current rotation for one team: the 5 who have been taking the ball lately.
+    A rotation member starts in most of his outings and is either established
+    (5+ starts) or in the rotation right now (2+ starts in the last 30 days);
+    a team that cannot field 5 is topped up by season innings (bullpen games)."""
+    tid,tname=team
     act=fetch(f"{API}/teams/{tid}/roster?rosterType=active&season={SEASON}&hydrate={HYD}")
-    forty=fetch(f"{API}/teams/{tid}/roster?rosterType=40Man&season={SEASON}&hydrate={HYD}")
-    active_ids={p["person"]["id"] for p in act.get("roster",[])}
-    starters=[]
+    pool=[]
     for p in act.get("roster",[]):
         st=pstat(p.get("person",{}))
         if not st: continue
         gs=int(st.get("gamesStarted",0) or 0); gp=int(st.get("gamesPitched",0) or 0)
-        if gs>=5 and gp and gs/gp>=0.5: starters.append(mkrow(p["person"],st))
-    # pick the 5 rotation members by innings, then DISPLAY most->least FORM
-    starters=sorted(starters,key=lambda r:r["ip"],reverse=True)[:5]
-    starters=sorted(starters,key=lambda r:r["forma"],reverse=True)
+        if gs>=1 and gp: pool.append(mkrow(p["person"],st)|{"ratio":gs/gp})
+    rec=recent_starts([r["pid"] for r in pool])
+    for r in pool: r["gs30"],r["last"]=rec.get(r["pid"],(0,""))
+    starters=[r for r in pool if r["ratio"]>=0.5 and (r["gs"]>=5 or r["gs30"]>=2)]
+    rot=sorted(starters,key=lambda r:(r["gs30"],r["last"]),reverse=True)[:5]
+    if len(rot)<5:
+        rest=sorted([r for r in pool if r not in rot],key=lambda r:r["ip"],reverse=True)
+        rot+=rest[:5-len(rot)]
+    rot=sorted(rot,key=lambda r:r["forma"],reverse=True)
+    avgf=sum(r["forma"] for r in rot)/len(rot) if rot else 0
+    return {"tid":tid,"name":tname,"starters":rot,"avg":round(avgf),"avgf":avgf}
+
+TEAMS=fetch(f"{API}/teams?sportId=1&season={SEASON}")["teams"]
+ABBR={t["id"]:t["abbreviation"] for t in TEAMS}
+LEAGUE={t["id"]:t["league"]["id"] for t in TEAMS}
+
+def standings():
+    div={d["id"]:d["nameShort"] for d in fetch(f"{API}/divisions?sportId=1")["divisions"]}
+    d=fetch(f"{API}/standings?leagueId=103,104&season={SEASON}&standingsTypes=regularSeason")
+    out={}
+    for rec in d.get("records",[]):
+        dv=div.get(rec.get("division",{}).get("id"),"")
+        for t in rec.get("teamRecords",[]):
+            out[t["team"]["id"]]={"w":t["wins"],"l":t["losses"],
+                                  "rank":int(t.get("divisionRank") or 0),"div":dv}
+    return out
+
+def ordinal(n): return f"{n}{'th' if 10<=n%100<20 else {1:'st',2:'nd',3:'rd'}.get(n%10,'th')}"
+
+def moves(tid):
+    """In-season trades/waiver claims: {pid: from-abbr} coming in, list of pids going out."""
+    d=fetch(f"{API}/transactions?teamId={tid}&startDate={TRADE_SINCE}&endDate={TODAY}")
+    came,left={},{}
+    for x in d.get("transactions",[]):
+        if x.get("typeCode") not in ("TR","CL") or not x.get("person"): continue
+        to=(x.get("toTeam") or {}).get("id"); fr=(x.get("fromTeam") or {}).get("id")
+        pid=x["person"]["id"]
+        if to==tid and fr in ABBR and fr!=tid: came[pid]=ABBR[fr]
+        elif fr==tid and to in ABBR and to!=tid: left[pid]=ABBR[to]
+    return came,left
+
+def gone_rows(left):
+    """Departures worth naming: the ones who were making starts. -> display strings."""
+    if not left: return []
+    d=fetch(f"{API}/people?personIds={','.join(map(str,left))}&hydrate={HYD_STATS}")
+    rows=[]
+    for p in d.get("people",[]):
+        st=pstat(p)
+        if not st: continue
+        gs=int(st.get("gamesStarted",0) or 0)
+        if gs<GONE_MIN_GS: continue
+        f=round(forma_score(float(st.get("era",99) or 99),float(st.get("whip",9) or 9)))
+        rows.append({"name":p["fullName"],"gs":gs,"forma":f,
+                     "to":left[p["id"]],"color":BRIGHT[tier(f)]})
+    return sorted(rows,key=lambda r:r["gs"],reverse=True)[:3]
+
+teams=[(t["id"],t["teamName"]) for t in TEAMS]
+with cf.ThreadPoolExecutor(8) as ex:
+    scans=list(ex.map(scan,teams))
+scans.sort(key=lambda s:s["avgf"],reverse=True)
+print("Rotation ranking (avg FORM of the current 5):")
+for i,s in enumerate(scans,1):
+    print(f"  {i:2}. {s['name']:<12} {s['avgf']:>5.1f}  " +
+          "  ".join(f"{r['name'].split()[-1]} {r['forma']}" for r in s["starters"]))
+
+# best TOP_PER_LEAGUE rotations in each league, keeping whoever ties the cutoff
+picked=[]
+for lg in (103,104):
+    ls=[s for s in scans if LEAGUE.get(s["tid"])==lg]
+    cut=ls[TOP_PER_LEAGUE-1]["avgf"]
+    picked+=[s for s in ls if s["avgf"]>=cut]
+STAND=standings()
+
+out=[]
+for sc in picked:
+    tid,tname=sc["tid"],sc["name"]
+    starters=sc["starters"]
+    forty=fetch(f"{API}/teams/{tid}/roster?rosterType=40Man&season={SEASON}&hydrate={HYD}")
+    act=fetch(f"{API}/teams/{tid}/roster?rosterType=active&season={SEASON}&hydrate={HYD}")
+    active_ids={p["person"]["id"] for p in act.get("roster",[])}
     inj=[]
     for p in forty.get("roster",[]):
         if p["person"]["id"] in active_ids: continue
@@ -135,25 +246,33 @@ for tid,tname in TEAMS:
     rmap=rookie_map([r["pid"] for r in starters+inj])
     for r in starters+inj: r["rookie"]=rmap.get(r["pid"],False)
 
-    avg=round(sum(r["forma"] for r in starters)/len(starters)) if starters else 0
+    came,left=moves(tid)
+    gone=gone_rows(left)
+    if gone: inj=inj[:1]   # the departures strip takes the last row the card has room for
+    for r in starters+inj: r["acq"]=came.get(r["pid"],"")
+
+    avg=sc["avg"]; sd=STAND.get(tid,{})
+    rec=f"{sd['w']}-{sd['l']} · {ordinal(sd['rank'])} {sd['div']}" if sd else ""
     c1=PRIMARY[tid]
     data={
       "kicker":"Rotation Report","team":tname,
-      "subtitle":f"Top-5 starter form · avg {avg}",
+      "subtitle":rec,
       "teamLogo":cap(tid),"cardColor":c1,"cardColor2":shade(c1),
       "avgForma":avg,"avgColor":BRIGHT[tier(avg)],
       "starters":[{"name":r["name"],"throws":r["throws"],"forma":r["forma"],"rookie":r["rookie"],
-                   "color":r["color"],"tcolor":r["tcolor"],"pid":r["pid"],
+                   "color":r["color"],"tcolor":r["tcolor"],"pid":r["pid"],"acq":r["acq"],
                    "statline":statline(r,True)} for r in starters],
       "injured":[{"name":r["name"],"throws":r["throws"],"forma":r["forma"],"rookie":r["rookie"],
                   "color":r["color"],"tcolor":r["tcolor"],"pid":r["pid"],"status":r["status"],
-                  "statline":statline(r,True)} for r in inj],
+                  "acq":r["acq"],"statline":statline(r,True)} for r in inj],
       "injLabel":"On the IL" if len(inj)>1 else "Key Injury",
-      "footer":"baseballlens.com","edition":"The Lens · Jun 22, 2026"}
-    slug=tname.lower()
+      "gone":gone,
+      "footer":"baseballlens.com","edition":EDITION}
+    slug=tname.lower().replace(" ","")
     jf=f"rotation_{slug}.json"; pf=f"rotation_{slug}.png"
     json.dump(data,open(jf,"w"),ensure_ascii=False,indent=2)
     subprocess.run(["python3","render.py",jf,pf,"--template","template_rotation.html"],check=True)
-    print(f"  -> {pf}  {tname} avg {avg}  forma:{[r['forma'] for r in starters]}  injured:{[r['name'] for r in inj]}")
+    print(f"  -> {pf}  {tname} {rec}  avg {avg}  in:{[r['name'] for r in starters+inj if r['acq']]}"
+          f"  out:{[g['name'] for g in gone]}")
     out.append(pf)
 print("DONE:",out)

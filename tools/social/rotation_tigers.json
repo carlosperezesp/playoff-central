@@ -1,134 +1,64 @@
 {
   "kicker": "Rotation Report",
   "team": "Tigers",
-  "subtitle": "Top-5 starter form · avg 70",
+  "subtitle": "55-58 · 4th AL Central",
   "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/116.svg",
   "cardColor": "#0C2340",
   "cardColor2": "#061220",
-  "avgForma": 70,
+  "avgForma": 64,
   "avgColor": "#b1c882",
   "starters": [
     {
       "name": "Troy Melton",
       "throws": "R",
-      "forma": 82,
+      "forma": 95,
       "rookie": true,
       "color": "#16a34a",
       "tcolor": "#ffffff",
       "pid": 675512,
+      "acq": "",
       "statline": [
         {
-          "v": "2.56",
+          "v": "1.58",
           "l": "ERA",
           "c": "#16a34a"
         },
         {
-          "v": "0.95",
+          "v": "0.91",
           "l": "WHIP",
           "c": "#16a34a"
         },
         {
-          "v": "4-0",
+          "v": "7-1",
           "l": "",
           "c": "#16a34a"
         },
         {
-          "v": "31.2",
+          "v": "74.0",
           "l": "IP",
-          "c": "#ff2200"
+          "c": "#ffc000"
         },
         {
-          "v": "19",
+          "v": "64",
           "l": "K",
-          "c": "#ff2200"
-        }
-      ]
-    },
-    {
-      "name": "Casey Mize",
-      "throws": "R",
-      "forma": 79,
-      "rookie": false,
-      "color": "#16a34a",
-      "tcolor": "#ffffff",
-      "pid": 663554,
-      "statline": [
-        {
-          "v": "2.58",
-          "l": "ERA",
-          "c": "#16a34a"
-        },
-        {
-          "v": "1.01",
-          "l": "WHIP",
-          "c": "#16a34a"
-        },
-        {
-          "v": "2-4",
-          "l": "",
-          "c": "#ff8100"
-        },
-        {
-          "v": "52.1",
-          "l": "IP",
-          "c": "#ff8100"
-        },
-        {
-          "v": "52",
-          "l": "K",
-          "c": "#ff8100"
-        }
-      ]
-    },
-    {
-      "name": "Tarik Skubal",
-      "throws": "L",
-      "forma": 74,
-      "rookie": false,
-      "color": "#b1c882",
-      "tcolor": "#15351c",
-      "pid": 669373,
-      "statline": [
-        {
-          "v": "3.02",
-          "l": "ERA",
-          "c": "#b1c882"
-        },
-        {
-          "v": "1.02",
-          "l": "WHIP",
-          "c": "#16a34a"
-        },
-        {
-          "v": "3-3",
-          "l": "",
-          "c": "#b1c882"
-        },
-        {
-          "v": "53.2",
-          "l": "IP",
-          "c": "#ff8100"
-        },
-        {
-          "v": "57",
-          "l": "K",
-          "c": "#ff8100"
+          "c": "#ffc000"
         }
       ]
     },
     {
       "name": "Keider Montero",
       "throws": "R",
-      "forma": 67,
+      "forma": 73,
       "rookie": false,
       "color": "#b1c882",
       "tcolor": "#15351c",
       "pid": 672456,
+      "acq": "",
       "statline": [
         {
-          "v": "3.68",
+          "v": "3.17",
           "l": "ERA",
-          "c": "#ffc000"
+          "c": "#b1c882"
         },
         {
           "v": "1.00",
@@ -136,87 +66,86 @@
           "c": "#16a34a"
         },
         {
-          "v": "3-5",
+          "v": "8-6",
           "l": "",
-          "c": "#ff8100"
-        },
-        {
-          "v": "80.2",
-          "l": "IP",
           "c": "#b1c882"
         },
         {
-          "v": "53",
+          "v": "116.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "81",
           "l": "K",
-          "c": "#ff8100"
+          "c": "#b1c882"
         }
       ]
     },
     {
-      "name": "Framber Valdez",
+      "name": "Tyler Holton",
       "throws": "L",
-      "forma": 48,
+      "forma": 60,
       "rookie": false,
-      "color": "#ffc000",
-      "tcolor": "#3a2c00",
-      "pid": 664285,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 663947,
+      "acq": "",
       "statline": [
         {
-          "v": "4.09",
+          "v": "3.06",
           "l": "ERA",
-          "c": "#ffc000"
-        },
-        {
-          "v": "1.35",
-          "l": "WHIP",
-          "c": "#ff8100"
-        },
-        {
-          "v": "3-5",
-          "l": "",
-          "c": "#ff8100"
-        },
-        {
-          "v": "83.2",
-          "l": "IP",
           "c": "#b1c882"
         },
         {
-          "v": "67",
-          "l": "K",
-          "c": "#ffc000"
-        }
-      ]
-    }
-  ],
-  "injured": [
-    {
-      "name": "Jack Flaherty",
-      "throws": "R",
-      "forma": 25,
-      "rookie": false,
-      "color": "#ff8100",
-      "tcolor": "#ffffff",
-      "pid": 656427,
-      "status": "15-DAY IL",
-      "statline": [
-        {
-          "v": "5.35",
-          "l": "ERA",
-          "c": "#ff2200"
-        },
-        {
-          "v": "1.57",
+          "v": "1.34",
           "l": "WHIP",
-          "c": "#ff2200"
+          "c": "#ff8100"
         },
         {
-          "v": "1-8",
+          "v": "1-4",
           "l": "",
           "c": "#ff2200"
         },
         {
-          "v": "65.2",
+          "v": "50.0",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "38",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    },
+    {
+      "name": "Drew Anderson",
+      "throws": "R",
+      "forma": 49,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 623454,
+      "acq": "",
+      "statline": [
+        {
+          "v": "4.24",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.30",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "4-4",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "63.2",
           "l": "IP",
           "c": "#ffc000"
         },
@@ -226,9 +155,102 @@
           "c": "#ffc000"
         }
       ]
+    },
+    {
+      "name": "Framber Valdez",
+      "throws": "L",
+      "forma": 43,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 664285,
+      "acq": "",
+      "statline": [
+        {
+          "v": "4.41",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.39",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "6-7",
+          "l": "",
+          "c": "#ffc000"
+        },
+        {
+          "v": "120.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "98",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    }
+  ],
+  "injured": [
+    {
+      "name": "Jack Flaherty",
+      "throws": "R",
+      "forma": 40,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 656427,
+      "status": "15-DAY IL",
+      "acq": "",
+      "statline": [
+        {
+          "v": "4.59",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.41",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "3-8",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "86.1",
+          "l": "IP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "102",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
     }
   ],
   "injLabel": "Key Injury",
+  "gone": [
+    {
+      "name": "Tarik Skubal",
+      "gs": 17,
+      "forma": 80,
+      "to": "LAD",
+      "color": "#16a34a"
+    },
+    {
+      "name": "Casey Mize",
+      "gs": 16,
+      "forma": 79,
+      "to": "SD",
+      "color": "#16a34a"
+    }
+  ],
   "footer": "baseballlens.com",
-  "edition": "The Lens · Jun 22, 2026"
+  "edition": "The Lens · Aug 5, 2026"
 }

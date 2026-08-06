@@ -1,0 +1,202 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Guardians",
+  "subtitle": "57-57 · 2nd AL Central",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/114.svg",
+  "cardColor": "#00385D",
+  "cardColor2": "#001c2e",
+  "avgForma": 64,
+  "avgColor": "#b1c882",
+  "starters": [
+    {
+      "name": "Parker Messick",
+      "throws": "L",
+      "forma": 77,
+      "rookie": true,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 800048,
+      "acq": "",
+      "statline": [
+        {
+          "v": "2.57",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.06",
+          "l": "WHIP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "8-6",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "129.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "128",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Foster Griffin",
+      "throws": "L",
+      "forma": 71,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 656492,
+      "acq": "WSH",
+      "statline": [
+        {
+          "v": "3.06",
+          "l": "ERA",
+          "c": "#b1c882"
+        },
+        {
+          "v": "1.07",
+          "l": "WHIP",
+          "c": "#b1c882"
+        },
+        {
+          "v": "12-3",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "129.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "116",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Gavin Williams",
+      "throws": "R",
+      "forma": 67,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 668909,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.56",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.04",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "11-6",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "139.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "178",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Tanner Bibee",
+      "throws": "R",
+      "forma": 60,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 676440,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.81",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.15",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "4-11",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "132.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "100",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Joey Cantillo",
+      "throws": "L",
+      "forma": 46,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 676282,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.87",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.47",
+          "l": "WHIP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "8-7",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "118.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "129",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    }
+  ],
+  "injured": [],
+  "injLabel": "Key Injury",
+  "gone": [],
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Aug 5, 2026"
+}

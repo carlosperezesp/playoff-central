@@ -24,7 +24,7 @@
     color:var(--text); background:rgba(255,255,255,.08); border:1px solid var(--line); padding:8px 17px; border-radius:999px}
 
   /* team header banner */
-  .team{position:relative; border-radius:24px; overflow:hidden; display:flex; align-items:center;
+  .team{position:relative; flex:none; border-radius:24px; overflow:hidden; display:flex; align-items:center;
     gap:24px; padding:20px 30px; margin-bottom:22px;
     background:linear-gradient(110deg, var(--c1,#12284b) 0%, var(--c1,#12284b) 52%, var(--c2,#0b1830) 100%);
     box-shadow:0 14px 40px rgba(0,0,0,.38)}
@@ -82,6 +82,25 @@
   .row.inj .meta .st{opacity:.92}
   .chip.dim{filter:saturate(.55) brightness(.82); border-color:rgba(255,255,255,.14)}
 
+  /* 7 rows (5 starters + 2 injured) only fit if they run a little tighter */
+  .card.tight .row{padding:5px 8px}
+  .card.tight .face{height:84px}
+
+  /* in-season moves, in purple: badge on who arrived, strip for who was traded away */
+  .meta .nm .acq{font-family:'Barlow Condensed'; font-weight:800; font-size:15px; letter-spacing:1px;
+    color:#fff; background:#7c3aed; border:1px solid rgba(255,255,255,.28);
+    padding:2px 9px; border-radius:6px; line-height:1.2}
+  .gone{flex:none; display:flex; align-items:center; gap:16px; margin-top:12px; padding:11px 18px;
+    background:rgba(124,58,237,.16); border:1px solid rgba(168,85,247,.5); border-radius:14px}
+  .gone .lbl{flex:none; font-weight:800; font-size:16px; letter-spacing:2px; text-transform:uppercase; color:#c084fc}
+  .gone .items{flex:1; min-width:0; font-weight:600; font-size:21px; letter-spacing:.3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:rgba(255,255,255,.92)}
+  .gone .items b{font-weight:800}
+  .gone .items .fl{font-size:12px; font-weight:700; letter-spacing:.8px; text-transform:uppercase;
+    color:rgba(255,255,255,.45); margin-left:3px}
+  .gone .items .to{color:#c084fc; font-weight:800}
+  .gone .items .dot{color:rgba(255,255,255,.28); margin:0 11px}
+
   .ft{margin-top:auto; padding-top:16px; display:flex; align-items:center; justify-content:space-between; color:var(--muted)}
   .ft .url{font-weight:700; font-size:21px; letter-spacing:2px; text-transform:uppercase}
   .ft .edition{font-weight:500; font-size:20px; letter-spacing:1px}
@@ -115,6 +134,11 @@
 
     <div class="sec out hidden" id="secInj"><span id="injLabel">On the IL</span><span class="ln"></span></div>
     <div id="injured"></div>
+
+    <div class="gone hidden" id="gone">
+      <span class="lbl">Traded away</span>
+      <span class="items" id="goneItems"></span>
+    </div>
 
     <div class="ft">
       <span class="url" id="url"></span>
@@ -159,7 +183,7 @@ const DATA = __DATA__;
       <div class="chip${injured?' dim':''}" style="background:${p.color};color:${p.tcolor||'#fff'}">${Math.round(p.forma)}</div>
       <div class="face">${photo?`<img src="${photo}" onerror="this.style.display='none'">`:''}</div>
       <div class="meta">
-        <div class="nm">${p.name}${hand?`<span class="hand">${hand}</span>`:''}${p.rookie?`<span class="rk">R</span>`:''}</div>
+        <div class="nm">${p.name}${hand?`<span class="hand">${hand}</span>`:''}${p.rookie?`<span class="rk">R</span>`:''}${p.acq?`<span class="acq">&larr; ${p.acq}</span>`:''}</div>
         <div class="st">${statHTML(p.statline)}</div>
       </div>
       ${il}
@@ -170,10 +194,20 @@ const DATA = __DATA__;
     (d.starters||[]).map(p=>rowHTML(p,false)).join('');
 
   const inj = d.injured||[];
+  const gone = d.gone||[];
+  if((d.starters||[]).length + inj.length + (gone.length?1:0) > 6)
+    document.querySelector('.card').classList.add('tight');
   if(inj.length){
     document.getElementById('secInj').classList.remove('hidden');
     txt('injLabel', d.injLabel || 'On the IL');
     document.getElementById('injured').innerHTML = inj.map(p=>rowHTML(p,true)).join('');
+  }
+
+  if(gone.length){
+    document.getElementById('gone').classList.remove('hidden');
+    document.getElementById('goneItems').innerHTML = gone.map(g =>
+      `<b>${g.name}</b> <span style="color:${g.color}">${g.forma}</span><span class="fl">form</span> <span class="to">&rarr; ${g.to}</span>`
+    ).join('<span class="dot">·</span>');
   }
 
   if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>window.__ready=true);} else window.__ready=true;

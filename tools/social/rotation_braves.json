@@ -1,108 +1,185 @@
 {
   "kicker": "Rotation Report",
   "team": "Braves",
-  "subtitle": "Top-5 starter form · avg 60",
+  "subtitle": "68-45 · 1st NL East",
   "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/144.svg",
   "cardColor": "#CE1141",
   "cardColor2": "#670820",
-  "avgForma": 60,
-  "avgColor": "#b1c882",
+  "avgForma": 58,
+  "avgColor": "#ffc000",
   "starters": [
     {
       "name": "Chris Sale",
       "throws": "L",
-      "forma": 82,
+      "forma": 84,
       "rookie": false,
       "color": "#16a34a",
       "tcolor": "#ffffff",
       "pid": 519242,
+      "acq": "",
       "statline": [
         {
-          "v": "2.14",
+          "v": "2.08",
           "l": "ERA",
           "c": "#16a34a"
         },
         {
-          "v": "1.05",
+          "v": "1.02",
           "l": "WHIP",
-          "c": "#b1c882"
+          "c": "#16a34a"
         },
         {
-          "v": "8-5",
+          "v": "12-6",
           "l": "",
           "c": "#16a34a"
         },
         {
-          "v": "84.0",
+          "v": "117.0",
           "l": "IP",
-          "c": "#b1c882"
+          "c": "#16a34a"
         },
         {
-          "v": "99",
+          "v": "143",
           "l": "K",
-          "c": "#b1c882"
+          "c": "#16a34a"
         }
       ]
     },
     {
       "name": "Martín Pérez",
       "throws": "L",
-      "forma": 75,
+      "forma": 65,
       "rookie": false,
       "color": "#b1c882",
       "tcolor": "#15351c",
       "pid": 527048,
+      "acq": "",
       "statline": [
         {
-          "v": "2.78",
+          "v": "3.24",
           "l": "ERA",
           "c": "#b1c882"
         },
         {
-          "v": "1.07",
+          "v": "1.17",
           "l": "WHIP",
-          "c": "#b1c882"
-        },
-        {
-          "v": "6-3",
-          "l": "",
-          "c": "#16a34a"
-        },
-        {
-          "v": "68.0",
-          "l": "IP",
           "c": "#ffc000"
         },
         {
-          "v": "56",
+          "v": "7-6",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "97.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "75",
           "l": "K",
-          "c": "#ff8100"
+          "c": "#ffc000"
         }
       ]
     },
     {
       "name": "Bryce Elder",
       "throws": "R",
-      "forma": 58,
+      "forma": 55,
       "rookie": false,
       "color": "#ffc000",
       "tcolor": "#3a2c00",
       "pid": 693821,
+      "acq": "",
       "statline": [
         {
-          "v": "3.71",
+          "v": "3.84",
           "l": "ERA",
           "c": "#ffc000"
         },
         {
-          "v": "1.21",
+          "v": "1.25",
           "l": "WHIP",
           "c": "#ffc000"
         },
         {
-          "v": "5-5",
+          "v": "7-6",
           "l": "",
           "c": "#b1c882"
+        },
+        {
+          "v": "119.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "101",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Grant Holmes",
+      "throws": "R",
+      "forma": 53,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 656550,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.67",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.34",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "7-4",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "108.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "92",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Tyler Mahle",
+      "throws": "R",
+      "forma": 35,
+      "rookie": false,
+      "color": "#ff8100",
+      "tcolor": "#ffffff",
+      "pid": 641816,
+      "acq": "SF",
+      "statline": [
+        {
+          "v": "5.13",
+          "l": "ERA",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1.39",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "3-9",
+          "l": "",
+          "c": "#ff2200"
         },
         {
           "v": "94.2",
@@ -110,28 +187,32 @@
           "c": "#16a34a"
         },
         {
-          "v": "79",
+          "v": "89",
           "l": "K",
-          "c": "#ffc000"
+          "c": "#b1c882"
         }
       ]
-    },
+    }
+  ],
+  "injured": [
     {
-      "name": "Grant Holmes",
+      "name": "Reynaldo López",
       "throws": "R",
-      "forma": 44,
+      "forma": 54,
       "rookie": false,
       "color": "#ffc000",
       "tcolor": "#3a2c00",
-      "pid": 656550,
+      "pid": 625643,
+      "status": "15-DAY IL",
+      "acq": "",
       "statline": [
         {
-          "v": "4.33",
+          "v": "3.64",
           "l": "ERA",
-          "c": "#ff8100"
+          "c": "#ffc000"
         },
         {
-          "v": "1.40",
+          "v": "1.34",
           "l": "WHIP",
           "c": "#ff8100"
         },
@@ -141,55 +222,17 @@
           "c": "#b1c882"
         },
         {
-          "v": "68.2",
+          "v": "71.2",
           "l": "IP",
           "c": "#ffc000"
         },
         {
-          "v": "61",
+          "v": "66",
           "l": "K",
           "c": "#ffc000"
         }
       ]
     },
-    {
-      "name": "JR Ritchie",
-      "throws": "R",
-      "forma": 42,
-      "rookie": true,
-      "color": "#ffc000",
-      "tcolor": "#3a2c00",
-      "pid": 702275,
-      "statline": [
-        {
-          "v": "4.54",
-          "l": "ERA",
-          "c": "#ff8100"
-        },
-        {
-          "v": "1.37",
-          "l": "WHIP",
-          "c": "#ff8100"
-        },
-        {
-          "v": "1-2",
-          "l": "",
-          "c": "#ff8100"
-        },
-        {
-          "v": "35.2",
-          "l": "IP",
-          "c": "#ff8100"
-        },
-        {
-          "v": "30",
-          "l": "K",
-          "c": "#ff2200"
-        }
-      ]
-    }
-  ],
-  "injured": [
     {
       "name": "Spencer Strider",
       "throws": "R",
@@ -199,6 +242,7 @@
       "tcolor": "#ffffff",
       "pid": 675911,
       "status": "60-DAY IL",
+      "acq": "",
       "statline": [
         {
           "v": "5.31",
@@ -228,7 +272,8 @@
       ]
     }
   ],
-  "injLabel": "Key Injury",
+  "injLabel": "On the IL",
+  "gone": [],
   "footer": "baseballlens.com",
-  "edition": "The Lens · Jun 22, 2026"
+  "edition": "The Lens · Aug 5, 2026"
 }

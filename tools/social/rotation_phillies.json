@@ -1,0 +1,202 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Phillies",
+  "subtitle": "61-53 · 2nd NL East",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/143.svg",
+  "cardColor": "#E81828",
+  "cardColor2": "#740c14",
+  "avgForma": 53,
+  "avgColor": "#ffc000",
+  "starters": [
+    {
+      "name": "Zack Wheeler",
+      "throws": "R",
+      "forma": 84,
+      "rookie": false,
+      "color": "#16a34a",
+      "tcolor": "#ffffff",
+      "pid": 554430,
+      "acq": "",
+      "statline": [
+        {
+          "v": "2.49",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "0.91",
+          "l": "WHIP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "10-2",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "105.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "126",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Cristopher Sánchez",
+      "throws": "L",
+      "forma": 71,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 650911,
+      "acq": "",
+      "statline": [
+        {
+          "v": "2.61",
+          "l": "ERA",
+          "c": "#16a34a"
+        },
+        {
+          "v": "1.20",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "14-4",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "144.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "168",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Jesús Luzardo",
+      "throws": "L",
+      "forma": 64,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 666200,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.36",
+          "l": "ERA",
+          "c": "#b1c882"
+        },
+        {
+          "v": "1.16",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "10-5",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "136.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "164",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Aaron Nola",
+      "throws": "R",
+      "forma": 28,
+      "rookie": false,
+      "color": "#ff8100",
+      "tcolor": "#ffffff",
+      "pid": 605400,
+      "acq": "",
+      "statline": [
+        {
+          "v": "5.55",
+          "l": "ERA",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1.44",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "3-9",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "120.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "121",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    },
+    {
+      "name": "Andrew Painter",
+      "throws": "R",
+      "forma": 16,
+      "rookie": true,
+      "color": "#ff2200",
+      "tcolor": "#ffffff",
+      "pid": 691725,
+      "acq": "",
+      "statline": [
+        {
+          "v": "6.72",
+          "l": "ERA",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1.61",
+          "l": "WHIP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "1-8",
+          "l": "",
+          "c": "#ff2200"
+        },
+        {
+          "v": "71.0",
+          "l": "IP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "59",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    }
+  ],
+  "injured": [],
+  "injLabel": "Key Injury",
+  "gone": [],
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Aug 5, 2026"
+}

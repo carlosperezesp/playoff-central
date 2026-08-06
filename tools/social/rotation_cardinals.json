@@ -1,0 +1,210 @@
+{
+  "kicker": "Rotation Report",
+  "team": "Cardinals",
+  "subtitle": "56-58 · 4th NL Central",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/138.svg",
+  "cardColor": "#C41E3A",
+  "cardColor2": "#620f1d",
+  "avgForma": 53,
+  "avgColor": "#ffc000",
+  "starters": [
+    {
+      "name": "Michael McGreevy",
+      "throws": "R",
+      "forma": 60,
+      "rookie": false,
+      "color": "#b1c882",
+      "tcolor": "#15351c",
+      "pid": 700241,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.59",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.20",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "4-9",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "120.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "81",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Andre Pallante",
+      "throws": "R",
+      "forma": 58,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 669467,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.72",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.22",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "11-6",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "118.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "86",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Kyle Leahy",
+      "throws": "R",
+      "forma": 56,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 681517,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.44",
+          "l": "ERA",
+          "c": "#b1c882"
+        },
+        {
+          "v": "1.33",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "7-4",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "107.1",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "91",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Hunter Dobbins",
+      "throws": "R",
+      "forma": 56,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 690928,
+      "acq": "",
+      "statline": [
+        {
+          "v": "3.60",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.30",
+          "l": "WHIP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "2-2",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "40.0",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "36",
+          "l": "K",
+          "c": "#ff2200"
+        }
+      ]
+    },
+    {
+      "name": "Matthew Liberatore",
+      "throws": "L",
+      "forma": 33,
+      "rookie": false,
+      "color": "#ff8100",
+      "tcolor": "#ffffff",
+      "pid": 669461,
+      "acq": "",
+      "statline": [
+        {
+          "v": "4.97",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.49",
+          "l": "WHIP",
+          "c": "#ff2200"
+        },
+        {
+          "v": "5-8",
+          "l": "",
+          "c": "#ff8100"
+        },
+        {
+          "v": "108.2",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "107",
+          "l": "K",
+          "c": "#16a34a"
+        }
+      ]
+    }
+  ],
+  "injured": [],
+  "injLabel": "Key Injury",
+  "gone": [
+    {
+      "name": "Dustin May",
+      "gs": 21,
+      "forma": 48,
+      "to": "MIL",
+      "color": "#ffc000"
+    }
+  ],
+  "footer": "baseballlens.com",
+  "edition": "The Lens · Aug 5, 2026"
+}

@@ -1,26 +1,27 @@
 {
   "kicker": "Rotation Report",
   "team": "Dodgers",
-  "subtitle": "Top-5 starter form · avg 68",
+  "subtitle": "69-45 · 1st NL West",
   "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/119.svg",
   "cardColor": "#005A9C",
   "cardColor2": "#002d4e",
-  "avgForma": 68,
+  "avgForma": 65,
   "avgColor": "#b1c882",
   "starters": [
     {
-      "name": "Shohei Ohtani",
+      "name": "Yoshinobu Yamamoto",
       "throws": "R",
-      "forma": 97,
+      "forma": 83,
       "rookie": false,
       "color": "#16a34a",
       "tcolor": "#ffffff",
-      "pid": 660271,
+      "pid": 808967,
+      "acq": "",
       "statline": [
         {
-          "v": "1.47",
+          "v": "2.76",
           "l": "ERA",
-          "c": "#16a34a"
+          "c": "#b1c882"
         },
         {
           "v": "0.88",
@@ -28,89 +29,128 @@
           "c": "#16a34a"
         },
         {
-          "v": "7-2",
+          "v": "11-7",
           "l": "",
           "c": "#16a34a"
         },
         {
-          "v": "73.2",
+          "v": "133.2",
           "l": "IP",
-          "c": "#ffc000"
+          "c": "#16a34a"
         },
         {
-          "v": "78",
+          "v": "121",
           "l": "K",
-          "c": "#ffc000"
+          "c": "#16a34a"
         }
       ]
     },
     {
-      "name": "Yoshinobu Yamamoto",
-      "throws": "R",
-      "forma": 84,
+      "name": "Tarik Skubal",
+      "throws": "L",
+      "forma": 80,
       "rookie": false,
       "color": "#16a34a",
       "tcolor": "#ffffff",
-      "pid": 808967,
+      "pid": 669373,
+      "acq": "DET",
       "statline": [
         {
-          "v": "2.65",
+          "v": "2.81",
           "l": "ERA",
-          "c": "#16a34a"
+          "c": "#b1c882"
         },
         {
-          "v": "0.87",
+          "v": "0.92",
           "l": "WHIP",
           "c": "#16a34a"
         },
         {
-          "v": "7-5",
+          "v": "7-6",
           "l": "",
           "c": "#b1c882"
         },
         {
-          "v": "91.2",
+          "v": "102.2",
           "l": "IP",
           "c": "#16a34a"
         },
         {
-          "v": "86",
+          "v": "122",
           "l": "K",
-          "c": "#b1c882"
+          "c": "#16a34a"
         }
       ]
     },
     {
       "name": "Justin Wrobleski",
       "throws": "L",
-      "forma": 78,
+      "forma": 69,
       "rookie": false,
-      "color": "#16a34a",
-      "tcolor": "#ffffff",
+      "color": "#b1c882",
+      "tcolor": "#15351c",
       "pid": 680736,
+      "acq": "",
       "statline": [
         {
-          "v": "2.72",
+          "v": "3.31",
           "l": "ERA",
-          "c": "#16a34a"
+          "c": "#b1c882"
         },
         {
-          "v": "1.01",
+          "v": "1.07",
           "l": "WHIP",
-          "c": "#16a34a"
+          "c": "#b1c882"
         },
         {
-          "v": "8-2",
+          "v": "11-3",
           "l": "",
           "c": "#16a34a"
         },
         {
-          "v": "79.1",
+          "v": "117.0",
+          "l": "IP",
+          "c": "#16a34a"
+        },
+        {
+          "v": "91",
+          "l": "K",
+          "c": "#b1c882"
+        }
+      ]
+    },
+    {
+      "name": "Eric Lauer",
+      "throws": "L",
+      "forma": 50,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 641778,
+      "acq": "TOR",
+      "statline": [
+        {
+          "v": "4.50",
+          "l": "ERA",
+          "c": "#ff8100"
+        },
+        {
+          "v": "1.19",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "6-5",
+          "l": "",
+          "c": "#b1c882"
+        },
+        {
+          "v": "88.0",
           "l": "IP",
           "c": "#b1c882"
         },
         {
-          "v": "50",
+          "v": "56",
           "l": "K",
           "c": "#ff8100"
         }
@@ -119,52 +159,17 @@
     {
       "name": "Roki Sasaki",
       "throws": "R",
-      "forma": 43,
+      "forma": 44,
       "rookie": false,
       "color": "#ffc000",
       "tcolor": "#3a2c00",
       "pid": 808963,
+      "acq": "",
       "statline": [
         {
-          "v": "4.76",
+          "v": "4.64",
           "l": "ERA",
           "c": "#ff8100"
-        },
-        {
-          "v": "1.29",
-          "l": "WHIP",
-          "c": "#ffc000"
-        },
-        {
-          "v": "3-4",
-          "l": "",
-          "c": "#ffc000"
-        },
-        {
-          "v": "68.0",
-          "l": "IP",
-          "c": "#ffc000"
-        },
-        {
-          "v": "70",
-          "l": "K",
-          "c": "#ffc000"
-        }
-      ]
-    },
-    {
-      "name": "Emmet Sheehan",
-      "throws": "R",
-      "forma": 37,
-      "rookie": false,
-      "color": "#ff8100",
-      "tcolor": "#ffffff",
-      "pid": 686218,
-      "statline": [
-        {
-          "v": "5.32",
-          "l": "ERA",
-          "c": "#ff2200"
         },
         {
           "v": "1.30",
@@ -172,24 +177,62 @@
           "c": "#ff8100"
         },
         {
-          "v": "3-5",
+          "v": "5-5",
           "l": "",
-          "c": "#ff8100"
+          "c": "#b1c882"
         },
         {
-          "v": "67.2",
+          "v": "99.0",
           "l": "IP",
-          "c": "#ffc000"
+          "c": "#16a34a"
         },
         {
-          "v": "76",
+          "v": "101",
           "l": "K",
-          "c": "#ffc000"
+          "c": "#16a34a"
         }
       ]
     }
   ],
   "injured": [
+    {
+      "name": "Kris Bubic",
+      "throws": "L",
+      "forma": 53,
+      "rookie": false,
+      "color": "#ffc000",
+      "tcolor": "#3a2c00",
+      "pid": 663460,
+      "status": "60-DAY IL",
+      "acq": "KC",
+      "statline": [
+        {
+          "v": "4.11",
+          "l": "ERA",
+          "c": "#ffc000"
+        },
+        {
+          "v": "1.23",
+          "l": "WHIP",
+          "c": "#ffc000"
+        },
+        {
+          "v": "3-2",
+          "l": "",
+          "c": "#16a34a"
+        },
+        {
+          "v": "50.1",
+          "l": "IP",
+          "c": "#ff8100"
+        },
+        {
+          "v": "51",
+          "l": "K",
+          "c": "#ff8100"
+        }
+      ]
+    },
     {
       "name": "Tyler Glasnow",
       "throws": "R",
@@ -199,6 +242,7 @@
       "tcolor": "#ffffff",
       "pid": 607192,
       "status": "60-DAY IL",
+      "acq": "",
       "statline": [
         {
           "v": "2.72",
@@ -228,7 +272,8 @@
       ]
     }
   ],
-  "injLabel": "Key Injury",
+  "injLabel": "On the IL",
+  "gone": [],
   "footer": "baseballlens.com",
-  "edition": "The Lens · Jun 22, 2026"
+  "edition": "The Lens · Aug 5, 2026"
 }
