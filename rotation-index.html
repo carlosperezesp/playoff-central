@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Rotation Index — Baseball Lens</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f6f8; --surface:#fff; --surface2:#eef1f5; --border:#dde2e9;
+    --text:#16202b; --muted:#6b7280; --accent:#16a34a; --accent-blue:#1565d8; --gold:#e8c23a;
+    --ink:#f3efe0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Inter',system-ui,sans-serif; color:var(--text); background:var(--bg);
+    padding:26px 14px 70px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .ri-head{margin-bottom:20px}
+  .ri-brand{font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;color:var(--muted);margin-bottom:6px}
+  .ri-brand b{font-weight:400;color:var(--accent)}
+  .ri-title{font-family:'Bebas Neue';font-size:44px;line-height:1;letter-spacing:2px}
+  .ri-sub{font-size:14px;color:var(--muted);max-width:62ch;margin-top:8px;line-height:1.5}
+  .ri-sub b{color:var(--text);font-weight:600}
+  .ri-meta{font-family:'Barlow Condensed';font-weight:700;font-size:12px;letter-spacing:1.2px;
+    text-transform:uppercase;color:var(--muted);margin-top:12px}
+
+  /* ── Index rows ─────────────────────────────────────────── */
+  .ri-list{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .ri-row{
+    width:100%;background:none;border:0;border-bottom:1px solid var(--border);cursor:pointer;
+    display:grid;grid-template-columns:30px 30px minmax(0,1fr) auto 46px 16px;
+    align-items:center;gap:11px;padding:9px 13px;text-align:left;font:inherit;color:inherit;
+    transition:background .12s;-webkit-tap-highlight-color:transparent;
+  }
+  .ri-row:hover{background:var(--surface2)}
+  .ri-row.open{background:var(--surface2)}
+  .ri-rank{font-family:'Barlow Condensed';font-weight:700;font-size:15px;color:var(--muted);text-align:center}
+  .ri-row.open .ri-rank{color:var(--accent-blue)}
+  .ri-logo{width:28px;height:28px;object-fit:contain}
+  .ri-team{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ri-team small{font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.5px}
+  .ri-strip{display:flex;gap:3px}
+  .ri-pip{width:16px;height:16px;border-radius:3px;font-family:'Barlow Condensed';font-weight:700;
+    font-size:10px;display:flex;align-items:center;justify-content:center}
+  .ri-form{font-family:'Barlow Condensed';font-weight:800;font-size:19px;text-align:right;letter-spacing:.5px}
+  .ri-chev{color:var(--muted);font-size:11px;transition:transform .15s;text-align:center}
+  .ri-row.open .ri-chev{transform:rotate(180deg)}
+
+  /* ── Expanded panel ─────────────────────────────────────── */
+  .ri-panel{display:none;border-bottom:1px solid var(--border);background:var(--surface)}
+  .ri-panel.open{display:block}
+  .ri-phead{padding:16px 18px;display:flex;align-items:center;gap:14px;color:var(--ink)}
+  .ri-phead img{width:46px;height:46px;object-fit:contain;flex-shrink:0}
+  .ri-kicker{font-family:'Barlow Condensed';font-weight:700;font-size:11px;letter-spacing:2px;
+    text-transform:uppercase;opacity:.72}
+  .ri-pname{font-family:'Bebas Neue';font-size:30px;line-height:1.05;letter-spacing:1.5px}
+  .ri-psub{font-family:'Barlow Condensed';font-weight:600;font-size:12.5px;letter-spacing:.6px;opacity:.78}
+  .ri-chip{
+    margin-left:auto;flex-shrink:0;text-align:center;border-radius:7px;padding:6px 11px;
+    background:linear-gradient(135deg,#ffe9a8 0%,var(--gold) 48%,#c8961e 100%);color:#3a2a05;
+  }
+  .ri-chip .v{font-family:'Barlow Condensed';font-weight:800;font-size:24px;line-height:1}
+  .ri-chip .l{font-family:'Barlow Condensed';font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+
+  .ri-sps{padding:4px 0}
+  .ri-sp{display:grid;grid-template-columns:38px minmax(0,1fr) 40px;gap:11px;align-items:center;
+    padding:9px 18px;border-bottom:1px solid var(--border)}
+  .ri-sp:last-child{border-bottom:0}
+  .ri-face{width:38px;height:38px;border-radius:50%;object-fit:cover;object-position:top center}
+  .ri-spname{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .ri-hand{font-family:'Barlow Condensed';font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;
+    background:rgba(184,15,33,.1);color:#b80f21;letter-spacing:.3px}
+  .ri-hand.L{background:rgba(0,90,156,.1);color:#005A9C}
+  .ri-starts{font-family:'Barlow Condensed';font-weight:600;font-size:11px;color:var(--muted);letter-spacing:.4px}
+  .ri-statline{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+  .ri-stat{font-family:'Barlow Condensed';font-weight:700;font-size:11px;letter-spacing:.4px;
+    padding:1px 6px;border-radius:4px;white-space:nowrap}
+  .ri-stat b{font-weight:800;font-size:12px}
+  .ri-spform{font-family:'Barlow Condensed';font-weight:800;font-size:24px;text-align:right;line-height:1}
+
+  .ri-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:14px 18px 18px}
+  .ri-tile{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 6px;text-align:center}
+  .ri-tile.gold{background:linear-gradient(135deg,#fff4d1 0%,#f7dd8e 100%);border-color:#e8c96a}
+  .ri-tile .v{font-family:'Barlow Condensed';font-weight:800;font-size:21px;line-height:1.1}
+  .ri-tile .l{font-family:'Barlow Condensed';font-weight:700;font-size:9.5px;letter-spacing:.9px;
+    text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .ri-note{padding:0 18px 16px;font-size:11.5px;color:var(--muted);line-height:1.5}
+
+  /* ── Legend / states ────────────────────────────────────── */
+  .ri-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;padding:12px 14px;background:var(--surface);
+    border:1px solid var(--border);border-radius:10px;font-family:'Barlow Condensed';font-weight:700;
+    font-size:11.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .ri-legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .ri-loading,.ri-error{padding:40px 18px;text-align:center;font-family:'Barlow Condensed';font-weight:700;
+    letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:var(--surface);
+    border:1px solid var(--border);border-radius:10px}
+
+  @media (max-width:620px){
+    .ri-title{font-size:34px}
+    .ri-row{grid-template-columns:24px 26px minmax(0,1fr) 40px 14px;gap:9px;padding:9px 11px}
+    .ri-strip{display:none}
+    .ri-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ri-sp{grid-template-columns:32px minmax(0,1fr) 36px;gap:9px;padding:9px 13px}
+    .ri-face{width:32px;height:32px}
+    .ri-phead{padding:14px}
+    .ri-pname{font-size:25px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="ri-head">
+    <div class="ri-brand">BASEBALL <b>LENS</b></div>
+    <h1 class="ri-title">ROTATION INDEX</h1>
+    <p class="ri-sub">All 30 rotations, ranked by <b>FORM</b>: each team's five current starters scored 0–100
+      on their season ERA and WHIP, then averaged <b>weighted by innings pitched</b> — so the arm carrying the
+      rotation counts more than the No. 5 with 40 innings. Tap a team for its full report.</p>
+    <div class="ri-meta" id="riMeta">Loading…</div>
+  </header>
+
+  <div id="riList" class="ri-loading">Loading rotations…</div>
+
+  <div class="ri-legend">
+    <span>Form scale</span>
+    <span><i style="background:#16a34a"></i>Elite 75+</span>
+    <span><i style="background:#b1c882"></i>Above avg 60+</span>
+    <span><i style="background:#ffc000"></i>Average 40+</span>
+    <span><i style="background:#ff8100"></i>Below avg 25+</span>
+    <span><i style="background:#ff2200"></i>Poor</span>
+  </div>
+</div>
+
+<script>
+const API = 'https://statsapi.mlb.com/api/v1';
+const WINDOW_DAYS = 15;   // how far back we look to decide who is actually starting now
+const MIN_IP = 10;        // a spot starter with 5 innings is not a rotation member
+
+// FORM scale — same constants as the app (js/app.js calcBaseScore)
+const ERA_BEST = 1.50, ERA_WORST = 6.00, WHIP_BEST = 0.80, WHIP_WORST = 2.00;
+function forma(era, whip) {
+  const parts = [];
+  if (era  != null && isFinite(era))  parts.push(Math.max(0, Math.min(100, (ERA_WORST  - era)  / (ERA_WORST  - ERA_BEST)  * 100)));
+  if (whip != null && isFinite(whip)) parts.push(Math.max(0, Math.min(100, (WHIP_WORST - whip) / (WHIP_WORST - WHIP_BEST) * 100)));
+  return parts.length ? Math.round(parts.reduce((a,b)=>a+b,0) / parts.length) : null;
+}
+const tier  = f => f == null ? '#9ca3af' : f >= 75 ? '#16a34a' : f >= 60 ? '#b1c882' : f >= 40 ? '#ffc000' : f >= 25 ? '#ff8100' : '#ff2200';
+const tint  = (h,r) => { const n=parseInt(h.slice(1),16),R=(n>>16)&255,G=(n>>8)&255,B=n&255;
+  return '#'+((1<<24)+(Math.round(R+(255-R)*r)<<16)+(Math.round(G+(255-G)*r)<<8)+Math.round(B+(255-B)*r)).toString(16).slice(1); };
+const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));
+  return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1); };
+
+// Team primary colors (same map the scoreboard uses)
+const PRIMARY = {108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0E3386',113:'#C6011F',114:'#00385D',
+  115:'#33006F',116:'#0C2340',117:'#002D62',118:'#004687',119:'#005A9C',120:'#AB0003',121:'#002D72',133:'#003831',
+  134:'#FDB827',135:'#2F241D',136:'#0C2C56',137:'#FD5A1E',138:'#C41E3A',139:'#092C5C',140:'#003278',141:'#134A8E',
+  142:'#002B5C',143:'#E81828',144:'#CE1141',145:'#27251F',146:'#00A3E0',147:'#003087',158:'#12284B'};
+
+const capLogo = id => `https://www.mlbstatic.com/team-logos/${id}.svg`;
+const darkLogo = id => `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg`;
+const face = id => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_120,q_auto:best/v1/people/${id}/headshot/silo/current`;
+
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const ipToFloat = ip => { const s = String(ip ?? '0'); if (!s.includes('.')) return parseFloat(s) || 0;
+  const [w,f] = s.split('.'); return (parseInt(w,10)||0) + (parseInt(f,10)||0)/3; };
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+
+let TEAMS = [];            // [{id, name, abbr, starters:[…], form, …}]
+const openTeams = new Set();
+
+async function load() {
+  const end = new Date(), start = new Date();
+  start.setDate(start.getDate() - (WINDOW_DAYS - 1));
+  const season = end.getFullYear();
+
+  const [sched, stats] = await Promise.all([
+    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R&hydrate=probablePitcher,team`),
+    fj(`${API}/stats?stats=season&season=${season}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000`),
+  ]);
+
+  // 1) Who has actually been starting, per team, in the window
+  const byTeam = {}, meta = {};
+  (sched.dates || []).forEach(d => (d.games || []).forEach(g => {
+    ['away','home'].forEach(side => {
+      const t = g.teams[side], team = t.team, pp = t.probablePitcher;
+      if (!team?.id || !pp?.id) return;
+      meta[team.id] = { id: team.id, name: team.teamName || team.name, abbr: team.abbreviation || '' };
+      const bag = byTeam[team.id] = byTeam[team.id] || {};
+      const e = bag[pp.id] = bag[pp.id] || { pid: pp.id, name: pp.fullName, starts: 0 };
+      e.starts++;
+    });
+  }));
+
+  // 2) Season pitching lines (one row per pitcher; traded arms carry full-season totals)
+  const line = {};
+  ((stats.stats || [])[0]?.splits || []).forEach(s => {
+    const st = s.stat || {};
+    line[s.player.id] = {
+      era: num(st.era), whip: num(st.whip), ip: ipToFloat(st.inningsPitched),
+      ipTxt: st.inningsPitched || '0.0', k: st.strikeOuts || 0, w: st.wins || 0, l: st.losses || 0,
+      er: st.earnedRuns || 0, h: st.hits || 0, bb: st.baseOnBalls || 0, gs: st.gamesStarted || 0,
+    };
+  });
+
+  // 3) The current rotation: most starts in the window, then most season innings — so a
+  //    genuine rotation arm outranks a one-off spot starter with the same start count.
+  TEAMS = Object.values(meta).map(t => {
+    const starters = Object.values(byTeam[t.id] || {})
+      .map(s => { const ln = line[s.pid] || { ip:0, ipTxt:'0.0', k:0, w:0, l:0, er:0, h:0, bb:0, gs:0 };
+        return { ...s, ...ln, form: forma(ln.era, ln.whip) }; })
+      .filter(s => s.ip >= MIN_IP)
+      .sort((a,b) => b.starts - a.starts || b.ip - a.ip)
+      .slice(0, 5)
+      .sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
+
+    // FORM = mean of the five, weighted by innings pitched
+    let wsum = 0, ipsum = 0;
+    starters.forEach(s => { if (s.form != null && s.ip > 0) { wsum += s.form * s.ip; ipsum += s.ip; } });
+    const form = ipsum > 0 ? Math.round(wsum / ipsum) : null;
+
+    const agg = starters.reduce((a,s) => ({ ip:a.ip+s.ip, er:a.er+s.er, h:a.h+s.h, bb:a.bb+s.bb,
+      k:a.k+s.k, w:a.w+s.w, l:a.l+s.l, starts:a.starts+s.starts }), {ip:0,er:0,h:0,bb:0,k:0,w:0,l:0,starts:0});
+    return { ...t, starters, form, agg };
+  }).sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
+
+  const pids = TEAMS.flatMap(t => t.starters.map(s => s.pid));
+  try {
+    const ppl = await fj(`${API}/people?personIds=${pids.join(',')}`);
+    const hand = {}; (ppl.people || []).forEach(p => hand[p.id] = p.pitchHand?.code || '');
+    TEAMS.forEach(t => t.starters.forEach(s => s.hand = hand[s.pid] || ''));
+  } catch (e) { /* handedness is cosmetic — render without it */ }
+
+  document.getElementById('riMeta').textContent =
+    `${season} season · rotations as of ${ymd(end)} · starts counted over the last ${WINDOW_DAYS} days`;
+  render();
+}
+
+function statChip(v, label, color) {
+  return `<span class="ri-stat" style="background:${tint(color,.84)};color:${shade(color,.35)}"><b>${v}</b>${label ? ' ' + label : ''}</span>`;
+}
+
+function panelHTML(t, rank) {
+  const c = PRIMARY[t.id] || '#26324a';
+  const a = t.agg;
+  const era  = a.ip > 0 ? (a.er * 9 / a.ip) : null;
+  const whip = a.ip > 0 ? ((a.h + a.bb) / a.ip) : null;
+  const k9   = a.ip > 0 ? (a.k * 9 / a.ip) : null;
+
+  const sps = t.starters.map(s => {
+    const col = tier(s.form);
+    return `<div class="ri-sp">
+      <img class="ri-face" src="${face(s.pid)}" alt="" style="background:${tint(c,.8)}" onerror="this.style.visibility='hidden'">
+      <div>
+        <div class="ri-spname">${s.name}
+          ${s.hand ? `<span class="ri-hand ${s.hand}">${s.hand}</span>` : ''}
+          <span class="ri-starts">${s.starts} start${s.starts === 1 ? '' : 's'} · ${WINDOW_DAYS}d</span>
+        </div>
+        <div class="ri-statline">
+          ${statChip(s.era != null ? s.era.toFixed(2) : '—', 'ERA', tier(forma(s.era, null)))}
+          ${statChip(s.whip != null ? s.whip.toFixed(2) : '—', 'WHIP', tier(forma(null, s.whip)))}
+          ${statChip(`${s.w}-${s.l}`, '', '#9ca3af')}
+          ${statChip(s.ipTxt, 'IP', '#9ca3af')}
+          ${statChip(s.k, 'K', '#9ca3af')}
+        </div>
+      </div>
+      <div class="ri-spform" style="color:${shade(col,.18)}">${s.form ?? '—'}</div>
+    </div>`;
+  }).join('');
+
+  const tile = (v,l,gold) => `<div class="ri-tile${gold ? ' gold' : ''}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+
+  return `<div class="ri-panel" id="pan-${t.id}">
+    <div class="ri-phead" style="background:linear-gradient(145deg,${c} 0%,${shade(c,.5)} 100%)">
+      <img src="${darkLogo(t.id)}" alt="" onerror="this.style.display='none'">
+      <div>
+        <div class="ri-kicker">Rotation report</div>
+        <div class="ri-pname">${t.name.toUpperCase()}</div>
+        <div class="ri-psub">Top-5 starter form · IP-weighted</div>
+      </div>
+      <div class="ri-chip"><div class="v">${t.form ?? '—'}</div><div class="l">Form</div></div>
+    </div>
+    <div class="ri-sps">${sps}</div>
+    <div class="ri-tiles">
+      ${tile(era  != null ? era.toFixed(2)  : '—', 'Rotation ERA')}
+      ${tile(whip != null ? whip.toFixed(2) : '—', 'Rotation WHIP')}
+      ${tile(k9   != null ? k9.toFixed(1)   : '—', 'K / 9')}
+      ${tile(Math.round(a.ip), 'Innings')}
+      ${tile(a.k, 'Strikeouts')}
+      ${tile(`${a.w}-${a.l}`, 'Record')}
+      ${tile(a.starts, `Starts · ${WINDOW_DAYS}d`)}
+      ${tile(`#${rank}`, 'Of 30', true)}
+    </div>
+    <div class="ri-note">Season totals for the five arms above. FORM is their innings-weighted average on the
+      Baseball Lens 0–100 scale (ERA 6.00 → 0, 1.50 → 100; WHIP 2.00 → 0, 0.80 → 100).</div>
+  </div>`;
+}
+
+function render() {
+  const el = document.getElementById('riList');
+  el.className = 'ri-list';
+  el.innerHTML = TEAMS.map((t, i) => {
+    const rank = i + 1, col = tier(t.form), open = openTeams.has(t.id);
+    const pips = t.starters.map(s => `<span class="ri-pip" title="${s.name}: ${s.form ?? '—'}"
+      style="background:${tint(tier(s.form),.7)};color:${shade(tier(s.form),.4)}">${s.form ?? '·'}</span>`).join('');
+    return `<button class="ri-row${open ? ' open' : ''}" id="row-${t.id}" aria-expanded="${open}"
+        aria-controls="pan-${t.id}" onclick="toggleTeam(${t.id})">
+        <span class="ri-rank">${rank}</span>
+        <img class="ri-logo" src="${capLogo(t.id)}" alt="" onerror="this.style.display='none'">
+        <span class="ri-team">${t.name}<small>${t.abbr}</small></span>
+        <span class="ri-strip">${pips}</span>
+        <span class="ri-form" style="color:${shade(col,.18)}">${t.form ?? '—'}</span>
+        <span class="ri-chev">▼</span>
+      </button>${panelHTML(t, rank)}`;
+  }).join('');
+  openTeams.forEach(id => document.getElementById(`pan-${id}`)?.classList.add('open'));
+}
+
+function toggleTeam(id) {
+  const panel = document.getElementById(`pan-${id}`), row = document.getElementById(`row-${id}`);
+  if (!panel) return;
+  const open = !panel.classList.contains('open');
+  panel.classList.toggle('open', open);
+  row.classList.toggle('open', open);
+  row.setAttribute('aria-expanded', String(open));
+  open ? openTeams.add(id) : openTeams.delete(id);
+}
+
+load().catch(err => {
+  document.getElementById('riList').className = 'ri-error';
+  document.getElementById('riList').textContent = 'Could not load rotations. ' + err.message;
+});
+</script>
+</body>
+</html>
