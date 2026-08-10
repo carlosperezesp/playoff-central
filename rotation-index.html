@@ -9,7 +9,7 @@
 <style>
   :root{
     --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
-    --line:rgba(243,239,224,.13); --gold:#e8c23a;
+    --line:rgba(243,239,224,.13); --gold:#e8c23a; --muted:#9fb4a6;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{
@@ -53,12 +53,15 @@
   .bar-name span{font-family:'Barlow Condensed';font-weight:700;font-size:12px;letter-spacing:1.5px;
     color:rgba(255,255,255,.5);margin-left:8px;vertical-align:2px}
   .pips{display:flex;gap:4px}
-  .pip{width:26px;height:22px;border-radius:5px;font-weight:800;font-size:13px;
-    display:flex;align-items:center;justify-content:center}
-  .bar-div{width:1px;height:34px;background:rgba(255,255,255,.22)}
-  .bar-form{text-align:center;line-height:1}
-  .bar-form .v{font-family:'Bebas Neue';font-size:31px;letter-spacing:1px}
-  .bar-form .l{font-weight:700;font-size:8.5px;letter-spacing:1.4px;color:rgba(255,255,255,.55)}
+  .pip{width:27px;height:23px;border-radius:6px;font-weight:800;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+    border:1.5px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 -3px 6px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.3)}
+  .bar-div{width:1px;height:34px;background:rgba(255,255,255,.2)}
+  .bar-form{text-align:center}
+  .bar-form .v{font-family:'Barlow Condensed';font-weight:800;font-size:36px;line-height:.86;display:block}
+  .bar-form .l{font-weight:700;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.85);
+    text-transform:uppercase;margin-top:4px;display:block}
   .chev{font-size:10px;color:rgba(255,255,255,.5);text-align:center;transition:transform .15s}
   .team.open .chev{transform:rotate(180deg)}
 
@@ -73,8 +76,11 @@
   .sp{display:grid;grid-template-columns:52px 56px minmax(0,1fr) auto;gap:14px;align-items:center;
     padding:9px 4px;border-bottom:1px solid var(--line)}
   .sp:last-child{border-bottom:0}
+  /* same treatment as the social card's form chip */
   .sp-form{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-family:'Bebas Neue';font-size:25px;letter-spacing:.5px;line-height:1;flex-shrink:0}
+    font-family:'Barlow Condensed';font-weight:800;font-size:27px;line-height:1;flex-shrink:0;
+    border:2px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 -5px 10px rgba(0,0,0,.22), 0 4px 10px rgba(0,0,0,.32)}
   .sp-face{width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;position:relative}
   .sp-face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .sp-name{font-family:'Bebas Neue';font-size:23px;letter-spacing:1px;line-height:1.1;color:#fff;
@@ -96,13 +102,17 @@
   .dots .dl{font-weight:700;font-size:8.5px;letter-spacing:.8px;color:var(--ink-soft);margin-right:2px}
   .dot{width:8px;height:8px;border-radius:50%;opacity:.9}
 
-  /* ── League-context tiles ────────────────────────────────── */
-  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:4px}
-  .tile{border-radius:9px;padding:10px 11px;background:rgba(243,239,224,.05);border-left:3px solid}
-  .tile .v{font-family:'Bebas Neue';font-size:26px;letter-spacing:.5px;line-height:1}
-  .tile .l{font-weight:700;font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-dim);
-    margin-top:2px}
-  .tile .r{font-weight:800;font-size:10.5px;letter-spacing:.9px;margin-top:4px;text-transform:uppercase}
+  /* ── League-context tiles (same slider as the Teams section) ── */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px 26px;margin-top:6px}
+  .tile{display:flex;flex-direction:column;gap:5px}
+  .tile-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .tile .l{font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .tile-vals{display:flex;align-items:center;gap:6px}
+  .tile .v{font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1}
+  .tile .rk{font-weight:700;font-size:12px;letter-spacing:.5px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+  .track{position:relative;height:5px;background:rgba(243,239,224,.14);border-radius:999px}
+  .fill{height:100%;border-radius:999px}
+  .ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);opacity:.6}
 
   /* ── Footer / states ────────────────────────────────────── */
   .legend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:24px;padding-top:16px;
@@ -125,7 +135,7 @@
     .sp-name{font-size:19px}
     .sp-right{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px}
     .statline .s b{font-size:14px}
-    .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .tiles{grid-template-columns:1fr;gap:14px}
   }
 </style>
 </head>
@@ -197,6 +207,7 @@ const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
 const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
 let TEAMS = [];
+const LEAGUE = {};             // metric → { best, worst } across the 30 rotations
 const careerCache = {};        // pid → { careerForm, careerIP, years:{yr:form} }
 const openTeams = new Set();
 
@@ -292,9 +303,10 @@ function rankAll() {
   ];
   TEAMS.forEach(t => t.rank = {});
   metrics.forEach(([key, get, higherBetter]) => {
-    [...TEAMS].filter(t => get(t) != null)
-      .sort((a,b) => higherBetter ? get(b) - get(a) : get(a) - get(b))
-      .forEach((t,i) => t.rank[key] = i + 1);
+    const sorted = [...TEAMS].filter(t => get(t) != null)
+      .sort((a,b) => higherBetter ? get(b) - get(a) : get(a) - get(b));
+    sorted.forEach((t,i) => t.rank[key] = i + 1);
+    if (sorted.length) LEAGUE[key] = { best: get(sorted[0]), worst: get(sorted[sorted.length - 1]) };
   });
   // Per-pitcher volume colours are percentiles among all rotation arms in the league
   const all = TEAMS.flatMap(t => t.starters);
@@ -364,7 +376,7 @@ function starterHTML(s, teamColor) {
     <div>
       <div class="sp-name">${s.name}
         ${s.hand ? `<span class="hand ${s.hand}">${s.hand}HP</span>` : ''}
-        <span class="sp-sub">${s.starts} start${s.starts === 1 ? '' : 's'} · ${WINDOW_DAYS}d</span>
+        <span class="sp-sub">${s.starts} start${s.starts === 1 ? '' : 's'} in the last ${WINDOW_DAYS} days</span>
       </div>
       <div class="statline">
         ${stat(s.era != null ? s.era.toFixed(2) : '—', 'ERA', tier(forma(s.era, null)))}<span class="dot">·</span>
@@ -381,29 +393,44 @@ function starterHTML(s, teamColor) {
   </div>`;
 }
 
-function tileHTML(v, label, rank) {
-  const c = rank ? rankColor(rank, 30) : '#9ca3af';
-  return `<div class="tile" style="border-left-color:${c}">
-    <div class="v" style="color:${c}">${v}</div>
-    <div class="l">${label}</div>
-    <div class="r" style="color:${c}">${rank ? `#${rank}/30 in MLB` : '—'}</div>
+// Value, rank badge and the league slider: fill by rank (1 = full), with the
+// league's worst and best at the ends — same treatment as Team Stats vs League.
+function tileHTML(t, key, label, value, fmt) {
+  const rank = t.rank[key], total = 30;
+  const c = rank ? rankColor(rank, total) : '#9ca3af';
+  const fillPct = rank ? Math.max(5, Math.round(((total - rank + 1) / total) * 100)) : 5;
+  const ex = LEAGUE[key];
+  return `<div class="tile">
+    <div class="tile-top">
+      <span class="l">${label}</span>
+      <span class="tile-vals">
+        <span class="v" style="color:${c}">${value}</span>
+        <span class="rk" style="background:${rgba(c,.16)};color:${c}">${rank ? `#${rank} / ${total}` : '—'}</span>
+      </span>
+    </div>
+    <div class="track"><div class="fill" style="width:${fillPct}%;background:${c}"></div></div>
+    <div class="ends"><span>${ex ? fmt(ex.worst) : ''}</span><span>${ex ? fmt(ex.best) : ''}</span></div>
   </div>`;
 }
 
 function panelHTML(t) {
   const c = PRIMARY[t.id] || '#26324a';
   const a = t.agg;
+  const d2 = v => v == null ? '—' : v.toFixed(2);
+  const d1 = v => v == null ? '—' : v.toFixed(1);
+  const d0 = v => v == null ? '—' : Math.round(v).toLocaleString('en-US');
+  const d3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/,'');
   return `<div class="panel" id="pan-${t.id}">
     <div class="sec"><span class="sec-l">Current rotation</span><span class="sec-r"></span></div>
     ${t.starters.map(s => starterHTML(s, c)).join('')}
     <div class="sec"><span class="sec-l">Rotation vs the league</span><span class="sec-r"></span></div>
     <div class="tiles">
-      ${tileHTML(a.era  != null ? a.era.toFixed(2)  : '—', 'Rotation ERA',  t.rank.era)}
-      ${tileHTML(a.whip != null ? a.whip.toFixed(2) : '—', 'Rotation WHIP', t.rank.whip)}
-      ${tileHTML(a.k9   != null ? a.k9.toFixed(1)   : '—', 'K per 9',       t.rank.k9)}
-      ${tileHTML(Math.round(a.ip), 'Innings',    t.rank.ip)}
-      ${tileHTML(a.k,              'Strikeouts', t.rank.k)}
-      ${tileHTML(`${a.w}-${a.l}`,  'Record',     t.rank.pct)}
+      ${tileHTML(t, 'era',  'Rotation ERA',  d2(a.era),  d2)}
+      ${tileHTML(t, 'whip', 'Rotation WHIP', d2(a.whip), d2)}
+      ${tileHTML(t, 'k9',   'K per 9',       d1(a.k9),   d1)}
+      ${tileHTML(t, 'ip',   'Innings',       d0(a.ip),   d0)}
+      ${tileHTML(t, 'k',    'Strikeouts',    d0(a.k),    d0)}
+      ${tileHTML(t, 'pct',  'Record',        `${a.w}-${a.l}`, d3)}
     </div>
   </div>`;
 }
