@@ -582,12 +582,12 @@
     width: 14px; text-align: center; flex-shrink: 0;
   }
   .team-logo-grid {
-    display: flex; flex-wrap: wrap; justify-content: center;
-    gap: 8px 14px; padding: 10px 10px 14px;
+    display: grid; grid-template-columns: repeat(5, 1fr); justify-items: center;
+    gap: 6px 4px; padding: 10px 8px 14px;
   }
   .team-logo-btn {
     background: none; border: 1.5px solid transparent; border-radius: 8px;
-    padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
     transition: background .12s, border-color .12s; -webkit-tap-highlight-color: transparent;
   }
   .team-logo-btn:hover { background: var(--surface2); }

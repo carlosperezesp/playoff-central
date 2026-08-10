@@ -5036,8 +5036,12 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     const sh=$('wb-sh'),mh=$('wb-mh'),hh=$('wb-hh');if(sh)sh.style.transform=`rotate(${s*6}deg)`;if(mh)mh.style.transform=`rotate(${m*6}deg)`;if(hh)hh.style.transform=`rotate(${h*30}deg)`;}
   function startClock(){const c=$('wb-clock');if(c&&!c.querySelector('.wb-tick')){for(let i=0;i<12;i++){const t=document.createElement('div');t.className='wb-tick';t.style.transform=`rotate(${i*30}deg)`;c.appendChild(t);}}tickClock();if(!clockStarted){clockStarted=true;setInterval(tickClock,1000);}}
 
-  // ── TOP GAME badge: mark games passing the shared top-match formula ──
-  // (pitcher duel + division/wild-card race + award candidates → isTopMatch)
+  // ── TOP GAME badge: relative pick, ~1 per day ──
+  // The absolute threshold (total >= 7) is unreachable before September, when the
+  // seasonal multiplier kicks in, so instead of a fixed cut we badge the day's
+  // single best game by total score, as long as it clears a modest floor (a flat
+  // slate gets none). An elite pitcher duel always qualifies on its own.
+  const TOP_MIN_TOTAL = 3.5;
   function buildCandsByTeam(){
     const ml=window._mvpLists; if(!ml)return null;
     const flat=[...(ml.alMVP||[]),...(ml.nlMVP||[]),...(ml.alCY||[]),...(ml.nlCY||[]),...(ml.alROY||[]),...(ml.nlROY||[])];
@@ -5051,10 +5055,16 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     const fm={};
     Object.keys(people).forEach(pid=>{const p=people[pid];const f=calcBaseScore(p.era??NaN,p.whip??NaN);if(f!=null){fm[pid]=f;if(p.name)fm[p.name]=f;}});
     const cands=buildCandsByTeam();
+    let best=null;
     games.forEach(g=>{
       const probables={away:g.teams.away.probablePitcher||null,home:g.teams.home.probablePitcher||null};
-      try{if(calcTopMatchScore({teams:g.teams,probables},fm,cands).isTopMatch)topPks.add(g.gamePk);}catch(e){}
+      let s;
+      try{s=calcTopMatchScore({teams:g.teams,probables},fm,cands);}catch(e){return;}
+      if(s.eliteDuel)topPks.add(g.gamePk);
+      if(s.total>=TOP_MIN_TOTAL && (!best || s.total>best.s.total ||
+        (s.total===best.s.total && s.pitcherScore>best.s.pitcherScore))) best={g,s};
     });
+    if(best)topPks.add(best.g.gamePk);
   }
 
   async function loadDay(day,silent){
