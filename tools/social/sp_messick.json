@@ -1,0 +1,164 @@
+{
+  "mode": "pitcher_form",
+  "editable": false,
+  "kicker": "In Focus",
+  "photo": "https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/800048/headshot/silo/current",
+  "name": "Parker Messick",
+  "team": "Cleveland Guardians",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/114.svg",
+  "number": "77",
+  "position": "SP",
+  "cardColor": "#00385D",
+  "cardColor2": "#001f33",
+  "accent": "#ffffff",
+  "statColor": "#16a34a",
+  "strip": [
+    {
+      "key": "forma",
+      "label": "Form",
+      "value": "78"
+    },
+    {
+      "label": "ERA",
+      "value": "2.59"
+    },
+    {
+      "label": "WHIP",
+      "value": "1.04"
+    }
+  ],
+  "gamesTitle": "His 21 starts in 2026",
+  "games": [
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/119.svg",
+      "date": "3/30"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/112.svg",
+      "date": "4/5"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/144.svg",
+      "date": "4/11"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/110.svg",
+      "date": "4/16"
+    },
+    {
+      "color": "#ff8100",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/117.svg",
+      "date": "4/21"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/139.svg",
+      "date": "4/27"
+    },
+    {
+      "color": "#ff8100",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/133.svg",
+      "date": "5/3"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/142.svg",
+      "date": "5/8"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/108.svg",
+      "date": "5/13"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/116.svg",
+      "date": "5/19"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/143.svg",
+      "date": "5/24"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/111.svg",
+      "date": "5/30"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/140.svg",
+      "date": "6/5"
+    },
+    {
+      "color": "#ff2200",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
+      "date": "6/10"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/158.svg",
+      "date": "6/18"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/145.svg",
+      "date": "6/23"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/140.svg",
+      "date": "6/29"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/145.svg",
+      "date": "7/4"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/146.svg",
+      "date": "7/10"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/142.svg",
+      "date": "7/21"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/139.svg",
+      "date": "7/26"
+    }
+  ],
+  "dotsWidth": 732,
+  "legend": [
+    {
+      "label": "Elite",
+      "color": "#16a34a"
+    },
+    {
+      "label": "Above avg",
+      "color": "#b1c882"
+    },
+    {
+      "label": "Average",
+      "color": "#ffc000"
+    },
+    {
+      "label": "Below avg",
+      "color": "#ff8100"
+    },
+    {
+      "label": "Poor",
+      "color": "#ff2200"
+    }
+  ],
+  "legendNote": "Each dot is one start, graded by that game's ERA & WHIP on the Baseball Lens scale.",
+  "footer": "baseballlens.com",
+  "edition": "2026 Season · Jul 30"
+}

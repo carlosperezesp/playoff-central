@@ -189,6 +189,7 @@ const DATA = __DATA__;
   // games dots: colored circle + opponent logo + date
   const games=d.games || [];
   txt('gamesTitle', d.gamesTitle || (games.length+' starts · color = how he pitched that day'));
+  if(d.dotsWidth) document.getElementById('dots').style.width = d.dotsWidth+'px';
   document.getElementById('dots').innerHTML = games.map(g=>
     `<div class="dot">
        <div class="o" style="background:${g.color}"></div>

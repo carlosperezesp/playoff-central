@@ -1,0 +1,139 @@
+{
+  "mode": "pitcher_form",
+  "editable": false,
+  "kicker": "In Focus",
+  "photo": "https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/669373/headshot/silo/current",
+  "name": "Tarik Skubal",
+  "team": "Detroit Tigers",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/116.svg",
+  "number": "29",
+  "position": "SP",
+  "cardColor": "#0C2340",
+  "cardColor2": "#071323",
+  "accent": "#fa4616",
+  "statColor": "#16a34a",
+  "strip": [
+    {
+      "key": "forma",
+      "label": "Form",
+      "value": "81"
+    },
+    {
+      "label": "ERA",
+      "value": "2.79"
+    },
+    {
+      "label": "WHIP",
+      "value": "0.91"
+    }
+  ],
+  "gamesTitle": "His 16 starts in 2026",
+  "games": [
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/135.svg",
+      "date": "3/26"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/109.svg",
+      "date": "4/1"
+    },
+    {
+      "color": "#ff2200",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/142.svg",
+      "date": "4/7"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/146.svg",
+      "date": "4/12"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/111.svg",
+      "date": "4/18"
+    },
+    {
+      "color": "#ff8100",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/158.svg",
+      "date": "4/23"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/144.svg",
+      "date": "4/29"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/114.svg",
+      "date": "6/13"
+    },
+    {
+      "color": "#ff8100",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/145.svg",
+      "date": "6/19"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
+      "date": "6/24"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
+      "date": "6/30"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/133.svg",
+      "date": "7/7"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/143.svg",
+      "date": "7/12"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/108.svg",
+      "date": "7/18"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/118.svg",
+      "date": "7/24"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/110.svg",
+      "date": "7/29"
+    }
+  ],
+  "dotsWidth": 528,
+  "legend": [
+    {
+      "label": "Elite",
+      "color": "#16a34a"
+    },
+    {
+      "label": "Above avg",
+      "color": "#b1c882"
+    },
+    {
+      "label": "Average",
+      "color": "#ffc000"
+    },
+    {
+      "label": "Below avg",
+      "color": "#ff8100"
+    },
+    {
+      "label": "Poor",
+      "color": "#ff2200"
+    }
+  ],
+  "legendNote": "Each dot is one start, graded by that game's ERA & WHIP on the Baseball Lens scale.",
+  "footer": "baseballlens.com",
+  "edition": "2026 Season · Jul 30"
+}

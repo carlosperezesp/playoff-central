@@ -1,0 +1,154 @@
+{
+  "mode": "pitcher_form",
+  "editable": false,
+  "kicker": "In Focus",
+  "photo": "https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_426,q_auto:best/v1/people/808967/headshot/silo/current",
+  "name": "Yoshinobu Yamamoto",
+  "team": "Los Angeles Dodgers",
+  "teamLogo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/119.svg",
+  "number": "18",
+  "position": "SP",
+  "cardColor": "#005A9C",
+  "cardColor2": "#003256",
+  "accent": "#ffffff",
+  "statColor": "#16a34a",
+  "strip": [
+    {
+      "key": "forma",
+      "label": "Form",
+      "value": "82"
+    },
+    {
+      "label": "ERA",
+      "value": "2.72"
+    },
+    {
+      "label": "WHIP",
+      "value": "0.90"
+    }
+  ],
+  "gamesTitle": "His 19 starts in 2026",
+  "games": [
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/109.svg",
+      "date": "3/26"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/114.svg",
+      "date": "4/1"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/141.svg",
+      "date": "4/7"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg",
+      "date": "4/14"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/137.svg",
+      "date": "4/21"
+    },
+    {
+      "color": "#ff2200",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/146.svg",
+      "date": "4/27"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/117.svg",
+      "date": "5/4"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/137.svg",
+      "date": "5/12"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/135.svg",
+      "date": "5/18"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/158.svg",
+      "date": "5/24"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/143.svg",
+      "date": "5/31"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/108.svg",
+      "date": "6/6"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/145.svg",
+      "date": "6/13"
+    },
+    {
+      "color": "#ffc000",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/110.svg",
+      "date": "6/20"
+    },
+    {
+      "color": "#b1c882",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/135.svg",
+      "date": "6/27"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/135.svg",
+      "date": "7/4"
+    },
+    {
+      "color": "#ff2200",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/109.svg",
+      "date": "7/11"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
+      "date": "7/19"
+    },
+    {
+      "color": "#16a34a",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg",
+      "date": "7/25"
+    }
+  ],
+  "dotsWidth": 664,
+  "legend": [
+    {
+      "label": "Elite",
+      "color": "#16a34a"
+    },
+    {
+      "label": "Above avg",
+      "color": "#b1c882"
+    },
+    {
+      "label": "Average",
+      "color": "#ffc000"
+    },
+    {
+      "label": "Below avg",
+      "color": "#ff8100"
+    },
+    {
+      "label": "Poor",
+      "color": "#ff2200"
+    }
+  ],
+  "legendNote": "Each dot is one start, graded by that game's ERA & WHIP on the Baseball Lens scale.",
+  "footer": "baseballlens.com",
+  "edition": "2026 Season · Jul 30"
+}
