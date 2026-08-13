@@ -138,11 +138,17 @@
     .top-actions{gap:6px}
     .back-pill{font-size:10px;padding:6px 10px;letter-spacing:1px}
     .brand-txt{font-size:22px}.top-pill{font-size:10px;padding:6px 11px;letter-spacing:1.2px}
-    .bar{grid-template-columns:20px 30px minmax(0,1fr) 44px 12px;gap:10px;padding:9px 11px}
-    .pips,.bar-div{display:none}
-    .bar-logo{width:30px;height:30px}
-    .bar-name{font-size:21px}
+    .bar{display:flex;flex-wrap:wrap;gap:8px 9px;padding:9px 11px}
+    .rank{flex:0 0 20px}
+    .bar-logo{width:30px;height:30px;flex:0 0 30px}
+    .bar-name{flex:1 1 calc(100% - 68px);font-size:21px;min-width:0}
+    .pips{display:flex;overflow-x:auto;max-width:100%;min-width:0;flex:1 1 0;padding-bottom:1px}
+    .pips::-webkit-scrollbar{display:none}
+    .pip{width:22px;height:23px;font-size:11px;flex:0 0 auto}
+    .bar-div{display:block;height:31px;flex:0 0 1px}
+    .bar-form{flex:0 0 48px}
     .bar-form .v{font-size:25px}
+    .chev{flex:0 0 12px;align-self:center}
     .sp{grid-template-columns:42px 44px minmax(0,1fr);gap:10px}
     .sp-form{width:42px;height:42px;font-size:20px}
     .sp-face{width:44px;height:44px}

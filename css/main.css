@@ -434,11 +434,13 @@
     .bnav-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center;
       justify-content: center; gap: 3px; background: none; border: none;
-      color: rgba(255,255,255,.4); cursor: pointer; padding: 6px 4px; transition: color .15s;
-      font-family: 'Barlow Condensed'; font-size: 10px; font-weight: 700;
-      letter-spacing: .8px; text-transform: uppercase;
+      color: rgba(255,255,255,.4); cursor: pointer; padding: 6px 2px; transition: color .15s;
+      font-family: 'Barlow Condensed'; font-size: 9px; font-weight: 700;
+      letter-spacing: .45px; text-transform: uppercase;
+      min-width: 0;
     }
-    .bnav-btn svg { width: 20px; height: 20px; }
+    .bnav-btn svg { width: 19px; height: 19px; flex-shrink: 0; }
+    .bnav-btn span { white-space: nowrap; }
     .bnav-btn.active { color: var(--accent); }
     #desktopTabs { display: none; }
     main { padding-bottom: 100px; }
