@@ -93,6 +93,88 @@
   .section-title::after { content: ''; flex: 1; height: 2px; background: rgba(255,255,255,.14); }
   .section-title::before { content: ''; width: 4px; height: 24px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
 
+  .rankings-hub {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 8px 0 24px;
+  }
+  .rankings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .ranking-link {
+    position: relative;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+    overflow: hidden;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: linear-gradient(145deg, rgba(13,32,22,.96), rgba(31,55,38,.9));
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    color: #fff;
+    text-decoration: none;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .ranking-link::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .22;
+    background:
+      linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,.28) 45% 46%, transparent 46% 100%),
+      radial-gradient(80% 70% at 82% 12%, var(--ranking-accent), transparent 58%);
+    pointer-events: none;
+  }
+  .ranking-link:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,.32);
+    box-shadow: 0 12px 30px rgba(0,0,0,.3);
+  }
+  .ranking-link--rotation { --ranking-accent: #16a34a; }
+  .ranking-link--bullpen { --ranking-accent: #1565d8; }
+  .ranking-link--batters { --ranking-accent: #e05a2b; }
+  .ranking-kicker {
+    position: relative;
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.12);
+    color: rgba(255,255,255,.7);
+    font-family: 'Barlow Condensed';
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .ranking-name {
+    position: relative;
+    font-family: 'Bebas Neue';
+    font-size: 36px;
+    line-height: .95;
+    letter-spacing: 2px;
+  }
+  .ranking-copy {
+    position: relative;
+    max-width: 28ch;
+    color: rgba(255,255,255,.66);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .ranking-arrow {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    font-family: 'Barlow Condensed';
+    font-size: 28px;
+    font-weight: 800;
+    color: rgba(255,255,255,.7);
+  }
+
   /* ── HERO CARD ── */
   .hero-card {
     background: linear-gradient(135deg, #0d2016 0%, #1a2e1f 60%, #0d2016 100%);
@@ -465,6 +547,9 @@
     /* Tabs */
     .tabs { padding: 8px; gap: 6px; }
     .tab-btn { padding: 8px 14px; font-size: 12px; }
+    .rankings-grid { grid-template-columns: 1fr; gap: 10px; }
+    .ranking-link { min-height: 150px; padding: 18px; }
+    .ranking-name { font-size: 30px; }
 
     /* Main */
     main { padding: 16px 12px calc(110px + env(safe-area-inset-bottom)); }

@@ -4716,7 +4716,7 @@ function trendFormaHTML(currentScore, careerScore) {
   }
 }
 
-const loaded = { standings: true, bracket: false, schedule: false, rosters: false, topgames: false, players: false, mvp: false };
+const loaded = { standings: true, bracket: false, schedule: false, rosters: false, rankings: true, topgames: false, players: false, mvp: false };
 
 function warmAppData() {
   setTimeout(() => {
@@ -8539,7 +8539,7 @@ function openPlayerInRoster(teamId, pid) {
 }
 
 // On load, jump to the tab specified in the URL hash (e.g. #mvp, #rosters/nyy, #rosters/nyy/12345)
-const VALID_TABS = new Set(['standings','topgames','rosters','mvp','info']);
+const VALID_TABS = new Set(['standings','topgames','rosters','rankings','mvp','info']);
 const [hashTab, hashParam, hashPid] = window.location.hash.replace('#', '').split('/');
 const startTab = VALID_TABS.has(hashTab) ? hashTab : 'standings';
 if (startTab !== 'standings') switchTab(startTab);

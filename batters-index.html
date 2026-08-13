@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Batters Index — Baseball Lens</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
+    --line:rgba(243,239,224,.13); --gold:#e8c23a; --muted:#9fb4a6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Barlow Condensed',system-ui,sans-serif; color:var(--ink); min-height:100vh;
+    background:#0d1a12 radial-gradient(120% 75% at 50% -8%, #223d2a 0%, #16281c 52%, #0d1a1200 100%) fixed;
+    padding:24px 14px 70px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+
+  /* ── Page header ─────────────────────────────────────────── */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand-ico{width:34px;height:34px;border-radius:50%;background:#16a34a;display:flex;align-items:center;
+    justify-content:center;flex-shrink:0}
+  .brand-ico svg{display:block}
+  .brand-txt{font-family:'Bebas Neue';font-size:27px;letter-spacing:2.5px;line-height:1;color:#fff}
+  .brand-txt b{font-weight:400;color:#3ddc7f}
+  .top-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .back-pill{font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink);
+    border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;white-space:nowrap;text-decoration:none;
+    background:rgba(243,239,224,.04);transition:background .15s,border-color .15s}
+  .back-pill:hover{background:rgba(243,239,224,.1);border-color:rgba(243,239,224,.28)}
+  .top-pill{font-weight:800;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--ink);
+    border:1.5px solid var(--line);border-radius:999px;padding:8px 16px;white-space:nowrap}
+
+  .lede{font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.6;color:var(--ink-dim);max-width:70ch;margin-bottom:6px}
+  .lede b{color:var(--ink);font-weight:600}
+  .meta{font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
+    margin-bottom:18px}
+
+  /* ── Team bar (always visible, team-coloured) ─────────────── */
+  .team{margin-bottom:9px}
+  .bar{
+    width:100%;border:0;cursor:pointer;font:inherit;color:var(--ink);text-align:left;
+    display:grid;grid-template-columns:26px 40px minmax(0,1fr) auto 1px 66px 14px;
+    align-items:center;gap:13px;padding:11px 15px;border-radius:11px;
+    box-shadow:0 2px 10px rgba(0,0,0,.28);transition:transform .12s,box-shadow .12s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bar:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.36)}
+  .team.open .bar{border-radius:11px 11px 0 0}
+  .rank{font-weight:700;font-size:16px;color:rgba(255,255,255,.5);text-align:center}
+  .bar-logo{width:40px;height:40px;object-fit:contain}
+  .bar-name{font-family:'Bebas Neue';font-size:27px;letter-spacing:1.5px;line-height:1;color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-name span{font-family:'Barlow Condensed';font-weight:700;font-size:12px;letter-spacing:1.5px;
+    color:rgba(255,255,255,.5);margin-left:8px;vertical-align:2px}
+  /* nine pips — one per lineup slot, so the bar reads as a batting order */
+  .pips{display:flex;gap:3px}
+  .pip{width:22px;height:23px;border-radius:6px;font-weight:800;font-size:11px;
+    display:flex;align-items:center;justify-content:center;
+    border:1.5px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 -3px 6px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.3)}
+  .bar-div{width:1px;height:34px;background:rgba(255,255,255,.2)}
+  .bar-form{text-align:center}
+  .bar-form .v{font-family:'Barlow Condensed';font-weight:800;font-size:31px;line-height:.86;display:block}
+  .bar-form .l{font-weight:700;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.85);
+    text-transform:uppercase;margin-top:4px;display:block}
+  .chev{font-size:10px;color:rgba(255,255,255,.5);text-align:center;transition:transform .15s}
+  .team.open .chev{transform:rotate(180deg)}
+
+  /* ── Expanded report ─────────────────────────────────────── */
+  .panel{display:none;padding:4px 2px 20px}
+  .team.open .panel{display:block}
+  .sec{display:flex;align-items:center;gap:12px;margin:16px 4px 6px}
+  .sec-l{font-weight:800;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-soft);
+    white-space:nowrap}
+  .sec-r{flex:1;height:1px;background:var(--line)}
+
+  .slot-row{border-bottom:1px solid var(--line)}
+  .slot-row:last-child{border-bottom:0}
+  .sp{display:grid;grid-template-columns:26px 52px 56px minmax(0,1fr) auto;gap:12px;align-items:center;
+    padding:9px 4px}
+  .sp.has-alt{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .sp.has-alt:hover{background:rgba(243,239,224,.03)}
+  .alt-chev{font-size:8px;color:var(--ink-soft);transition:transform .15s;display:inline-block;margin-left:2px}
+  .slot-row.alt-open .alt-chev{transform:rotate(180deg)}
+  .alt-tag{font-family:'Inter',sans-serif;font-weight:700;font-size:8.5px;letter-spacing:.6px;
+    text-transform:uppercase;padding:3px 6px;border-radius:4px;white-space:nowrap;
+    background:rgba(243,239,224,.09);color:var(--ink-dim)}
+
+  /* ── The understudy, folded under his spot ─────────────────── */
+  .alt{display:none;grid-template-columns:26px 40px 44px minmax(0,1fr);gap:12px;align-items:center;
+    padding:8px 4px 11px 4px;margin-left:6px;border-left:2px solid var(--line)}
+  .slot-row.alt-open .alt{display:grid}
+  .alt-lbl{font-weight:800;font-size:8.5px;letter-spacing:.8px;color:var(--ink-soft);text-align:center;
+    line-height:1.1;text-transform:uppercase}
+  .alt-ops{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Barlow Condensed';font-weight:800;font-size:15px;line-height:1;flex-shrink:0;
+    border:2px solid rgba(255,255,255,.18);box-shadow:inset 0 -4px 8px rgba(0,0,0,.2)}
+  .alt-face{width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0}
+  .alt-face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .alt-name{font-family:'Bebas Neue';font-size:19px;letter-spacing:.8px;line-height:1.1;color:var(--ink);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* the batting-order slot, like a lineup card */
+  .slot{font-family:'Bebas Neue';font-size:21px;line-height:1;color:var(--ink-soft);text-align:center}
+  /* same treatment as the social card's form chip */
+  .sp-form{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Barlow Condensed';font-weight:800;font-size:19px;line-height:1;flex-shrink:0;
+    border:2px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 -5px 10px rgba(0,0,0,.22), 0 4px 10px rgba(0,0,0,.32)}
+  .sp-face{width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;position:relative}
+  .sp-face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .sp-name{font-family:'Bebas Neue';font-size:23px;letter-spacing:1px;line-height:1.1;color:#fff;
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .pos{font-family:'Barlow Condensed';font-weight:800;font-size:10px;letter-spacing:1.2px;padding:2px 6px;
+    border-radius:4px;background:rgba(255,255,255,.13);color:#fff}
+  .hand{font-family:'Barlow Condensed';font-weight:800;font-size:10px;letter-spacing:1px;padding:2px 6px;
+    border-radius:4px;background:rgba(184,15,33,.22);color:#ff8a97}
+  .hand.L{background:rgba(21,101,216,.28);color:#8fc4ff}
+  .hand.S{background:rgba(232,194,58,.2);color:#e8c23a}
+  .sp-sub{font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim)}
+  .statline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 9px;margin-top:5px;
+    font-weight:700;font-size:13px}
+  .statline .s{white-space:nowrap}
+  .statline .s b{font-weight:800;font-size:16px;letter-spacing:.3px}
+  .statline .s i{font-style:normal;font-size:10.5px;letter-spacing:1px;color:var(--ink-soft);margin-left:2px}
+  .statline .dot{color:var(--ink-soft);font-size:12px}
+  .sp-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  .trend{font-family:'Inter',sans-serif;font-size:9px;font-weight:700;line-height:1.2;text-align:right;
+    padding:3px 6px;border-radius:4px;letter-spacing:.2px;white-space:nowrap}
+  .dots{display:flex;gap:3px;align-items:center}
+  .dots .dl{font-weight:700;font-size:8.5px;letter-spacing:.8px;color:var(--ink-soft);margin-right:2px}
+  .dot{width:8px;height:8px;border-radius:50%;opacity:.9}
+  .thin{font-family:'Inter',sans-serif;font-size:12px;line-height:1.55;color:var(--ink-soft);padding:6px 4px}
+
+  /* ── League-context tiles (same slider as the Teams section) ── */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px 26px;margin-top:6px}
+  .tile{display:flex;flex-direction:column;gap:5px}
+  .tile-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .tile .l{font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .tile-vals{display:flex;align-items:center;gap:6px}
+  .tile .v{font-family:'Barlow Condensed';font-weight:800;font-size:22px;line-height:1}
+  .tile .rk{font-weight:700;font-size:12px;letter-spacing:.5px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+  .track{position:relative;height:5px;background:rgba(243,239,224,.14);border-radius:999px}
+  .fill{height:100%;border-radius:999px}
+  .ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);opacity:.6}
+
+  /* ── Footer / states ────────────────────────────────────── */
+  .legend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:24px;padding-top:16px;
+    border-top:1px solid var(--line);font-weight:700;font-size:11px;letter-spacing:1.2px;
+    text-transform:uppercase;color:var(--ink-soft)}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+  .note{font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.6;color:var(--ink-soft);margin-top:14px;
+    max-width:70ch;text-transform:none;letter-spacing:0;font-weight:400}
+  .state{padding:60px 10px;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    color:var(--ink-soft)}
+
+  @media (max-width:700px){
+    .top{align-items:flex-start;flex-direction:column;gap:12px}
+    .top-actions{gap:6px}
+    .back-pill{font-size:10px;padding:6px 10px;letter-spacing:1px}
+    .brand-txt{font-size:22px}.top-pill{font-size:10px;padding:6px 11px;letter-spacing:1.2px}
+    .bar{grid-template-columns:20px 30px minmax(0,1fr) 52px 12px;gap:10px;padding:9px 11px}
+    .pips,.bar-div{display:none}
+    .bar-logo{width:30px;height:30px}
+    .bar-name{font-size:21px}
+    .bar-form .v{font-size:23px}
+    .sp{grid-template-columns:20px 42px 44px minmax(0,1fr);gap:9px}
+    .alt{grid-template-columns:20px 34px 36px minmax(0,1fr);gap:9px}
+    .alt-ops{width:34px;height:34px;font-size:13px}
+    .alt-face{width:36px;height:36px}
+    .slot{font-size:17px}
+    .sp-form{width:42px;height:42px;font-size:15px}
+    .sp-face{width:44px;height:44px}
+    .sp-name{font-size:19px}
+    .sp-right{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px}
+    .statline .s b{font-size:14px}
+    .tiles{grid-template-columns:1fr;gap:14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <div class="brand">
+        <span class="brand-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="8" cy="13" r="4.2"/><circle cx="16" cy="13" r="4.2"/><path d="M4 9c1.5-2 3-2.6 4-2.6M20 9c-1.5-2-3-2.6-4-2.6"/></svg></span>
+        <span class="brand-txt">BASEBALL <b>LENS</b></span>
+      </div>
+      <div class="top-actions">
+        <a class="back-pill" href="index.html#rankings">&larr; Rankings</a>
+        <div class="top-pill">Batters Index</div>
+      </div>
+    </div>
+    <p class="lede">All 30 everyday lineups ranked by <b>OPS</b>: at each of the nine spots — catcher through
+      designated hitter — the man who has started there most over the last 30 days, then the nine pooled into a
+      single on-base plus slugging. Not a team average: the bench is out, this is the lineup that actually takes
+      the field. Tap a team for the full card — and where a spot is really being shared, or the man behind it is
+      swinging a better bat, tap the hitter to unfold the understudy.</p>
+    <div class="meta" id="meta">Loading…</div>
+  </header>
+
+  <div id="list" class="state">Loading lineups…</div>
+
+  <div class="legend">
+    <span>OPS scale</span>
+    <span><i style="background:#16a34a"></i>Elite .900+</span>
+    <span><i style="background:#b1c882"></i>Above avg .750+</span>
+    <span><i style="background:#ffc000"></i>Average .600+</span>
+    <span><i style="background:#ff8100"></i>Below avg .450+</span>
+    <span><i style="background:#ff2200"></i>Poor</span>
+  </div>
+  <p class="note">Positions come from each hitter's primary position, so a utility man appears at the spot he
+    is listed for. Where a club has no regular at a spot, the outfield slots fall back to the next most-used
+    outfielder and the DH to the most-used bat still unplaced. A backup is only offered where he has started at
+    least 5 games with 60 plate appearances behind him and either takes 40% of the spot's starts or out-hits the
+    man ahead of him by .080 of OPS — most spots have no such man, and those say nothing. Backups never count
+    toward the lineup's OPS. Season totals are a hitter's full year, so a bat traded in July carries the numbers
+    he put up elsewhere.</p>
+</div>
+
+<script>
+const API = 'https://statsapi.mlb.com/api/v1';
+const WINDOW_DAYS = 30;   // window used to decide who is actually starting now
+const MIN_PA = 25;        // a September call-up with six plate appearances has no OPS yet
+const PA_AT = 40;         // ...but nobody has banked 25 in the first week of April
+// A backup only earns a line if he is genuinely part of the picture: enough starts
+// and plate appearances to be real, and then either a true timeshare or a better bat.
+const ALT_STARTS = 5, ALT_PA = 60, ALT_SHARE = .40, ALT_EDGE = .080, ALT_EVEN = .85;
+const SLOTS = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
+const OF = new Set(['LF','CF','RF','OF']);
+
+let SEASON = new Date().getFullYear();
+let ROSTER_MODE = false;  // October and the winter: the roster is the lineup, usage is not
+let paFloor = MIN_PA;
+const rosterPos = {};     // pid → the position the club lists him at
+
+// ── OPS scale — the app's hitter tiers (js/app.js getDiamondPlayerColor) ──
+const TIERS = ['#16a34a','#b1c882','#ffc000','#ff8100','#ff2200'];
+const scale = (v, c) => (v == null || v <= 0) ? '#9ca3af'
+  : v >= c[0] ? TIERS[0] : v >= c[1] ? TIERS[1] : v >= c[2] ? TIERS[2] : v >= c[3] ? TIERS[3] : TIERS[4];
+const tier = o => scale(o, [.900, .750, .600, .450]);
+// AVG/OBP/SLG cut where the OPS tiers actually fall among qualified hitters, so a
+// green batting average and a green OPS mean the same thing
+const AVG_T = [.300, .255, .205, .160], OBP_T = [.380, .330, .275, .250], SLG_T = [.545, .425, .315, .270];
+// Dark ink on the light tiers, cream on the two dark ones — same as the social card
+const onTier = c => (c === '#ff8100' || c === '#ff2200' || c === '#9ca3af') ? '#fff' : shade(c,.62);
+const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));
+  return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1); };
+const rgba = (h,a) => { const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; };
+// 1 = best → the five tiers in quintiles, so a rank always carries a colour
+const rankColor = (rank, total) => TIERS[Math.min(4, Math.floor((rank - 1) / (total / 5)))];
+
+const PRIMARY = {108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0E3386',113:'#C6011F',114:'#00385D',
+  115:'#33006F',116:'#0C2340',117:'#002D62',118:'#004687',119:'#005A9C',120:'#AB0003',121:'#002D72',133:'#003831',
+  134:'#FDB827',135:'#2F241D',136:'#0C2C56',137:'#FD5A1E',138:'#C41E3A',139:'#092C5C',140:'#003278',141:'#134A8E',
+  142:'#002B5C',143:'#E81828',144:'#CE1141',145:'#27251F',146:'#00A3E0',147:'#003087',158:'#12284B'};
+
+const logo = id => `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg`;
+const face = id => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_180,q_auto:best/v1/people/${id}/headshot/silo/current`;
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+const int = v => parseInt(v, 10) || 0;
+const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+// A pitcher or a two-way player in the lineup is there to hit — the app files him at DH
+const posOf = p => { const a = (p.primaryPosition || {}).abbreviation; return (a === 'TWP' || a === 'P') ? 'DH' : a; };
+// OBP and SLG pooled from raw totals, never an average of averages
+const pool = rows => {
+  const t = rows.reduce((a,s) => ({ ab:a.ab+s.ab, h:a.h+s.h, bb:a.bb+s.bb, hbp:a.hbp+s.hbp, sf:a.sf+s.sf,
+    tb:a.tb+s.tb, pa:a.pa+s.pa, hr:a.hr+s.hr, rbi:a.rbi+s.rbi, sb:a.sb+s.sb, so:a.so+s.so }),
+    {ab:0,h:0,bb:0,hbp:0,sf:0,tb:0,pa:0,hr:0,rbi:0,sb:0,so:0});
+  const onBase = t.ab + t.bb + t.hbp + t.sf;
+  t.avg = t.ab > 0 ? t.h / t.ab : null;
+  t.obp = onBase > 0 ? (t.h + t.bb + t.hbp) / onBase : null;
+  t.slg = t.ab > 0 ? t.tb / t.ab : null;
+  t.ops = (t.obp != null && t.slg != null) ? t.obp + t.slg : null;
+  t.bbPct = t.pa > 0 ? t.bb / t.pa : null;
+  t.kPct  = t.pa > 0 ? t.so / t.pa : null;
+  return t;
+};
+
+let TEAMS = [];
+let RANKED = 0;
+const LEAGUE = {};             // metric → { best, worst } across the ranked lineups
+const careerCache = {};        // pid → { careerOPS, careerPA, years:{yr:ops} }
+const openTeams = new Set();
+const openAlts = new Set();    // lineup pids whose understudy is unfolded
+
+async function teamGames(season) {
+  return fj(`${API}/standings?leagueId=103,104&season=${season}`)
+    .then(d => { const g = (d.records || []).flatMap(r => r.teamRecords || []).map(t => (t.wins || 0) + (t.losses || 0));
+      return g.length ? g.reduce((a,b)=>a+b,0) / g.length : 0; }).catch(() => 0);
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────
+async function load() {
+  const end = new Date(), start = new Date();
+  start.setDate(start.getDate() - (WINDOW_DAYS - 1));
+
+  // A season that hasn't thrown a pitch yet means we're in the winter — show the last one
+  let games = await teamGames(SEASON);
+  if (!games) { SEASON -= 1; games = await teamGames(SEASON); }
+  // 25 PA is the summer floor; in the first week of April it would empty every lineup
+  paFloor = games ? Math.max(5, Math.min(MIN_PA, MIN_PA * games / PA_AT)) : MIN_PA;
+
+  // In October the lineup card is still a lineup card — the four postseason game
+  // types just have to be asked for by name, since "P" only works on the stats API.
+  const [teamList, sched, stats] = await Promise.all([
+    fj(`${API}/teams?sportId=1&season=${SEASON}`),
+    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R,F,D,L,W&hydrate=lineups`),
+    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=hitting&gameType=R&playerPool=All&limit=2000`),
+  ]);
+
+  const meta = {};
+  (teamList.teams || []).forEach(t => meta[t.id] = { id: t.id, name: t.teamName || t.name, abbr: t.abbreviation || '' });
+
+  // Every lineup card of the window: starts per hitter, and the batting slot he fills
+  const byTeam = {}, seen = {};
+  (sched.dates || []).forEach(d => (d.games || []).forEach(g => {
+    const lu = g.lineups; if (!lu) return;
+    [['home','homePlayers'],['away','awayPlayers']].forEach(([side, key]) => {
+      const tid = g.teams?.[side]?.team?.id; if (!tid || !meta[tid]) return;
+      (lu[key] || []).forEach((p, i) => {
+        const bag = byTeam[tid] = byTeam[tid] || {};
+        const e = bag[p.id] = bag[p.id] || { pid: p.id, name: p.fullName, pos: posOf(p), starts: 0, slotSum: 0 };
+        e.starts++; e.slotSum += i + 1;
+        seen[p.id] = true;
+      });
+    });
+  }));
+  ROSTER_MODE = !Object.keys(byTeam).length;
+
+  const line = {};
+  ((stats.stats || [])[0]?.splits || []).forEach(s => {
+    const st = s.stat || {};
+    line[s.player.id] = {
+      fullName: s.player.fullName,
+      avg: num(st.avg), obp: num(st.obp), slg: num(st.slg), ops: num(st.ops),
+      pa: int(st.plateAppearances), ab: int(st.atBats), h: int(st.hits), tb: int(st.totalBases),
+      bb: int(st.baseOnBalls), hbp: int(st.hitByPitch), sf: int(st.sacFlies), so: int(st.strikeOuts),
+      hr: int(st.homeRuns), rbi: int(st.rbi), sb: int(st.stolenBases), g: int(st.gamesPlayed),
+    };
+  });
+
+  // Active rosters: a bat on the IL is not in tonight's lineup
+  const ids = Object.keys(meta).map(Number);
+  const rosters = await Promise.all(ids.map(id =>
+    fj(`${API}/teams/${id}/roster/active`).then(r => new Set((r.roster || [])
+      .filter(e => e.position?.abbreviation !== 'P')
+      .map(e => { const a = e.position?.abbreviation;
+        rosterPos[e.person.id] = (a === 'TWP') ? 'DH' : a;    // the club's own listing, for October
+        return e.person.id; }))).catch(() => null)));
+  const active = {}; ids.forEach((id,i) => active[id] = rosters[i]);
+
+  TEAMS = ids.map(id => {
+    // Candidates: in season the bats that have been starting; in October, everyone
+    // the club carries, however few plate appearances he has.
+    let cands = ROSTER_MODE
+      ? [...(active[id] || [])].filter(pid => line[pid])
+          .map(pid => ({ pid, name: line[pid].fullName, pos: rosterPos[pid] || null, starts: 0, slotSum: 0 }))
+      : Object.values(byTeam[id] || {}).filter(c => !active[id] || active[id].has(c.pid));
+
+    cands = cands.map(c => { const ln = line[c.pid]; return ln ? { ...c, ...ln, name: c.name || ln.fullName } : null; })
+      .filter(c => c && (ROSTER_MODE || c.pa >= paFloor))
+      .sort((a,b) => b.starts - a.starts || b.pa - a.pa);
+
+    const lineup = fillLineup(cands);
+    attachBackups(lineup, cands);
+    const agg = pool(lineup);   // the nine only — a backup never moves the team's number
+    return { ...meta[id], lineup, agg, ops: agg.ops };
+  }).sort((a,b) => (b.ops ?? -1) - (a.ops ?? -1));
+
+  rankAll();
+
+  // Batting side (cosmetic — render anyway if it fails)
+  const pids = TEAMS.flatMap(t => t.lineup.flatMap(s => s.alt ? [s.pid, s.alt.pid] : [s.pid]));
+  try {
+    const ppl = await fj(`${API}/people?personIds=${pids.join(',')}`);
+    const bats = {}; (ppl.people || []).forEach(p => bats[p.id] = p.batSide?.code || '');
+    TEAMS.forEach(t => t.lineup.forEach(s => {
+      s.bats = bats[s.pid] || '';
+      if (s.alt) s.alt.bats = bats[s.alt.pid] || '';
+    }));
+  } catch (e) {}
+
+  document.getElementById('meta').textContent = ROSTER_MODE
+    ? `${SEASON} season · every bat on the active roster as of ${ymd(end)}`
+    : `${SEASON} season · lineups as of ${ymd(end)} · starts counted over the last ${WINDOW_DAYS} days`
+      + (paFloor < MIN_PA ? ` · ${Math.round(paFloor)} PA minimum this early in the year` : '');
+  render();
+}
+
+// One man per spot, most starts first. Where a club has no regular at a spot the
+// outfield falls back to the next most-used outfielder and the DH to whoever is
+// left — no club in the league ends up with a hole, but the rule is stated.
+function fillLineup(cands) {
+  const used = new Set(), out = [];
+  const take = (slot, pick) => { if (!pick) return; used.add(pick.pid); out.push({ ...pick, slot }); };
+  SLOTS.forEach(slot => take(slot, cands.find(c => !used.has(c.pid) && c.pos === slot)));
+  ['LF','CF','RF'].forEach(slot => {
+    if (out.some(o => o.slot === slot)) return;
+    take(slot, cands.find(c => !used.has(c.pid) && OF.has(c.pos)));
+  });
+  if (!out.some(o => o.slot === 'DH')) take('DH', cands.find(c => !used.has(c.pid)));
+  // Batting order: where he actually hits, with the unfilled spots at the back
+  return out.sort((a,b) => (a.starts ? a.slotSum / a.starts : 99) - (b.starts ? b.slotSum / b.starts : 99));
+}
+
+// The man behind each spot — but only when he is worth a line. Most slots have a
+// third catcher or a bench bat nobody needs to hear about; these are the ones a
+// manager is actually choosing between. Each backup is claimed by one spot only,
+// so two everyday outfielders never read as starter and understudy.
+function attachBackups(lineup, cands) {
+  const used = new Set(lineup.map(s => s.pid));
+  const vol = c => ROSTER_MODE ? c.pa : c.starts;   // no lineup cards in October — go by playing time
+  lineup.forEach(s => {
+    const alt = cands.find(c => !used.has(c.pid) && c.pos === s.slot);
+    if (!alt) return;
+    if (vol(alt) < (ROSTER_MODE ? ALT_PA : ALT_STARTS) || alt.pa < ALT_PA) return;
+    const share = vol(s) > 0 ? vol(alt) / vol(s) : 0;
+    const edge = (alt.ops != null && s.ops != null) ? alt.ops - s.ops : null;
+    if (!(share >= ALT_SHARE || (edge != null && edge >= ALT_EDGE))) return;
+    used.add(alt.pid);
+    // Name what he actually is. Past ~85% of the starts neither man is the backup —
+    // they are splitting the job, and calling an everyday player an understudy would
+    // be plainly wrong. Otherwise: a better bat if he out-hits the man ahead, a
+    // platoon if he just plays a lot. The tag never implies quality on its own.
+    const why = share >= ALT_EVEN ? 'splitting the spot'
+      : (edge != null && edge >= ALT_EDGE) ? 'better bat' : 'platoon';
+    s.alt = { ...alt, why, edge, share };
+  });
+}
+
+// Ranks give every number league context: 1 = best in the league
+function rankAll() {
+  const poolT = TEAMS.filter(t => t.lineup.length >= 8 && t.ops != null);
+  RANKED = poolT.length;
+  const metrics = [
+    ['ops',   t => t.agg.ops,   true],
+    ['obp',   t => t.agg.obp,   true],
+    ['slg',   t => t.agg.slg,   true],
+    ['hr',    t => t.agg.hr,    true],
+    ['bbPct', t => t.agg.bbPct, true],
+    ['kPct',  t => t.agg.kPct,  false],
+  ];
+  TEAMS.forEach(t => t.rank = {});
+  metrics.forEach(([key, get, higherBetter]) => {
+    const sorted = poolT.filter(t => get(t) != null)
+      .sort((a,b) => higherBetter ? get(b) - get(a) : get(a) - get(b));
+    sorted.forEach((t,i) => t.rank[key] = i + 1);
+    if (sorted.length) LEAGUE[key] = { best: get(sorted[0]), worst: get(sorted[sorted.length - 1]) };
+  });
+  // Per-hitter volume colours are percentiles among all lineup regulars in the league
+  const all = TEAMS.flatMap(t => t.lineup);
+  [['hr', s => s.hr], ['rbi', s => s.rbi]].forEach(([key, get]) => {
+    const sorted = [...all].sort((a,b) => get(b) - get(a));
+    sorted.forEach((s,i) => s[key + 'Col'] = rankColor(i + 1, sorted.length));
+  });
+}
+
+// ── Career context (lazy: only the team you open) ─────────────────────────
+async function loadCareer(team) {
+  const need = team.lineup.map(s => s.pid).filter(pid => !careerCache[pid]);
+  if (!need.length) return;
+  const d = await fj(`${API}/people?personIds=${need.join(',')}&hydrate=stats(type=yearByYear,group=hitting)`);
+  (d.people || []).forEach(p => {
+    const splits = (p.stats?.find(g => g.group?.displayName === 'hitting')?.splits || [])
+      .filter(sp => parseInt(sp.season, 10) < SEASON);
+    // Career = every prior season pooled, the same way the lineup is pooled
+    const tot = pool(splits.map(sp => { const s = sp.stat || {};
+      return { ab:int(s.atBats), h:int(s.hits), bb:int(s.baseOnBalls), hbp:int(s.hitByPitch), sf:int(s.sacFlies),
+               tb:int(s.totalBases), pa:int(s.plateAppearances), hr:int(s.homeRuns), rbi:int(s.rbi),
+               sb:int(s.stolenBases), so:int(s.strikeOuts) }; }));
+    const years = {};
+    splits.forEach(sp => { const yr = parseInt(sp.season,10), s = sp.stat || {};
+      if (yr >= SEASON - 5 && int(s.plateAppearances) > 0) years[yr] = num(s.ops);
+    });
+    careerCache[p.id] = { careerPA: tot.pa, careerOPS: tot.ops, years };
+  });
+  need.forEach(pid => careerCache[pid] = careerCache[pid] || { careerPA:0, careerOPS:null, years:{} });
+}
+
+// The app's hitter threshold (js/app.js): .025 of OPS is the line between noise
+// and a real move, and .075 is a different hitter altogether.
+function trendHTML(cur, career, careerPA) {
+  if (cur == null || career == null || careerPA < 300) return '';
+  const d = cur - career, abs = Math.abs(d);
+  const fmt = v => v.toFixed(3).replace(/^0/,'');
+  if (abs < .025) { const c = tier(cur); return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">≈ career</span>`; }
+  const c = d > 0 ? (abs >= .075 ? TIERS[0] : TIERS[1]) : (abs >= .075 ? TIERS[4] : TIERS[3]);
+  return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">${d > 0 ? '▲' : '▼'} ${fmt(abs)} vs career</span>`;
+}
+
+function dotsHTML(pid) {
+  const years = careerCache[pid]?.years || {};
+  const list = Array.from({length:5}, (_,k) => SEASON - 5 + k).filter(yr => years[yr] != null);
+  if (!list.length) return '';
+  return `<div class="dots"><span class="dl">5Y</span>` +
+    list.map(yr => `<span class="dot" style="background:${tier(years[yr])}" title="OPS ${years[yr].toFixed(3).replace(/^0/,'')} (${yr})"></span>`).join('') +
+    `</div>`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function stat(v, label, color) {
+  return `<span class="s" style="color:${color}"><b>${v}</b>${label ? `<i>${label}</i>` : ''}</span>`;
+}
+const d3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/,'');
+const pct1 = v => v == null ? '—' : `${(v * 100).toFixed(1)}%`;
+
+function altHTML(a, teamColor, slot) {
+  const col = tier(a.ops);
+  const sep = `<span class="dot">·</span>`;
+  const share = ROSTER_MODE ? `${a.g} games` : `${a.starts} start${a.starts === 1 ? '' : 's'}`;
+  return `<div class="alt">
+    <div class="alt-lbl">${slot}<br>ALT</div>
+    <div class="alt-ops" style="background:${col};color:${onTier(col)}">${d3(a.ops)}</div>
+    <div class="alt-face" style="background:linear-gradient(150deg,${teamColor} 0%,${shade(teamColor,.45)} 100%)">
+      <img src="${face(a.pid)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    </div>
+    <div>
+      <div class="alt-name">${a.name}
+        ${a.bats ? `<span class="hand ${a.bats}">${a.bats === 'S' ? 'SWITCH' : a.bats + 'HB'}</span>` : ''}
+        <span class="alt-tag">${Math.round(a.share * 100)}% of the spot's ${ROSTER_MODE ? 'plate appearances' : 'starts'}${
+          a.edge != null && a.edge >= ALT_EDGE ? ` · +${d3(a.edge)} OPS` : ''}</span>
+        <span class="sp-sub">${share}</span>
+      </div>
+      <div class="statline">
+        ${stat(d3(a.avg), 'AVG', scale(a.avg, AVG_T))}${sep}
+        ${stat(d3(a.obp), 'OBP', scale(a.obp, OBP_T))}${sep}
+        ${stat(d3(a.slg), 'SLG', scale(a.slg, SLG_T))}${sep}
+        ${stat(a.hr, 'HR', '#9ca3af')}${sep}
+        ${stat(a.rbi, 'RBI', '#9ca3af')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function batterHTML(s, teamColor, n) {
+  const col = tier(s.ops);
+  const career = careerCache[s.pid];
+  const sep = `<span class="dot">·</span>`;
+  return `<div class="slot-row${openAlts.has(s.pid) ? ' alt-open' : ''}" id="row-${s.pid}">
+  <div class="sp${s.alt ? ' has-alt' : ''}"${s.alt ? ` onclick="toggleAlt(${s.pid})"` : ''}>
+    <div class="slot">${n}</div>
+    <div class="sp-form" style="background:${col};color:${onTier(col)}">${d3(s.ops)}</div>
+    <div class="sp-face" style="background:linear-gradient(150deg,${teamColor} 0%,${shade(teamColor,.45)} 100%)">
+      <img src="${face(s.pid)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    </div>
+    <div>
+      <div class="sp-name">${s.name}
+        <span class="pos">${s.slot}</span>
+        ${s.bats ? `<span class="hand ${s.bats}">${s.bats === 'S' ? 'SWITCH' : s.bats + 'HB'}</span>` : ''}
+        ${s.alt ? `<span class="alt-tag">${s.alt.why}<span class="alt-chev">▼</span></span>` : ''}
+        <span class="sp-sub">${ROSTER_MODE ? `${s.g} game${s.g === 1 ? '' : 's'} this season`
+                                           : `${s.starts} start${s.starts === 1 ? '' : 's'} in the last ${WINDOW_DAYS} days`}</span>
+      </div>
+      <div class="statline">
+        ${stat(d3(s.avg), 'AVG', scale(s.avg, AVG_T))}${sep}
+        ${stat(d3(s.obp), 'OBP', scale(s.obp, OBP_T))}${sep}
+        ${stat(d3(s.slg), 'SLG', scale(s.slg, SLG_T))}${sep}
+        ${stat(s.hr, 'HR', s.hrCol)}${sep}
+        ${stat(s.rbi, 'RBI', s.rbiCol)}${sep}
+        ${stat(s.sb, 'SB', '#9ca3af')}
+      </div>
+    </div>
+    <div class="sp-right">
+      ${trendHTML(s.ops, career?.careerOPS, career?.careerPA ?? 0)}
+      ${dotsHTML(s.pid)}
+    </div>
+  </div>
+  ${s.alt ? altHTML(s.alt, teamColor, s.slot) : ''}
+  </div>`;
+}
+
+// Value, rank badge and the league slider: fill by rank (1 = full), with the
+// league's worst and best at the ends — same treatment as Team Stats vs League.
+function tileHTML(t, key, label, value, fmt) {
+  const rank = t.rank[key], total = RANKED || 30;
+  const c = rank ? rankColor(rank, total) : '#9ca3af';
+  const fillPct = rank ? Math.max(5, Math.round(((total - rank + 1) / total) * 100)) : 5;
+  const ex = LEAGUE[key];
+  return `<div class="tile">
+    <div class="tile-top">
+      <span class="l">${label}</span>
+      <span class="tile-vals">
+        <span class="v" style="color:${c}">${value}</span>
+        <span class="rk" style="background:${rgba(c,.16)};color:${c}">${rank ? `#${rank} / ${total}` : '—'}</span>
+      </span>
+    </div>
+    <div class="track"><div class="fill" style="width:${fillPct}%;background:${c}"></div></div>
+    <div class="ends"><span>${ex ? fmt(ex.worst) : ''}</span><span>${ex ? fmt(ex.best) : ''}</span></div>
+  </div>`;
+}
+
+function panelHTML(t) {
+  const c = PRIMARY[t.id] || '#26324a';
+  const a = t.agg;
+  const d0 = v => v == null ? '—' : Math.round(v).toLocaleString('en-US');
+  return `<div class="panel" id="pan-${t.id}">
+    <div class="sec"><span class="sec-l">Everyday lineup — ${t.lineup.length} of 9 spots · ${d0(a.pa)} PA</span><span class="sec-r"></span></div>
+    ${t.lineup.length ? t.lineup.map((s,i) => batterHTML(s, c, i + 1)).join('')
+                      : `<p class="thin">No bat on the active roster clears ${Math.round(paFloor)} plate appearances on the season.</p>`}
+    <div class="sec"><span class="sec-l">Lineup vs the league</span><span class="sec-r"></span></div>
+    <div class="tiles">
+      ${tileHTML(t, 'ops',   'Lineup OPS',    d3(a.ops),   d3)}
+      ${tileHTML(t, 'obp',   'On-base',       d3(a.obp),   d3)}
+      ${tileHTML(t, 'slg',   'Slugging',      d3(a.slg),   d3)}
+      ${tileHTML(t, 'hr',    'Home runs',     d0(a.hr),    d0)}
+      ${tileHTML(t, 'bbPct', 'Walk rate',     pct1(a.bbPct), pct1)}
+      ${tileHTML(t, 'kPct',  'Strikeout rate',pct1(a.kPct),  pct1)}
+    </div>
+  </div>`;
+}
+
+function render() {
+  const el = document.getElementById('list');
+  el.className = '';
+  el.innerHTML = TEAMS.map((t,i) => {
+    const c = PRIMARY[t.id] || '#26324a', col = tier(t.ops), open = openTeams.has(t.id);
+    const pips = t.lineup.map(s => { const pc = tier(s.ops);
+      return `<span class="pip" style="background:${pc};color:${onTier(pc)}" title="${s.name} (${s.slot}): ${d3(s.ops)}">${s.slot}</span>`;
+    }).join('');
+    return `<div class="team${open ? ' open' : ''}" id="team-${t.id}">
+      <button class="bar" style="background:linear-gradient(100deg,${c} 0%,${shade(c,.5)} 100%)"
+          aria-expanded="${open}" aria-controls="pan-${t.id}" onclick="toggleTeam(${t.id})">
+        <span class="rank">${t.ops == null ? '—' : i + 1}</span>
+        <img class="bar-logo" src="${logo(t.id)}" alt="" onerror="this.style.display='none'">
+        <span class="bar-name">${t.name.toUpperCase()}<span>${t.abbr}</span></span>
+        <span class="pips">${pips}</span>
+        <span class="bar-div"></span>
+        <span class="bar-form"><span class="v" style="color:${col}">${d3(t.ops)}</span><span class="l">OPS</span></span>
+        <span class="chev">▼</span>
+      </button>
+      ${panelHTML(t)}
+    </div>`;
+  }).join('');
+}
+
+function toggleAlt(pid) {
+  const row = document.getElementById(`row-${pid}`);
+  const open = !row.classList.contains('alt-open');
+  row.classList.toggle('alt-open', open);
+  open ? openAlts.add(pid) : openAlts.delete(pid);
+}
+
+async function toggleTeam(id) {
+  const wrap = document.getElementById(`team-${id}`);
+  const open = !wrap.classList.contains('open');
+  wrap.classList.toggle('open', open);
+  wrap.querySelector('.bar').setAttribute('aria-expanded', String(open));
+  open ? openTeams.add(id) : openTeams.delete(id);
+  if (!open) return;
+  const t = TEAMS.find(x => x.id === id);
+  try { await loadCareer(t); } catch (e) { return; }        // career context is additive
+  document.getElementById(`pan-${id}`).outerHTML = panelHTML(t);
+}
+
+load().catch(err => {
+  const el = document.getElementById('list');
+  el.className = 'state';
+  el.textContent = 'Could not load lineups — ' + err.message;
+});
+</script>
+</body>
+</html>

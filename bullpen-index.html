@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Rotation Index — Baseball Lens</title>
+<title>Bullpen Index — Baseball Lens</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -57,8 +57,8 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bar-name span{font-family:'Barlow Condensed';font-weight:700;font-size:12px;letter-spacing:1.5px;
     color:rgba(255,255,255,.5);margin-left:8px;vertical-align:2px}
-  .pips{display:flex;gap:4px}
-  .pip{width:27px;height:23px;border-radius:6px;font-weight:800;font-size:13px;
+  .pips{display:flex;gap:3px}
+  .pip{width:24px;height:23px;border-radius:6px;font-weight:800;font-size:12px;
     display:flex;align-items:center;justify-content:center;
     border:1.5px solid rgba(255,255,255,.22);
     box-shadow:inset 0 -3px 6px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.3)}
@@ -93,6 +93,9 @@
   .hand{font-family:'Barlow Condensed';font-weight:800;font-size:10px;letter-spacing:1px;padding:2px 6px;
     border-radius:4px;background:rgba(184,15,33,.22);color:#ff8a97}
   .hand.L{background:rgba(21,101,216,.28);color:#8fc4ff}
+  .role{font-family:'Barlow Condensed';font-weight:800;font-size:10px;letter-spacing:1.2px;padding:2px 6px;
+    border-radius:4px;background:rgba(232,194,58,.18);color:#e8c23a}
+  .role.set{background:rgba(159,180,166,.18);color:#c3d4c9}
   .sp-sub{font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim)}
   .statline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 9px;margin-top:5px;
     font-weight:700;font-size:13px}
@@ -106,6 +109,7 @@
   .dots{display:flex;gap:3px;align-items:center}
   .dots .dl{font-weight:700;font-size:8.5px;letter-spacing:.8px;color:var(--ink-soft);margin-right:2px}
   .dot{width:8px;height:8px;border-radius:50%;opacity:.9}
+  .thin{font-family:'Inter',sans-serif;font-size:12px;line-height:1.55;color:var(--ink-soft);padding:6px 4px}
 
   /* ── League-context tiles (same slider as the Teams section) ── */
   .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px 26px;margin-top:6px}
@@ -124,6 +128,8 @@
     border-top:1px solid var(--line);font-weight:700;font-size:11px;letter-spacing:1.2px;
     text-transform:uppercase;color:var(--ink-soft)}
   .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+  .note{font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.6;color:var(--ink-soft);margin-top:14px;
+    max-width:70ch;text-transform:none;letter-spacing:0;font-weight:400}
   .state{padding:60px 10px;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;
     color:var(--ink-soft)}
 
@@ -157,16 +163,17 @@
       </div>
       <div class="top-actions">
         <a class="back-pill" href="index.html#rankings">&larr; Rankings</a>
-        <div class="top-pill">Rotation Index</div>
+        <div class="top-pill">Bullpen Index</div>
       </div>
     </div>
-    <p class="lede">All 30 rotations ranked by <b>FORM</b>: each team's five current starters scored 0–100 on
-      their season ERA and WHIP, then averaged <b>weighted by innings pitched</b> — the arm carrying the rotation
-      counts more than a No. 5 with 40 innings. Tap a team for the full report.</p>
+    <p class="lede">All 30 bullpens ranked by <b>FORM</b>: every arm a club has used in relief over the last
+      30 days is scored 0–100 on his season ERA and WHIP, then averaged <b>weighted by innings pitched</b> —
+      the arm carrying the workload counts more than a mop-up man. Tap a team for the full report, with the
+      two numbers only a bullpen has: <b>save conversion</b> and <b>inherited runners stranded</b>.</p>
     <div class="meta" id="meta">Loading…</div>
   </header>
 
-  <div id="list" class="state">Loading rotations…</div>
+  <div id="list" class="state">Loading bullpens…</div>
 
   <div class="legend">
     <span>Form scale</span>
@@ -176,16 +183,26 @@
     <span><i style="background:#ff8100"></i>Below avg 25+</span>
     <span><i style="background:#ff2200"></i>Poor</span>
   </div>
+  <p class="note">Pitchers who started a game in the window belong to the Rotation Index, not here — the two
+    boards never count the same arm twice. Season totals are a pitcher's full year, so a reliever traded in
+    August carries the numbers he put up elsewhere.</p>
 </div>
 
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
-const WINDOW_DAYS = 30;   // window used to decide who is actually in the rotation now
-const MIN_IP = 10;        // a spot starter with 5 innings is not a rotation member
-let SEASON = new Date().getFullYear();
-let ROSTER_MODE = false;  // October and the winter: the roster is the rotation, usage is not
+const WINDOW_DAYS = 30;   // window used to decide who is actually in the bullpen now
+const MIN_APPS = 3;       // one mop-up appearance does not make you a bullpen member
+const MIN_IP = 10;        // and neither does a season line built on five innings
+const FLOOR_AT = 60;      // ...but a reliever needs ~60 team games to bank those 10 innings
+const PEN_SIZE = 8;       // a modern bullpen: 13 pitchers, five of them starting
+const MIN_ARMS = 3;       // below this the FORM would be one hot arm, not a bullpen
 
-// ── FORM scale — same constants as the app (js/app.js calcBaseScore) ──
+let SEASON = new Date().getFullYear();
+let ROSTER_MODE = false;  // October and the winter: the roster is the bullpen, usage is not
+let ipFloor = MIN_IP;
+
+// ── FORM scale — same constants as the app (js/app.js calcBaseScore), so a 78
+// bullpen and a 78 rotation mean the same thing across the site ──
 const ERA_BEST = 1.50, ERA_WORST = 6.00, WHIP_BEST = 0.80, WHIP_WORST = 2.00;
 function forma(era, whip) {
   const p = [];
@@ -202,8 +219,10 @@ const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&2
 const rgba = (h,a) => { const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; };
 // 1 = best → the five tiers in quintiles, so a rank always carries a colour
 const rankColor = (rank, total) => TIERS[Math.min(4, Math.floor((rank - 1) / (total / 5)))];
-const pctColor = (w,l) => (w + l) === 0 ? '#9ca3af'
-  : (p => p >= .650 ? TIERS[0] : p >= .550 ? TIERS[1] : p >= .450 ? TIERS[2] : p >= .350 ? TIERS[3] : TIERS[4])(w / (w + l));
+// Save conversion: 90%+ is a real closer, sub-60% is a fire
+const svPctColor = p => p == null ? '#9ca3af' : p >= .90 ? TIERS[0] : p >= .80 ? TIERS[1] : p >= .70 ? TIERS[2] : p >= .60 ? TIERS[3] : TIERS[4];
+// Inherited runners stranded — the league strands roughly 70%
+const irsColor = p => p == null ? '#9ca3af' : p >= .85 ? TIERS[0] : p >= .75 ? TIERS[1] : p >= .65 ? TIERS[2] : p >= .55 ? TIERS[3] : TIERS[4];
 
 const PRIMARY = {108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0E3386',113:'#C6011F',114:'#00385D',
   115:'#33006F',116:'#0C2340',117:'#002D62',118:'#004687',119:'#005A9C',120:'#AB0003',121:'#002D72',133:'#003831',
@@ -216,69 +235,85 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-$
 const ipToFloat = ip => { const s=String(ip ?? '0'); if(!s.includes('.')) return parseFloat(s)||0;
   const [w,f]=s.split('.'); return (parseInt(w,10)||0)+(parseInt(f,10)||0)/3; };
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
-// Starter or reliever, from the season line. One start in one appearance says
-// nothing — that is a spot start or an opener, not a rotation arm.
+// Starter or reliever, from the season line — the mirror image of the Rotation
+// Index's test, so every arm on a roster lands on exactly one of the two boards.
 const isStarter = ln => !!ln && (ln.gs >= 3 || (ln.g >= 3 && ln.gs / ln.g >= 0.5));
+const int = v => parseInt(v, 10) || 0;
 const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
 let TEAMS = [];
-const LEAGUE = {};             // metric → { best, worst } across the 30 rotations
+let RANKED = 0;                // bullpens with enough arms to carry a rank
+const LEAGUE = {};             // metric → { best, worst } across the ranked bullpens
 const careerCache = {};        // pid → { careerForm, careerIP, years:{yr:form} }
 const openTeams = new Set();
+
+// The board has to read the same in April, in August and in October. Two things
+// change with the calendar: how many innings a reliever can possibly have banked,
+// and whether 30-day usage still describes a bullpen at all.
+async function calibrate(start, end) {
+  // Games played so far. Nothing yet → the new season hasn't started, fall back to the last one.
+  let games = await teamGames(SEASON);
+  if (!games) { SEASON -= 1; games = await teamGames(SEASON); }
+  // 10 IP is the September floor; in April it would disqualify every reliever alive
+  ipFloor = games ? Math.max(2, Math.min(MIN_IP, MIN_IP * games / FLOOR_AT)) : MIN_IP;
+  // October: D/F/L/W are the four postseason game types — "P" only works on the stats API
+  const post = await fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=F,D,L,W`)
+    .then(d => (d.dates || []).some(x => (x.games || []).length)).catch(() => false);
+  return post;
+}
+async function teamGames(season) {
+  return fj(`${API}/standings?leagueId=103,104&season=${season}`)
+    .then(d => { const g = (d.records || []).flatMap(r => r.teamRecords || []).map(t => (t.wins || 0) + (t.losses || 0));
+      return g.length ? g.reduce((a,b)=>a+b,0) / g.length : 0; }).catch(() => 0);
+}
 
 // ── Load ──────────────────────────────────────────────────────────────────
 async function load() {
   const end = new Date(), start = new Date();
   start.setDate(start.getDate() - (WINDOW_DAYS - 1));
+  const postseason = await calibrate(start, end);
 
-  // A season that hasn't thrown a pitch yet means we're in the winter — show the last one
-  const played = await fj(`${API}/standings?leagueId=103,104&season=${SEASON}`)
-    .then(d => (d.records || []).flatMap(r => r.teamRecords || []).some(t => (t.wins || 0) + (t.losses || 0) > 0)).catch(() => true);
-  if (!played) SEASON -= 1;
-
-  // D/F/L/W are the four postseason game types — "P" only works on the stats API
-  const [post, sched, stats] = await Promise.all([
-    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=F,D,L,W`)
-      .then(d => (d.dates || []).some(x => (x.games || []).length)).catch(() => false),
-    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R&hydrate=probablePitcher,team`),
+  const [teamList, window30, stats] = await Promise.all([
+    fj(`${API}/teams?sportId=1&season=${SEASON}`),
+    // byDateRange gives the club a pitcher actually worked for in the window —
+    // a reliever traded in July belongs to his new pen, not both.
+    fj(`${API}/stats?stats=byDateRange&startDate=${ymd(start)}&endDate=${ymd(end)}&season=${SEASON}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000`),
     fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000`),
   ]);
-  // In October a club rides three starters — the two left out are still the rotation
-  ROSTER_MODE = post || !(sched.dates || []).some(d => (d.games || []).length);
 
-  // Starts per team in the window, plus each arm's most recent start — a pitcher
-  // traded mid-window belongs to the club he last started for, not both.
-  const byTeam = {}, meta = {}, lastStart = {};
-  (sched.dates || []).forEach(d => (d.games || []).forEach(g => {
-    ['away','home'].forEach(side => {
-      const t = g.teams[side], team = t.team, pp = t.probablePitcher;
-      if (!team?.id || !pp?.id) return;
-      meta[team.id] = { id: team.id, name: team.teamName || team.name, abbr: team.abbreviation || '' };
-      const bag = byTeam[team.id] = byTeam[team.id] || {};
-      const e = bag[pp.id] = bag[pp.id] || { pid: pp.id, name: pp.fullName, starts: 0 };
-      e.starts++;
-      if (!lastStart[pp.id] || d.date >= lastStart[pp.id].date) lastStart[pp.id] = { date: d.date, team: team.id };
-    });
-  }));
+  const windowSplits = (window30.stats || [])[0]?.splits || [];
+  // In October the roster is the bullpen — an arm held back for the playoffs has no
+  // 30-day usage to speak of. Same in the winter, when the window is simply empty.
+  ROSTER_MODE = postseason || !windowSplits.length;
 
-  // No probable pitchers to read the rotation off — take the clubs from the league itself
-  if (ROSTER_MODE) {
-    const tl = await fj(`${API}/teams?sportId=1&season=${SEASON}`);
-    (tl.teams || []).forEach(t => meta[t.id] = { id: t.id, name: t.teamName || t.name, abbr: t.abbreviation || '' });
-  }
+  const meta = {};
+  (teamList.teams || []).forEach(t => meta[t.id] = { id: t.id, name: t.teamName || t.name, abbr: t.abbreviation || '' });
+
+  // Relief work in the window, by team. A pitcher who started a game in the
+  // window is a starter — he belongs to the Rotation Index instead.
+  const byTeam = {};
+  windowSplits.forEach(s => {
+    const st = s.stat || {}, tid = s.team?.id;
+    if (!tid || !meta[tid]) return;
+    const apps = (st.gamesPlayed || 0) - (st.gamesStarted || 0);
+    if ((st.gamesStarted || 0) > 0 || apps < MIN_APPS) return;
+    (byTeam[tid] = byTeam[tid] || []).push({ pid: s.player.id, name: s.player.fullName, apps });
+  });
 
   const line = {};
   ((stats.stats || [])[0]?.splits || []).forEach(s => {
     const st = s.stat || {};
     line[s.player.id] = {
-      fullName: s.player.fullName, g: st.gamesPlayed || 0, gs: st.gamesStarted || 0,
+      fullName: s.player.fullName,
       era: num(st.era), whip: num(st.whip), ip: ipToFloat(st.inningsPitched), ipTxt: st.inningsPitched || '0.0',
-      k: st.strikeOuts || 0, w: st.wins || 0, l: st.losses || 0,
-      er: st.earnedRuns || 0, h: st.hits || 0, bb: st.baseOnBalls || 0,
+      k: int(st.strikeOuts), er: int(st.earnedRuns), h: int(st.hits), bb: int(st.baseOnBalls),
+      g: int(st.gamesPlayed), gs: int(st.gamesStarted),
+      sv: int(st.saves), svo: int(st.saveOpportunities), hld: int(st.holds), bs: int(st.blownSaves),
+      gf: int(st.gamesFinished), ir: int(st.inheritedRunners), irs: int(st.inheritedRunnersScored),
     };
   });
 
-  // Active rosters: an arm on the IL is not part of the current rotation
+  // Active rosters: an arm on the IL is not part of the current bullpen
   const ids = Object.keys(meta).map(Number);
   const rosters = await Promise.all(ids.map(id =>
     fj(`${API}/teams/${id}/roster/active`).then(r => new Set((r.roster || []).map(e => e.person.id))).catch(() => null)));
@@ -286,70 +321,81 @@ async function load() {
 
   TEAMS = ids.map(id => {
     const t = meta[id];
-    // In season the rotation is whoever has been handed the ball; in October it is
-    // whoever the club carries, however little he has thrown.
+    // Who is in this bullpen? In season, the arms the manager has actually called on.
+    // In October, everyone the club carries — a man kept for one lefty matchup counts.
     const pool = ROSTER_MODE
-      ? [...(active[id] || [])].filter(pid => isStarter(line[pid]))
-          .map(pid => ({ pid, name: line[pid].fullName, starts: line[pid].gs }))
-      : Object.values(byTeam[id] || {})
-          .filter(s => lastStart[s.pid]?.team === id)                 // still this club's arm
-          .filter(s => !active[id] || active[id].has(s.pid));         // and not on the IL
+      ? [...(active[id] || [])].filter(pid => line[pid] && !isStarter(line[pid]))
+          .map(pid => ({ pid, name: null, apps: 0 }))
+      : (byTeam[id] || []).filter(r => !active[id] || active[id].has(r.pid));   // and not on the IL
 
-    const starters = pool
-      .map(s => { const ln = line[s.pid] || { ip:0, ipTxt:'0.0', k:0, w:0, l:0, er:0, h:0, bb:0 };
-        return { ...s, ...ln, form: forma(ln.era, ln.whip) }; })
-      .filter(s => ROSTER_MODE || s.ip >= MIN_IP)
-      .sort((a,b) => b.starts - a.starts || b.ip - a.ip)              // rotation members before spot starters
-      .slice(0, 5)
+    const arms = pool
+      .map(r => { const ln = line[r.pid];
+        return ln ? { ...r, ...ln, name: r.name || ln.fullName, form: forma(ln.era, ln.whip) } : null; })
+      .filter(s => s && (ROSTER_MODE || s.ip >= ipFloor))
+      .sort((a,b) => b.apps - a.apps || b.ip - a.ip)                   // the arms the manager actually calls
+      .slice(0, PEN_SIZE)
       .sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
 
+    arms.forEach(s => {
+      s.irsPct  = s.ir >= 3 ? (s.ir - s.irs) / s.ir : null;            // stranded share
+      s.svPct   = s.svo > 0 ? s.sv / s.svo : null;
+      s.isClose = s.sv >= 5 || (s.svo >= 5 && s.gf >= 10);
+      s.isSetup = !s.isClose && s.hld >= 8;
+    });
+
     let wsum = 0, ipsum = 0;
-    starters.forEach(s => { if (s.form != null && s.ip > 0) { wsum += s.form * s.ip; ipsum += s.ip; } });
-    const agg = starters.reduce((a,s) => ({ ip:a.ip+s.ip, er:a.er+s.er, h:a.h+s.h, bb:a.bb+s.bb,
-      k:a.k+s.k, w:a.w+s.w, l:a.l+s.l, starts:a.starts+s.starts }), {ip:0,er:0,h:0,bb:0,k:0,w:0,l:0,starts:0});
-    agg.era  = agg.ip > 0 ? agg.er * 9 / agg.ip : null;
-    agg.whip = agg.ip > 0 ? (agg.h + agg.bb) / agg.ip : null;
-    agg.k9   = agg.ip > 0 ? agg.k * 9 / agg.ip : null;
-    agg.pct  = (agg.w + agg.l) > 0 ? agg.w / (agg.w + agg.l) : null;
-    return { ...t, starters, form: ipsum > 0 ? Math.round(wsum / ipsum) : null, agg };
+    arms.forEach(s => { if (s.form != null && s.ip > 0) { wsum += s.form * s.ip; ipsum += s.ip; } });
+    const agg = arms.reduce((a,s) => ({ ip:a.ip+s.ip, er:a.er+s.er, h:a.h+s.h, bb:a.bb+s.bb, k:a.k+s.k,
+      sv:a.sv+s.sv, svo:a.svo+s.svo, hld:a.hld+s.hld, bs:a.bs+s.bs, ir:a.ir+s.ir, irs:a.irs+s.irs, apps:a.apps+s.apps }),
+      {ip:0,er:0,h:0,bb:0,k:0,sv:0,svo:0,hld:0,bs:0,ir:0,irs:0,apps:0});
+    agg.era    = agg.ip > 0 ? agg.er * 9 / agg.ip : null;
+    agg.whip   = agg.ip > 0 ? (agg.h + agg.bb) / agg.ip : null;
+    agg.k9     = agg.ip > 0 ? agg.k * 9 / agg.ip : null;
+    agg.svPct  = agg.svo > 0 ? agg.sv / agg.svo : null;
+    agg.irsPct = agg.ir >= 10 ? (agg.ir - agg.irs) / agg.ir : null;
+    return { ...t, arms, form: (arms.length >= MIN_ARMS && ipsum > 0) ? Math.round(wsum / ipsum) : null, agg };
   }).sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
 
   rankAll();
 
   // Handedness (cosmetic — render anyway if it fails)
-  const pids = TEAMS.flatMap(t => t.starters.map(s => s.pid));
+  const pids = TEAMS.flatMap(t => t.arms.map(s => s.pid));
   try {
     const ppl = await fj(`${API}/people?personIds=${pids.join(',')}`);
     const hand = {}; (ppl.people || []).forEach(p => hand[p.id] = p.pitchHand?.code || '');
-    TEAMS.forEach(t => t.starters.forEach(s => s.hand = hand[s.pid] || ''));
+    TEAMS.forEach(t => t.arms.forEach(s => s.hand = hand[s.pid] || ''));
   } catch (e) {}
 
   document.getElementById('meta').textContent = ROSTER_MODE
-    ? `${SEASON} season · every starter on the active roster as of ${ymd(end)} · no innings minimum`
-    : `${SEASON} season · rotations as of ${ymd(end)} · starts counted over the last ${WINDOW_DAYS} days`;
+    ? `${SEASON} season · every reliever on the active roster as of ${ymd(end)} · no innings minimum`
+    : `${SEASON} season · bullpens as of ${ymd(end)} · relief appearances counted over the last ${WINDOW_DAYS} days`
+      + (ipFloor < MIN_IP ? ` · ${ipFloor.toFixed(1)} IP minimum this early in the year` : '');
   render();
 }
 
-// Ranks give every number league context: 1 = best of 30
+// Ranks give every number league context: 1 = best in the league. Only bullpens
+// with enough arms rank — otherwise a 17-inning pen sets the scale for all 30.
 function rankAll() {
+  const pool = TEAMS.filter(t => t.form != null);
+  RANKED = pool.length;
   const metrics = [
-    ['form', t => t.form,      true],
-    ['era',  t => t.agg.era,   false],
-    ['whip', t => t.agg.whip,  false],
-    ['k9',   t => t.agg.k9,    true],
-    ['ip',   t => t.agg.ip,    true],
-    ['k',    t => t.agg.k,     true],
-    ['pct',  t => t.agg.pct,   true],
+    ['form',   t => t.form,        true],
+    ['era',    t => t.agg.era,     false],
+    ['whip',   t => t.agg.whip,    false],
+    ['k9',     t => t.agg.k9,      true],
+    ['svPct',  t => t.agg.svPct,   true],
+    ['irsPct', t => t.agg.irsPct,  true],
+    ['bs',     t => t.agg.bs,      false],
   ];
   TEAMS.forEach(t => t.rank = {});
   metrics.forEach(([key, get, higherBetter]) => {
-    const sorted = [...TEAMS].filter(t => get(t) != null)
+    const sorted = pool.filter(t => get(t) != null)
       .sort((a,b) => higherBetter ? get(b) - get(a) : get(a) - get(b));
     sorted.forEach((t,i) => t.rank[key] = i + 1);
     if (sorted.length) LEAGUE[key] = { best: get(sorted[0]), worst: get(sorted[sorted.length - 1]) };
   });
-  // Per-pitcher volume colours are percentiles among all rotation arms in the league
-  const all = TEAMS.flatMap(t => t.starters);
+  // Per-pitcher volume colours are percentiles among all bullpen arms in the league
+  const all = TEAMS.flatMap(t => t.arms);
   [['ip', s => s.ip], ['k', s => s.k]].forEach(([key, get]) => {
     const sorted = [...all].sort((a,b) => get(b) - get(a));
     sorted.forEach((s,i) => s[key + 'Col'] = rankColor(i + 1, sorted.length));
@@ -358,7 +404,7 @@ function rankAll() {
 
 // ── Career context (lazy: only the team you open) ─────────────────────────
 async function loadCareer(team) {
-  const need = team.starters.map(s => s.pid).filter(pid => !careerCache[pid]);
+  const need = team.arms.map(s => s.pid).filter(pid => !careerCache[pid]);
   if (!need.length) return;
   const d = await fj(`${API}/people?personIds=${need.join(',')}&hydrate=stats(type=yearByYear,group=pitching)`);
   (d.people || []).forEach(p => {
@@ -366,8 +412,8 @@ async function loadCareer(team) {
       .filter(sp => parseInt(sp.season, 10) < SEASON);
     // Career = every prior season pooled (same as the app's summarizePriorPitching)
     const tot = splits.reduce((a,sp) => { const s = sp.stat || {};
-      return { ip:a.ip + ipToFloat(s.inningsPitched), er:a.er + (+s.earnedRuns||0),
-               h:a.h + (+s.hits||0), bb:a.bb + (+s.baseOnBalls||0) }; }, {ip:0,er:0,h:0,bb:0});
+      return { ip:a.ip + ipToFloat(s.inningsPitched), er:a.er + int(s.earnedRuns),
+               h:a.h + int(s.hits), bb:a.bb + int(s.baseOnBalls) }; }, {ip:0,er:0,h:0,bb:0});
     const years = {};
     splits.forEach(sp => { const yr = parseInt(sp.season,10), s = sp.stat || {};
       const ip = ipToFloat(s.inningsPitched);
@@ -382,9 +428,10 @@ async function loadCareer(team) {
   need.forEach(pid => careerCache[pid] = careerCache[pid] || { careerIP:0, careerForm:null, years:{} });
 }
 
-// Same thresholds as the app's trendFormaHTML: <5 flat, >=12 strong
+// Same thresholds as the app's trendFormaHTML: <5 flat, >=12 strong.
+// Relievers build innings slowly, so the career bar is lower than the rotation's.
 function trendHTML(cur, career, careerIP) {
-  if (cur == null || career == null || careerIP < 20) return '';
+  if (cur == null || career == null || careerIP < 15) return '';
   const d = cur - career, abs = Math.abs(d);
   if (abs < 5) { const c = tier(cur); return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">≈ career</span>`; }
   const c = d > 0 ? (abs >= 12 ? TIERS[0] : TIERS[1]) : (abs >= 12 ? TIERS[4] : TIERS[3]);
@@ -404,10 +451,17 @@ function dotsHTML(pid) {
 function stat(v, label, color) {
   return `<span class="s" style="color:${color}"><b>${v}</b>${label ? `<i>${label}</i>` : ''}</span>`;
 }
+const pct0 = v => v == null ? '—' : `${Math.round(v * 100)}%`;
 
-function starterHTML(s, teamColor) {
+function armHTML(s, teamColor) {
   const col = tier(s.form);
   const career = careerCache[s.pid];
+  const sep = `<span class="dot">·</span>`;
+  // A closer lives on save conversion, a setup man on holds — show the one that is
+  // his job, not the two save chances a middle reliever happened to inherit
+  const job = (s.isClose || s.svo > s.hld)
+    ? stat(`${s.sv}/${s.svo}`, 'SV', svPctColor(s.svPct))
+    : stat(s.hld, 'HLD', s.hld >= 15 ? TIERS[0] : s.hld >= 8 ? TIERS[1] : '#9ca3af');
   return `<div class="sp">
     <div class="sp-form" style="background:${col};color:${onTier(col)}">${s.form ?? '—'}</div>
     <div class="sp-face" style="background:linear-gradient(150deg,${teamColor} 0%,${shade(teamColor,.45)} 100%)">
@@ -416,13 +470,16 @@ function starterHTML(s, teamColor) {
     <div>
       <div class="sp-name">${s.name}
         ${s.hand ? `<span class="hand ${s.hand}">${s.hand}HP</span>` : ''}
-        <span class="sp-sub">${s.starts} start${s.starts === 1 ? '' : 's'} ${ROSTER_MODE ? 'this season' : `in the last ${WINDOW_DAYS} days`}</span>
+        ${s.isClose ? `<span class="role">CLOSER</span>` : s.isSetup ? `<span class="role set">SETUP</span>` : ''}
+        <span class="sp-sub">${ROSTER_MODE ? `${s.g} appearance${s.g === 1 ? '' : 's'} this season`
+                                           : `${s.apps} outing${s.apps === 1 ? '' : 's'} in the last ${WINDOW_DAYS} days`}</span>
       </div>
       <div class="statline">
-        ${stat(s.era != null ? s.era.toFixed(2) : '—', 'ERA', tier(forma(s.era, null)))}<span class="dot">·</span>
-        ${stat(s.whip != null ? s.whip.toFixed(2) : '—', 'WHIP', tier(forma(null, s.whip)))}<span class="dot">·</span>
-        ${stat(`${s.w}-${s.l}`, '', pctColor(s.w, s.l))}<span class="dot">·</span>
-        ${stat(s.ipTxt, 'IP', s.ipCol)}<span class="dot">·</span>
+        ${stat(s.era != null ? s.era.toFixed(2) : '—', 'ERA', tier(forma(s.era, null)))}${sep}
+        ${stat(s.whip != null ? s.whip.toFixed(2) : '—', 'WHIP', tier(forma(null, s.whip)))}${sep}
+        ${job}${sep}
+        ${stat(pct0(s.irsPct), 'IRS', irsColor(s.irsPct))}${sep}
+        ${stat(s.ipTxt, 'IP', s.ipCol)}${sep}
         ${stat(s.k, 'K', s.kCol)}
       </div>
     </div>
@@ -436,7 +493,7 @@ function starterHTML(s, teamColor) {
 // Value, rank badge and the league slider: fill by rank (1 = full), with the
 // league's worst and best at the ends — same treatment as Team Stats vs League.
 function tileHTML(t, key, label, value, fmt) {
-  const rank = t.rank[key], total = 30;
+  const rank = t.rank[key], total = RANKED || 30;
   const c = rank ? rankColor(rank, total) : '#9ca3af';
   const fillPct = rank ? Math.max(5, Math.round(((total - rank + 1) / total) * 100)) : 5;
   const ex = LEAGUE[key];
@@ -459,18 +516,21 @@ function panelHTML(t) {
   const d2 = v => v == null ? '—' : v.toFixed(2);
   const d1 = v => v == null ? '—' : v.toFixed(1);
   const d0 = v => v == null ? '—' : Math.round(v).toLocaleString('en-US');
-  const d3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/,'');
+  const load = `${t.arms.length} arm${t.arms.length === 1 ? '' : 's'} · ${a.ip.toFixed(1)} IP`
+    + (ROSTER_MODE ? '' : ` · ${a.apps} outings in 30 days`);
   return `<div class="panel" id="pan-${t.id}">
-    <div class="sec"><span class="sec-l">Current rotation</span><span class="sec-r"></span></div>
-    ${t.starters.map(s => starterHTML(s, c)).join('')}
-    <div class="sec"><span class="sec-l">Rotation vs the league</span><span class="sec-r"></span></div>
+    <div class="sec"><span class="sec-l">Current bullpen — ${load}</span><span class="sec-r"></span></div>
+    ${t.arms.length ? t.arms.map(s => armHTML(s, c)).join('')
+                    : `<p class="thin">No reliever on the active roster clears ${MIN_APPS} outings in the window and ${ipFloor.toFixed(1)} innings on the season.</p>`}
+    ${t.form == null && t.arms.length ? `<p class="thin">Fewer than ${MIN_ARMS} qualified arms — a FORM here would grade one pitcher, not a bullpen, so this club is left unranked.</p>` : ''}
+    <div class="sec"><span class="sec-l">Bullpen vs the league</span><span class="sec-r"></span></div>
     <div class="tiles">
-      ${tileHTML(t, 'era',  'Rotation ERA',  d2(a.era),  d2)}
-      ${tileHTML(t, 'whip', 'Rotation WHIP', d2(a.whip), d2)}
-      ${tileHTML(t, 'k9',   'K per 9',       d1(a.k9),   d1)}
-      ${tileHTML(t, 'ip',   'Innings',       d0(a.ip),   d0)}
-      ${tileHTML(t, 'k',    'Strikeouts',    d0(a.k),    d0)}
-      ${tileHTML(t, 'pct',  'Record',        `${a.w}-${a.l}`, d3)}
+      ${tileHTML(t, 'era',    'Bullpen ERA',      d2(a.era),       d2)}
+      ${tileHTML(t, 'whip',   'Bullpen WHIP',     d2(a.whip),      d2)}
+      ${tileHTML(t, 'k9',     'K per 9',          d1(a.k9),        d1)}
+      ${tileHTML(t, 'svPct',  'Saves converted',  a.svo ? `${a.sv}/${a.svo}` : '—', pct0)}
+      ${tileHTML(t, 'irsPct', 'Runners stranded', pct0(a.irsPct),  pct0)}
+      ${tileHTML(t, 'bs',     'Blown saves',      d0(a.bs),        d0)}
     </div>
   </div>`;
 }
@@ -480,13 +540,13 @@ function render() {
   el.className = '';
   el.innerHTML = TEAMS.map((t,i) => {
     const c = PRIMARY[t.id] || '#26324a', col = tier(t.form), open = openTeams.has(t.id);
-    const pips = t.starters.map(s => { const pc = tier(s.form);
+    const pips = t.arms.map(s => { const pc = tier(s.form);
       return `<span class="pip" style="background:${pc};color:${onTier(pc)}" title="${s.name}: ${s.form ?? '—'}">${s.form ?? '·'}</span>`;
     }).join('');
     return `<div class="team${open ? ' open' : ''}" id="team-${t.id}">
       <button class="bar" style="background:linear-gradient(100deg,${c} 0%,${shade(c,.5)} 100%)"
           aria-expanded="${open}" aria-controls="pan-${t.id}" onclick="toggleTeam(${t.id})">
-        <span class="rank">${i + 1}</span>
+        <span class="rank">${t.form == null ? '—' : i + 1}</span>
         <img class="bar-logo" src="${logo(t.id)}" alt="" onerror="this.style.display='none'">
         <span class="bar-name">${t.name.toUpperCase()}<span>${t.abbr}</span></span>
         <span class="pips">${pips}</span>
@@ -514,7 +574,7 @@ async function toggleTeam(id) {
 load().catch(err => {
   const el = document.getElementById('list');
   el.className = 'state';
-  el.textContent = 'Could not load rotations — ' + err.message;
+  el.textContent = 'Could not load bullpens — ' + err.message;
 });
 </script>
 </body>
