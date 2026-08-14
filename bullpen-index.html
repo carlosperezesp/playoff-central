@@ -82,12 +82,13 @@
   .panel{display:none;padding:4px 2px 20px}
   .team.open .panel{display:block}
   .sec{display:flex;align-items:center;gap:12px;margin:16px 4px 6px}
-  .outs{display:flex;flex-wrap:wrap;gap:7px;margin:0 4px}
-  .out{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;border:1px solid var(--line);
-    border-radius:999px;background:rgba(243,239,224,.03)}
-  .out-f{font-weight:800;font-size:11px;padding:2px 6px;border-radius:4px;min-width:24px;text-align:center}
-  .out-n{font-weight:600;font-size:12.5px;color:var(--ink-dim)}
-  .out-il{font-weight:800;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
+  .outs{display:flex;flex-wrap:wrap;gap:9px;margin:2px 4px 0}
+  .out{display:flex;align-items:center;gap:10px;padding:6px 13px 6px 6px;border:1px solid rgba(243,239,224,.2);
+    border-radius:999px;background:rgba(243,239,224,.06)}
+  .out-f{font-weight:800;font-size:13.5px;padding:4px 8px;border-radius:5px;min-width:34px;text-align:center}
+  .out-n{font-weight:600;font-size:15px;color:var(--ink)}
+  .out-il{font-weight:800;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#f0b429;
+    padding:2px 7px;border-radius:4px;background:rgba(240,180,41,.14);white-space:nowrap}
   .sec-l{font-weight:800;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-soft);
     white-space:nowrap}
   .sec-r{flex:1;height:1px;background:var(--line)}
@@ -572,7 +573,7 @@ function panelHTML(t) {
     ${t.form == null && t.arms.length ? `<p class="thin">Fewer than ${MIN_ARMS} qualified arms — a FORM here would grade one pitcher, not a bullpen, so this club is left unranked.</p>` : ''}
     ${t.out?.length ? `<div class="sec"><span class="sec-l">Unavailable</span><span class="sec-r"></span></div>
     <div class="outs">${t.out.map(o => { const oc = tier(o.form);
-      return `<span class="out"><i class="out-f" style="background:${oc};color:${onTier(oc)}">${o.form ?? "—"}</i><span class="out-n">${o.name}</span><span class="out-il">${o.il}d IL</span></span>`;
+      return `<span class="out"><i class="out-f" style="background:${oc};color:${onTier(oc)}">${o.form ?? "—"}</i><span class="out-n">${o.name}</span><span class="out-il">${o.il}-day IL</span></span>`;
     }).join('')}</div>` : ''}
     <div class="sec"><span class="sec-l">Bullpen vs the league</span><span class="sec-r"></span></div>
     <div class="tiles">
