@@ -82,6 +82,12 @@
   .panel{display:none;padding:4px 2px 20px}
   .team.open .panel{display:block}
   .sec{display:flex;align-items:center;gap:12px;margin:16px 4px 6px}
+  .outs{display:flex;flex-wrap:wrap;gap:7px;margin:0 4px}
+  .out{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;border:1px solid var(--line);
+    border-radius:999px;background:rgba(243,239,224,.03)}
+  .out-f{font-weight:800;font-size:11px;padding:2px 6px;border-radius:4px;min-width:24px;text-align:center}
+  .out-n{font-weight:600;font-size:12.5px;color:var(--ink-dim)}
+  .out-il{font-weight:800;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
   .sec-l{font-weight:800;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-soft);
     white-space:nowrap}
   .sec-r{flex:1;height:1px;background:var(--line)}
@@ -337,11 +343,21 @@ async function load() {
     };
   });
 
-  // Active rosters: an arm on the IL is not part of the current bullpen
+  // The 40-man carries a status per man: A is the roster tonight, D* the injured
+  // lists. One call gives both the bullpen the club has and the arms it is missing.
   const ids = Object.keys(meta).map(Number);
   const rosters = await Promise.all(ids.map(id =>
-    fj(`${API}/teams/${id}/roster/active`).then(r => new Set((r.roster || []).map(e => e.person.id))).catch(() => null)));
-  const active = {}; ids.forEach((id,i) => active[id] = rosters[i]);
+    fj(`${API}/teams/${id}/roster/40Man`).then(r => {
+      const act = new Set(), il = [];
+      (r.roster || []).forEach(e => {
+        const code = e.status?.code || '';
+        if (code === 'A') { act.add(e.person.id); }
+        else if (code[0] === 'D') il.push({ pid: e.person.id, name: e.person.fullName, il: code.slice(1) });
+      });
+      return { act, il };
+    }).catch(() => null)));
+  const active = {}, injured = {};
+  ids.forEach((id,i) => { active[id] = rosters[i]?.act || null; injured[id] = rosters[i]?.il || []; });
 
   TEAMS = ids.map(id => {
     const t = meta[id];
@@ -377,7 +393,13 @@ async function load() {
     agg.k9     = agg.ip > 0 ? agg.k * 9 / agg.ip : null;
     agg.svPct  = agg.svo > 0 ? agg.sv / agg.svo : null;
     agg.irsPct = agg.ir >= 10 ? (agg.ir - agg.irs) / agg.ir : null;
-    return { ...t, arms, form: (arms.length >= MIN_ARMS && ipsum > 0) ? Math.round(wsum / ipsum) : null, agg };
+    // Arms the club is without. Shown, never scored.
+    const out = (injured[id] || [])
+      .map(m => { const ln = line[m.pid];
+        return (ln && !isStarter(ln) && ln.ip >= ipFloor) ? { ...m, form: forma(ln.era, ln.whip) } : null; })
+      .filter(Boolean).sort((a,b) => (b.form ?? -1) - (a.form ?? -1)).slice(0, 6);
+
+    return { ...t, arms, out, form: (arms.length >= MIN_ARMS && ipsum > 0) ? Math.round(wsum / ipsum) : null, agg };
   }).sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
 
   rankAll();
@@ -548,6 +570,10 @@ function panelHTML(t) {
     ${t.arms.length ? t.arms.map(s => armHTML(s, c)).join('')
                     : `<p class="thin">No reliever on the active roster clears ${MIN_APPS} outings in the window and ${ipFloor.toFixed(1)} innings on the season.</p>`}
     ${t.form == null && t.arms.length ? `<p class="thin">Fewer than ${MIN_ARMS} qualified arms — a FORM here would grade one pitcher, not a bullpen, so this club is left unranked.</p>` : ''}
+    ${t.out?.length ? `<div class="sec"><span class="sec-l">Unavailable</span><span class="sec-r"></span></div>
+    <div class="outs">${t.out.map(o => { const oc = tier(o.form);
+      return `<span class="out"><i class="out-f" style="background:${oc};color:${onTier(oc)}">${o.form ?? "—"}</i><span class="out-n">${o.name}</span><span class="out-il">${o.il}d IL</span></span>`;
+    }).join('')}</div>` : ''}
     <div class="sec"><span class="sec-l">Bullpen vs the league</span><span class="sec-r"></span></div>
     <div class="tiles">
       ${tileHTML(t, 'era',    'Bullpen ERA',      d2(a.era),       d2)}

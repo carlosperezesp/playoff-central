@@ -82,6 +82,12 @@
   .panel{display:none;padding:4px 2px 20px}
   .team.open .panel{display:block}
   .sec{display:flex;align-items:center;gap:12px;margin:16px 4px 6px}
+  .outs{display:flex;flex-wrap:wrap;gap:7px;margin:0 4px}
+  .out{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;border:1px solid var(--line);
+    border-radius:999px;background:rgba(243,239,224,.03)}
+  .out-f{font-weight:800;font-size:11px;padding:2px 6px;border-radius:4px;min-width:24px;text-align:center}
+  .out-n{font-weight:600;font-size:12.5px;color:var(--ink-dim)}
+  .out-il{font-weight:800;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
   .sec-l{font-weight:800;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-soft);
     white-space:nowrap}
   .sec-r{flex:1;height:1px;background:var(--line)}
@@ -302,11 +308,21 @@ async function load() {
     };
   });
 
-  // Active rosters: an arm on the IL is not part of the current rotation
+  // The 40-man carries a status per man: A is the roster tonight, D* the injured
+  // lists. One call gives both the rotation the club has and the arms it is missing.
   const ids = Object.keys(meta).map(Number);
   const rosters = await Promise.all(ids.map(id =>
-    fj(`${API}/teams/${id}/roster/active`).then(r => new Set((r.roster || []).map(e => e.person.id))).catch(() => null)));
-  const active = {}; ids.forEach((id,i) => active[id] = rosters[i]);
+    fj(`${API}/teams/${id}/roster/40Man`).then(r => {
+      const act = new Set(), il = [];
+      (r.roster || []).forEach(e => {
+        const code = e.status?.code || '';
+        if (code === 'A') { act.add(e.person.id); }
+        else if (code[0] === 'D') il.push({ pid: e.person.id, name: e.person.fullName, il: code.slice(1) });
+      });
+      return { act, il };
+    }).catch(() => null)));
+  const active = {}, injured = {};
+  ids.forEach((id,i) => { active[id] = rosters[i]?.act || null; injured[id] = rosters[i]?.il || []; });
 
   TEAMS = ids.map(id => {
     const t = meta[id];
@@ -327,6 +343,13 @@ async function load() {
       .slice(0, 5)
       .sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
 
+    // Arms the club is without. Shown, never scored — a man who cannot pitch
+    // has no business moving a rotation's mark either way.
+    const out = (injured[id] || [])
+      .map(m => { const ln = line[m.pid];
+        return (ln && isStarter(ln) && ln.ip >= MIN_IP) ? { ...m, form: forma(ln.era, ln.whip) } : null; })
+      .filter(Boolean).sort((a,b) => (b.form ?? -1) - (a.form ?? -1)).slice(0, 6);
+
     let wsum = 0, ipsum = 0;
     starters.forEach(s => { if (s.form != null && s.ip > 0) { wsum += s.form * s.ip; ipsum += s.ip; } });
     const agg = starters.reduce((a,s) => ({ ip:a.ip+s.ip, er:a.er+s.er, h:a.h+s.h, bb:a.bb+s.bb,
@@ -335,7 +358,7 @@ async function load() {
     agg.whip = agg.ip > 0 ? (agg.h + agg.bb) / agg.ip : null;
     agg.k9   = agg.ip > 0 ? agg.k * 9 / agg.ip : null;
     agg.pct  = (agg.w + agg.l) > 0 ? agg.w / (agg.w + agg.l) : null;
-    return { ...t, starters, form: ipsum > 0 ? Math.round(wsum / ipsum) : null, agg };
+    return { ...t, starters, out, form: ipsum > 0 ? Math.round(wsum / ipsum) : null, agg };
   }).sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
 
   rankAll();
@@ -488,6 +511,10 @@ function panelHTML(t) {
   return `<div class="panel" id="pan-${t.id}">
     <div class="sec"><span class="sec-l">Current rotation</span><span class="sec-r"></span></div>
     ${t.starters.map(s => starterHTML(s, c)).join('')}
+    ${t.out?.length ? `<div class="sec"><span class="sec-l">Unavailable</span><span class="sec-r"></span></div>
+    <div class="outs">${t.out.map(o => { const oc = tier(o.form);
+      return `<span class="out"><i class="out-f" style="background:${oc};color:${onTier(oc)}">${o.form ?? "—"}</i><span class="out-n">${o.name}</span><span class="out-il">${o.il}d IL</span></span>`;
+    }).join('')}</div>` : ''}
     <div class="sec"><span class="sec-l">Rotation vs the league</span><span class="sec-r"></span></div>
     <div class="tiles">
       ${tileHTML(t, 'era',  'Rotation ERA',  d2(a.era),  d2)}

@@ -83,6 +83,12 @@
   .panel{display:none;padding:4px 2px 20px}
   .team.open .panel{display:block}
   .sec{display:flex;align-items:center;gap:12px;margin:16px 4px 6px}
+  .outs{display:flex;flex-wrap:wrap;gap:7px;margin:0 4px}
+  .out{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;border:1px solid var(--line);
+    border-radius:999px;background:rgba(243,239,224,.03)}
+  .out-f{font-weight:800;font-size:11px;padding:2px 6px;border-radius:4px;min-width:24px;text-align:center}
+  .out-n{font-weight:600;font-size:12.5px;color:var(--ink-dim)}
+  .out-il{font-weight:800;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
   .sec-l{font-weight:800;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-soft);
     white-space:nowrap}
   .sec-r{flex:1;height:1px;background:var(--line)}
@@ -369,15 +375,21 @@ async function load() {
     };
   });
 
-  // Active rosters: a bat on the IL is not in tonight's lineup
+  // The 40-man carries a status per man: A is the roster tonight, D* the injured
+  // lists. One call gives both the lineup the club has and the bats it is missing.
   const ids = Object.keys(meta).map(Number);
   const rosters = await Promise.all(ids.map(id =>
-    fj(`${API}/teams/${id}/roster/active`).then(r => new Set((r.roster || [])
-      .filter(e => e.position?.abbreviation !== 'P')
-      .map(e => { const a = e.position?.abbreviation;
-        rosterPos[e.person.id] = (a === 'TWP') ? 'DH' : a;    // the club's own listing, for October
-        return e.person.id; }))).catch(() => null)));
-  const active = {}; ids.forEach((id,i) => active[id] = rosters[i]);
+    fj(`${API}/teams/${id}/roster/40Man`).then(r => {
+      const act = new Set(), il = [];
+      (r.roster || []).filter(e => e.position?.abbreviation !== 'P').forEach(e => {
+        const code = e.status?.code || '';
+        if (code === 'A') { act.add(e.person.id); const a = e.position?.abbreviation; rosterPos[e.person.id] = (a === 'TWP') ? 'DH' : a; }
+        else if (code[0] === 'D') il.push({ pid: e.person.id, name: e.person.fullName, il: code.slice(1) });
+      });
+      return { act, il };
+    }).catch(() => null)));
+  const active = {}, injured = {};
+  ids.forEach((id,i) => { active[id] = rosters[i]?.act || null; injured[id] = rosters[i]?.il || []; });
 
   TEAMS = ids.map(id => {
     // Candidates: in season the bats that have been starting; in October, everyone
@@ -394,7 +406,13 @@ async function load() {
     const lineup = fillLineup(cands);
     attachBackups(lineup, cands);
     const agg = pool(lineup);   // the nine only — a backup never moves the team's number
-    return { ...meta[id], lineup, agg, ops: agg.ops };
+    // Bats the club is without. Shown, never scored.
+    const out = (injured[id] || [])
+      .map(m => { const ln = line[m.pid];
+        return (ln && ln.pa >= paFloor) ? { ...m, ops: ln.ops } : null; })
+      .filter(Boolean).sort((a,b) => (b.ops ?? -1) - (a.ops ?? -1)).slice(0, 6);
+
+    return { ...meta[id], lineup, out, agg, ops: agg.ops };
   }).sort((a,b) => (b.ops ?? -1) - (a.ops ?? -1));
 
   rankAll();
@@ -628,6 +646,10 @@ function panelHTML(t) {
     <div class="sec"><span class="sec-l">Everyday lineup — ${t.lineup.length} of 9 spots · ${d0(a.pa)} PA</span><span class="sec-r"></span></div>
     ${t.lineup.length ? t.lineup.map((s,i) => batterHTML(s, c, i + 1)).join('')
                       : `<p class="thin">No bat on the active roster clears ${Math.round(paFloor)} plate appearances on the season.</p>`}
+    ${t.out?.length ? `<div class="sec"><span class="sec-l">Unavailable</span><span class="sec-r"></span></div>
+    <div class="outs">${t.out.map(o => { const oc = tier(o.ops);
+      return `<span class="out"><i class="out-f" style="background:${oc};color:${onTier(oc)}">${o.ops == null ? "—" : o.ops.toFixed(3).replace(/^0/,"")}</i><span class="out-n">${o.name}</span><span class="out-il">${o.il}d IL</span></span>`;
+    }).join('')}</div>` : ''}
     <div class="sec"><span class="sec-l">Lineup vs the league</span><span class="sec-r"></span></div>
     <div class="tiles">
       ${tileHTML(t, 'ops',   'Lineup OPS',    d3(a.ops),   d3)}
