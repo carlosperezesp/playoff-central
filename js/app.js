@@ -955,8 +955,8 @@ async function renderStandings() {
     </div>
     <div class="div-chart-card"><div class="tracker-section">
       <div class="tracker-header">
-        <span class="tracker-title tracker-title-desktop">WIN% · ${dm.name}</span>
-        <span class="tracker-title tracker-title-mobile">WIN% · ${dm.name}</span>
+        <span class="tracker-title tracker-title-desktop">GAMES OVER .500 · ${dm.name}</span>
+        <span class="tracker-title tracker-title-mobile">OVER .500 · ${dm.name}</span>
       </div>
       <div class="div-chart-body"><canvas id="divcanvas-${divId}"></canvas></div>
     </div></div></div>`;
@@ -1028,7 +1028,7 @@ function drawDivChart(divId) {
   canvas.style.cursor = 'crosshair';
   canvas.onmousemove = (e) => onDivHover(e, divId);
   canvas.onmouseleave = () => onDivLeave(divId);
-  if (desktop) drawDivisionWinPctTracker(divId, canvas, canvas.offsetHeight);
+  if (desktop) drawDivisionWinLossTracker(divId, canvas, canvas.offsetHeight);
   else drawTracker(trackerDates.length - 1, divId, canvas, canvas.offsetHeight, { divisionChart: true });
 }
 
@@ -1036,7 +1036,7 @@ function _divVisibleDates(divId) {
   const desktop = window.innerWidth > 900;
   if (!desktop) return trackerDates;
   divId = parseInt(divId);
-  return trackerDates.filter(date => date >= DESKTOP_TRACKER_START).filter(date => {
+  return trackerDates.filter(date => {
     const dr = (trackerData[date] || []).find(r => r.division?.id === divId);
     return !!dr?.teamRecords?.length;
   });
@@ -1050,7 +1050,7 @@ function onDivHover(e, divId) {
   const mx = e.clientX - rect.left;
   const desktop = window.innerWidth > 900;
   const PAD = desktop
-    ? divisionWinPctPadding(canvas.offsetWidth, canvas.offsetHeight)
+    ? divisionWinLossPadding(canvas.offsetWidth, canvas.offsetHeight)
     : trackerChartPadding(canvas.offsetWidth, canvas.offsetHeight, { showXAxis: true, divisionChart: true });
   const cW = canvas.offsetWidth - PAD.left - PAD.right;
   const relX = mx - PAD.left;
@@ -1081,23 +1081,25 @@ function showDivTooltip(idx, divId, visibleDates, cx, cy) {
   const recs = trackerData[date] || [];
   const dr = recs.find(r => r.division?.id === parseInt(divId));
   if (!dr) { tt.style.display = 'none'; return; }
-  const sorted = [...dr.teamRecords].sort((a, b) => b.wins - a.wins);
   const d = new Date(date + 'T12:00:00');
   const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   tt.innerHTML = `<div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:1.5px;color:#6b7280;margin-bottom:5px">${dateStr}</div>` +
-    sorted
-      .sort((a, b) => (parseFloat(b.winningPercentage) || 0) - (parseFloat(a.winningPercentage) || 0))
+    [...dr.teamRecords]
+      .sort((a, b) => (b.wins - b.losses) - (a.wins - a.losses))
       .map(tr => {
       const meta = TEAM_META[tr.team.id] || { abbr: '???' };
       const color = TEAM_COLORS_TRACKER[tr.team.id] || '#999';
+      const diff = tr.wins - tr.losses;
+      const diffColor = diff > 0 ? 'var(--win)' : diff < 0 ? 'var(--loss)' : '#6b7280';
       const pct = parseFloat(tr.winningPercentage || 0).toFixed(3).replace(/^0/, '');
       return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:12px">
         <span style="font-family:'Barlow Condensed';font-weight:700;color:${color};width:30px">${meta.abbr}</span>
         <span style="font-family:'Barlow Condensed';color:#6b7280;width:42px">${tr.wins}-${tr.losses}</span>
-        <span style="font-family:'Barlow Condensed';font-weight:700;color:#111827">${pct}</span></div>`;
+        <span style="font-family:'Barlow Condensed';font-weight:700;color:${diffColor};width:30px;text-align:right">${winLossLabel(diff)}</span>
+        <span style="font-family:'Barlow Condensed';color:#9ca3af">${pct}</span></div>`;
     }).join('');
   tt.style.display = 'block';
-  tt.style.left = Math.min(cx + 14, window.innerWidth - 210) + 'px';
+  tt.style.left = Math.min(cx + 14, window.innerWidth - 240) + 'px';
   tt.style.top = Math.min(cy + 14, window.innerHeight - tt.offsetHeight - 10) + 'px';
 }
 
@@ -1717,14 +1719,31 @@ function showTrackerTooltip(idx, visibleDates, mouseX, canvas) {
   tooltip.style.top = '10px';
 }
 
-const DESKTOP_TRACKER_START = '2026-04-01';
 let _hoverDiv = null;
 
-function divisionWinPctPadding(W, H) {
+// Games over .500 (W−L) is the division charts' y-axis: everyone starts at zero
+// on opening day and the field fans out as the season goes on, instead of win%
+// swinging wildly in April and collapsing into a tight band by August.
+function winLossRange(values) {
+  let min = -5, max = 5; // floor keeps opening week from looking like a seismograph
+  values.forEach(v => { min = Math.min(min, v); max = Math.max(max, v); });
+  const step = (max - min) <= 25 ? 5 : (max - min) <= 60 ? 10 : 15;
+  return {
+    min: Math.floor((min - 1) / step) * step,
+    max: Math.ceil((max + 1) / step) * step,
+    step
+  };
+}
+
+function winLossLabel(v) {
+  return v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : '0';
+}
+
+function divisionWinLossPadding(W, H) {
   return { top: 12, right: 54, bottom: H < 190 ? 18 : 24, left: 42 };
 }
 
-function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
+function drawDivisionWinLossTracker(divId, canvasEl, chartH) {
   const canvas = canvasEl;
   divId = parseInt(divId);
   if (!canvas || !trackerLoaded || !trackerDates.length) return;
@@ -1743,7 +1762,7 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
     .sort((a, b) => {
       const ar = latestRec.teamRecords.find(t => t.team.id === a);
       const br = latestRec.teamRecords.find(t => t.team.id === b);
-      return (parseFloat(br?.winningPercentage) || 0) - (parseFloat(ar?.winningPercentage) || 0);
+      return ((br?.wins - br?.losses) || 0) - ((ar?.wins - ar?.losses) || 0);
     });
 
   const series = {};
@@ -1754,7 +1773,7 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
     if (dr?.teamRecords?.length) {
       dr.teamRecords.forEach(tr => {
         if (!series[tr.team.id]) return;
-        series[tr.team.id].push(parseFloat(tr.winningPercentage) || null);
+        series[tr.team.id].push(tr.wins - tr.losses);
         seen.add(tr.team.id);
       });
     }
@@ -1770,32 +1789,20 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const PAD = divisionWinPctPadding(W, H);
+  const PAD = divisionWinLossPadding(W, H);
   const cW = W - PAD.left - PAD.right;
   const cH = H - PAD.top - PAD.bottom;
   if (cW <= 0 || cH <= 0) return;
 
-  let minPct = 0.45, maxPct = 0.65;
+  const flat = [];
   Object.values(series).forEach(vals => vals.forEach(v => {
-    if (v !== null && Number.isFinite(v)) {
-      minPct = Math.min(minPct, v);
-      maxPct = Math.max(maxPct, v);
-    }
+    if (v !== null && Number.isFinite(v)) flat.push(v);
   }));
-  minPct = Math.max(0, Math.floor((minPct - 0.025) * 20) / 20);
-  maxPct = Math.min(1, Math.ceil((maxPct + 0.025) * 20) / 20);
-  if (maxPct - minPct < 0.15) {
-    const mid = (maxPct + minPct) / 2;
-    minPct = Math.max(0, mid - 0.075);
-    maxPct = Math.min(1, mid + 0.075);
-  }
-  minPct = Math.min(minPct, 0.5);
-  maxPct = Math.max(maxPct, 0.5);
-  const pctRange = Math.max(maxPct - minPct, 0.1);
+  const { min: minWL, max: maxWL, step: gridStep } = winLossRange(flat);
+  const wlRange = Math.max(maxWL - minWL, 1);
 
-  const yFor = pct => PAD.top + cH - ((pct - minPct) / pctRange) * cH;
+  const yFor = v => PAD.top + cH - ((v - minWL) / wlRange) * cH;
   const xFor = (i, total) => PAD.left + (i / Math.max(total - 1, 1)) * cW;
-  const pctLabel = pct => pct.toFixed(3).replace(/^0/, '');
 
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
@@ -1803,27 +1810,28 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
   ctx.font = '11px Barlow Condensed, sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  const gridStep = pctRange <= 0.25 ? 0.05 : 0.1;
-  const startGrid = Math.ceil(minPct / gridStep) * gridStep;
-  for (let p = startGrid; p <= maxPct + 0.001; p += gridStep) {
-    p = Math.round(p * 1000) / 1000;
+  const startGrid = Math.ceil(minWL / gridStep) * gridStep;
+  for (let p = startGrid; p <= maxWL + 0.001; p += gridStep) {
+    p = Math.round(p);
     const y = yFor(p);
-    const is500 = Math.abs(p - 0.5) < 0.001;
-    ctx.strokeStyle = is500 ? 'rgba(107,114,128,.5)' : '#e5e7eb';
-    ctx.lineWidth = is500 ? 1.5 : 1;
-    ctx.setLineDash(is500 ? [5, 4] : []);
+    const isEven = p === 0; // the old .500 line — now the break-even line
+    ctx.strokeStyle = isEven ? 'rgba(107,114,128,.5)' : '#e5e7eb';
+    ctx.lineWidth = isEven ? 1.5 : 1;
+    ctx.setLineDash(isEven ? [5, 4] : []);
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = is500 ? '#4b5563' : '#9ca3af';
-    ctx.fillText(pctLabel(p), PAD.left - 6, y);
+    ctx.fillStyle = isEven ? '#4b5563' : '#9ca3af';
+    ctx.fillText(winLossLabel(p), PAD.left - 6, y);
   }
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#6b7280';
   const labelStep = Math.max(1, Math.floor(visibleDates.length / (W < 560 ? 3 : 4)));
+  const lastIdx = visibleDates.length - 1;
   visibleDates.forEach((date, i) => {
-    if (i % labelStep !== 0 && i !== visibleDates.length - 1) return;
+    // Today's label always shows; drop any periodic one that would crowd it.
+    if (i !== lastIdx && (i % labelStep !== 0 || lastIdx - i < labelStep / 2)) return;
     const x = xFor(i, visibleDates.length);
     const dd = new Date(date + 'T12:00:00');
     ctx.fillText(dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - 6);
@@ -1846,17 +1854,17 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
     }
   }
 
-  const currentPct = {};
+  const currentWL = {};
   divTeams.forEach(id => {
     const last = [...series[id]].reverse().find(v => v !== null && Number.isFinite(v));
-    currentPct[id] = last ?? 0;
+    currentWL[id] = last ?? 0;
   });
-  const bottomFirst = [...divTeams].sort((a, b) => currentPct[a] - currentPct[b]);
+  const bottomFirst = [...divTeams].sort((a, b) => currentWL[a] - currentWL[b]);
   bottomFirst.forEach(tid => {
     const pts = buildPath(series[tid], visibleDates.length);
     if (pts.length < 2) return;
     const color = TEAM_COLORS_TRACKER[tid] || '#999';
-    const isTop = currentPct[tid] === Math.max(...Object.values(currentPct));
+    const isTop = currentWL[tid] === Math.max(...Object.values(currentWL));
     ctx.strokeStyle = color;
     ctx.lineWidth = isTop ? 2.7 : 2;
     ctx.globalAlpha = isTop ? 1 : 0.9;
@@ -1882,8 +1890,8 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
     });
   }
 
-  const labelTeams = [...divTeams].sort((a, b) => currentPct[b] - currentPct[a]);
-  const labelY = labelTeams.map(tid => yFor(currentPct[tid]));
+  const labelTeams = [...divTeams].sort((a, b) => currentWL[b] - currentWL[a]);
+  const labelY = labelTeams.map(tid => yFor(currentWL[tid]));
   const minGap = 12;
   for (let i = 1; i < labelY.length; i++) {
     if (labelY[i] - labelY[i - 1] < minGap) labelY[i] = labelY[i - 1] + minGap;
@@ -1902,7 +1910,7 @@ function drawDivisionWinPctTracker(divId, canvasEl, chartH) {
     const color = TEAM_COLORS_TRACKER[tid] || '#999';
     const x = xFor(lastIdx, visibleDates.length);
     const y = yFor(vals[lastIdx]);
-    ctx.beginPath(); ctx.arc(x, y, currentPct[tid] === Math.max(...Object.values(currentPct)) ? 4 : 3.2, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(x, y, currentWL[tid] === Math.max(...Object.values(currentWL)) ? 4 : 3.2, 0, Math.PI * 2);
     ctx.fillStyle = color; ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.4; ctx.stroke();
     const meta = TEAM_META[tid] || { abbr: '???' };
@@ -1928,6 +1936,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   opts = opts || {};
   if (!canvas || !trackerLoaded || !trackerDates.length) return;
 
+  const wl = !!opts.divisionChart; // division charts plot games over .500, not win%
   const visibleDates = opts.startDate ? trackerDates.filter(d => d >= opts.startDate) : trackerDates;
   if (!visibleDates.length) return;
   const lastIdx = trackerDates.length - 1;
@@ -1951,7 +1960,7 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
     if (dr) {
       dr.teamRecords.forEach(tr => {
         if (series[tr.team.id]) {
-          series[tr.team.id].push(parseFloat(tr.winningPercentage) || 0);
+          series[tr.team.id].push(wl ? tr.wins - tr.losses : (parseFloat(tr.winningPercentage) || 0));
           seen.add(tr.team.id);
         }
       });
@@ -1973,15 +1982,23 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   const cH = H - PAD.top - PAD.bottom;
   if (cW <= 0 || cH <= 0) return;
 
-  let minPct = .350, maxPct = .750;
-  Object.values(series).forEach(arr => arr.forEach(v => {
-    if (v != null) { minPct = Math.min(minPct, v); maxPct = Math.max(maxPct, v); }
-  }));
-  minPct = Math.max(0, Math.floor(minPct * 10) / 10 - 0.05);
-  maxPct = Math.min(1, Math.ceil(maxPct * 10) / 10 + 0.05);
-  const pctRange = Math.max(maxPct - minPct, 0.1);
+  let minY, maxY, gridStep;
+  if (wl) {
+    const flat = [];
+    Object.values(series).forEach(arr => arr.forEach(v => { if (v != null) flat.push(v); }));
+    ({ min: minY, max: maxY, step: gridStep } = winLossRange(flat));
+  } else {
+    minY = .350; maxY = .750;
+    Object.values(series).forEach(arr => arr.forEach(v => {
+      if (v != null) { minY = Math.min(minY, v); maxY = Math.max(maxY, v); }
+    }));
+    minY = Math.max(0, Math.floor(minY * 10) / 10 - 0.05);
+    maxY = Math.min(1, Math.ceil(maxY * 10) / 10 + 0.05);
+    gridStep = 0.1;
+  }
+  const yRange = Math.max(maxY - minY, wl ? 1 : 0.1);
 
-  const yFor = pct => PAD.top + cH - ((pct - minPct) / pctRange) * cH;
+  const yFor = v => PAD.top + cH - ((v - minY) / yRange) * cH;
   const xFor = (i, total) => PAD.left + (i / Math.max(total - 1, 1)) * cW;
 
   ctx.fillStyle = '#ffffff';
@@ -1990,39 +2007,45 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
   const compact = !!opts.divisionChart || W < 560 || H < 260;
   ctx.font = `${compact ? 11 : 12}px Barlow Condensed, sans-serif`;
   ctx.textAlign = 'right';
-  const gridPcts = [];
-  for (let p = Math.ceil(minPct * 10) / 10; p <= maxPct + 0.001; p = Math.round((p + 0.1) * 10) / 10) gridPcts.push(p);
-  gridPcts.forEach(p => {
+  const gridVals = [];
+  if (wl) {
+    for (let p = Math.ceil(minY / gridStep) * gridStep; p <= maxY + 0.001; p += gridStep) gridVals.push(Math.round(p));
+  } else {
+    for (let p = Math.ceil(minY * 10) / 10; p <= maxY + 0.001; p = Math.round((p + 0.1) * 10) / 10) gridVals.push(p);
+  }
+  gridVals.forEach(p => {
     const y = yFor(p);
-    const is500 = Math.abs(p - 0.5) < 0.001;
-    ctx.strokeStyle = is500 ? 'rgba(107,114,128,.45)' : '#e5e7eb';
-    ctx.lineWidth = is500 ? 1.5 : 1;
-    ctx.setLineDash(is500 ? [4,3] : []);
+    const isBase = wl ? p === 0 : Math.abs(p - 0.5) < 0.001;
+    ctx.strokeStyle = isBase ? 'rgba(107,114,128,.45)' : '#e5e7eb';
+    ctx.lineWidth = isBase ? 1.5 : 1;
+    ctx.setLineDash(isBase ? [4,3] : []);
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = is500 ? '#4b5563' : '#9ca3af';
-    ctx.fillText(p.toFixed(3).replace(/^0/,''), PAD.left - 5, y + 3.5);
+    ctx.fillStyle = isBase ? '#4b5563' : '#9ca3af';
+    ctx.fillText(wl ? winLossLabel(p) : p.toFixed(3).replace(/^0/,''), PAD.left - 5, y + 3.5);
   });
 
   if (opts.showXAxis !== false) {
     ctx.fillStyle = '#6b7280';
     ctx.textAlign = 'center';
     const labelStep = Math.max(1, Math.floor(visibleDates.length / 5));
+    const lastLabelIdx = visibleDates.length - 1;
     visibleDates.forEach((date, i) => {
-      if (i % labelStep !== 0 && i !== visibleDates.length - 1) return;
+      // Today's label always shows; drop any periodic one that would crowd it.
+      if (i !== lastLabelIdx && (i % labelStep !== 0 || lastLabelIdx - i < labelStep / 2)) return;
       const x = xFor(i, visibleDates.length);
       const dd = new Date(date + 'T12:00:00');
       ctx.fillText(dd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - 7);
     });
   }
 
-  const currentPcts = {};
+  const currentVals = {};
   divTeams.forEach(id => {
     const arr = series[id];
     const last = [...arr].reverse().find(v => v != null);
-    currentPcts[id] = last ?? 0;
+    currentVals[id] = last ?? null;
   });
-  const sortedTeams = [...divTeams].sort((a,b) => currentPcts[b] - currentPcts[a]);
+  const sortedTeams = [...divTeams].sort((a,b) => currentVals[b] - currentVals[a]);
 
   function buildPath(vals, total) {
     const pts = [];
@@ -2097,8 +2120,8 @@ function drawTracker(sliderIdx, divId, canvasEl, chartH, opts) {
 
   ctx.textAlign = 'left';
   const labelY = sortedTeams.map(tid => {
-    const v = currentPcts[tid];
-    return v ? yFor(v) : null;
+    const v = currentVals[tid];
+    return v == null ? null : yFor(v); // 0 is a real value in W−L (even record)
   });
   const minGap = compact ? 12 : 13;
   for (let i = 1; i < labelY.length; i++) {
