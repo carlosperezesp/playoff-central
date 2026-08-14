@@ -35,6 +35,14 @@
   .top-pill{font-weight:800;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--ink);
     border:1.5px solid var(--line);border-radius:999px;padding:8px 16px;white-space:nowrap}
 
+  .filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+  .filter-pill{font-family:inherit;font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--ink);border:1.5px solid var(--line);border-radius:999px;padding:8px 15px;cursor:pointer;
+    background:rgba(243,239,224,.04);transition:background .15s,border-color .15s,color .15s}
+  .filter-pill:hover{background:rgba(243,239,224,.1);border-color:rgba(243,239,224,.28)}
+  .filter-pill.on{background:#16a34a;border-color:#16a34a;color:#fff}
+  .filter-note{font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft)}
+
   .lede{font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.6;color:var(--ink-dim);max-width:70ch;margin-bottom:6px}
   .lede b{color:var(--ink);font-weight:600}
   .meta{font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
@@ -162,6 +170,7 @@
     .top{align-items:flex-start;flex-direction:column;gap:12px}
     .top-actions{gap:6px}
     .back-pill{font-size:10px;padding:6px 10px;letter-spacing:1px}
+    .filter-pill{font-size:10px;padding:6px 11px;letter-spacing:1.2px}
     .brand-txt{font-size:22px}.top-pill{font-size:10px;padding:6px 11px;letter-spacing:1.2px}
     .bar{display:flex;flex-wrap:wrap;gap:8px 9px;padding:9px 11px}
     .rank{flex:0 0 20px}
@@ -208,6 +217,12 @@
       swinging a better bat, tap the hitter to unfold the understudy.</p>
     <div class="meta" id="meta">Loading…</div>
   </header>
+
+  <div class="filters">
+    <button class="filter-pill" id="playoffFilter" type="button" aria-pressed="false" hidden
+      onclick="togglePlayoffFilter()">Playoff teams only</button>
+    <span class="filter-note" id="filterNote"></span>
+  </div>
 
   <div id="list" class="state">Loading lineups…</div>
 
@@ -289,6 +304,9 @@ const pool = rows => {
 };
 
 let TEAMS = [];
+let PLAYOFF_IDS = new Set();   // the 12 clubs in the playoff field
+let PLAYOFF_SET = false;       // true once every one of them has clinched
+let playoffOnly = false;       // filter pill state
 let RANKED = 0;
 const LEAGUE = {};             // metric → { best, worst } across the ranked lineups
 const careerCache = {};        // pid → { careerOPS, careerPA, years:{yr:ops} }
@@ -396,6 +414,7 @@ async function load() {
     ? `${SEASON} season · every bat on the active roster as of ${ymd(end)}`
     : `${SEASON} season · lineups as of ${ymd(end)} · starts counted over the last ${WINDOW_DAYS} days`
       + (paFloor < MIN_PA ? ` · ${Math.round(paFloor)} PA minimum this early in the year` : '');
+  PLAYOFF_IDS = await playoffField(SEASON);
   render();
 }
 
@@ -621,10 +640,58 @@ function panelHTML(t) {
   </div>`;
 }
 
+// The playoff field: three division winners per league plus the three best
+// records behind them — the same bracket the standings page draws. Before
+// September that is the picture as it stands; once clubs clinch, and all
+// through October, the very same read resolves to the real field.
+async function playoffField(season) {
+  try {
+    const d = await fj(`${API}/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason`);
+    const ids = new Set();
+    let clinched = 0;
+    [103, 104].forEach(lg => {
+      const leaders = new Set(), all = [];
+      (d.records || []).filter(r => r.league?.id === lg).forEach(div => {
+        const sorted = [...(div.teamRecords || [])].sort((a, b) => b.wins - a.wins);
+        if (sorted[0]) leaders.add(sorted[0].team.id);
+        all.push(...(div.teamRecords || []));
+      });
+      all.sort((a, b) => parseFloat(b.winningPercentage) - parseFloat(a.winningPercentage));
+      [...all.filter(t => leaders.has(t.team.id)).slice(0, 3),
+       ...all.filter(t => !leaders.has(t.team.id)).slice(0, 3)]
+        .forEach(t => { ids.add(t.team.id); if (t.clinched) clinched++; });
+    });
+    PLAYOFF_SET = ids.size > 0 && clinched === ids.size;
+    return ids;
+  } catch (e) {
+    return new Set();   // no field, no pill — the board still ranks all 30
+  }
+}
+
+function togglePlayoffFilter() {
+  playoffOnly = !playoffOnly;
+  render();
+}
+
+function syncPlayoffPill() {
+  const btn = document.getElementById('playoffFilter');
+  const note = document.getElementById('filterNote');
+  if (!btn) return;
+  btn.hidden = PLAYOFF_IDS.size === 0;
+  btn.classList.toggle('on', playoffOnly);
+  btn.setAttribute('aria-pressed', String(playoffOnly));
+  const shown = TEAMS.filter(t => PLAYOFF_IDS.has(t.id)).length;
+  note.textContent = !playoffOnly ? ''
+    : `${shown} of ${TEAMS.length} · ${PLAYOFF_SET ? 'the confirmed field' : 'the field as it stands today'}`;
+}
+
 function render() {
   const el = document.getElementById('list');
   el.className = '';
-  el.innerHTML = TEAMS.map((t,i) => {
+  syncPlayoffPill();
+  el.innerHTML = TEAMS.map((t,i) => [t,i])
+    .filter(([t]) => !playoffOnly || PLAYOFF_IDS.has(t.id))   // rank stays the rank out of 30
+    .map(([t,i]) => {
     const c = PRIMARY[t.id] || '#26324a', col = tier(t.ops), open = openTeams.has(t.id);
     const pips = t.lineup.map(s => { const pc = tier(s.ops);
       return `<span class="pip" style="background:${pc};color:${onTier(pc)}" title="${s.name} (${s.slot}): ${d3(s.ops)}">${s.slot}</span>`;
