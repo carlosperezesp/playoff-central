@@ -1673,9 +1673,26 @@ def facts_for_llm(f, theme_title, section_ids):
     return json.dumps(payload, indent=2)
 
 
+def no_narration(reason):
+    """The edition still ships on template prose — but say so loudly.
+
+    A missing key used to return None in silence, so the blog published a month
+    of template editions (2026-07-18 to 2026-08-16, credit balance at zero) with
+    every Action green. The annotation surfaces it in the run summary and the
+    output flags the job to fail once the article is safely pushed.
+    """
+    print(f"  LLM narration unavailable ({reason}); using template prose")
+    print(f"::error title=The Lens published without AI prose::{reason}")
+    step_output = os.environ.get("GITHUB_OUTPUT")
+    if step_output:
+        with open(step_output, "a") as fh:
+            fh.write("llm_failed=true\n")
+    return None
+
+
 def llm_narration(f, theme_title, section_ids):
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        return None
+        return no_narration("ANTHROPIC_API_KEY is not set")
     try:
         import anthropic
         client = anthropic.Anthropic()
@@ -1687,8 +1704,7 @@ def llm_narration(f, theme_title, section_ids):
         text = next(b.text for b in resp.content if b.type == "text")
         return json.loads(text[text.find("{"): text.rfind("}") + 1])
     except Exception as e:
-        print(f"  LLM narration unavailable ({e}); using template prose")
-        return None
+        return no_narration(str(e))
 
 
 def build_facts(season, baseline, asof=None, need_teamstats=False):

@@ -30,6 +30,7 @@ jobs:
         run: pip install -r tools/requirements.txt
 
       - name: Generate today's edition
+        id: generate
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python tools/generate_weekly.py
@@ -45,3 +46,11 @@ jobs:
             git commit -m "The Lens: daily edition $(date -u +%F)"
             git push
           fi
+
+      # The edition is published by now; fail the run only so the red X and
+      # GitHub's failure email make a template-prose day impossible to miss.
+      - name: Flag an edition published without AI prose
+        if: steps.generate.outputs.llm_failed == 'true'
+        run: |
+          echo "Today's edition shipped with template prose — see the error above."
+          exit 1
