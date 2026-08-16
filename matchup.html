@@ -106,7 +106,7 @@
         <span class="brand-txt">BASEBALL <b>LENS</b></span>
       </div>
       <div class="top-actions">
-        <a class="back-pill" href="index.html#rankings">&larr; Rankings</a>
+        <a class="back-pill" id="backPill" href="index.html#rankings">&larr; Rankings</a>
         <div class="top-pill">Matchup</div>
       </div>
     </div>
@@ -197,6 +197,19 @@ function fillLineup(cands) {
   if (!out.some(o => o.slot === 'DH')) take('DH', cands.find(c => !used.has(c.pid)));
   return out.sort((a,b) => (a.starts ? a.slotSum / a.starts : 99) - (b.starts ? b.slotSum / b.starts : 99));
 }
+
+// Send the reader back where they came from. ?from= travels in the URL rather
+// than relying on the referrer, so it survives a reload or a new tab.
+const BACK = {
+  topgames: ['index.html#topgames', 'Top Games'],
+  rankings: ['index.html#rankings', 'Rankings'],
+};
+(function setBackPill() {
+  const [href, label] = BACK[new URLSearchParams(location.search).get('from')] || BACK.rankings;
+  const pill = document.getElementById('backPill');
+  pill.href = href;
+  pill.innerHTML = `&larr; ${label}`;
+})();
 
 // ── State ────────────────────────────────────────────────────────────────────
 let SEASON = new Date().getFullYear();
@@ -381,8 +394,9 @@ async function render() {
   if (A === B) { board.className = 'state'; board.textContent = 'Pick two different clubs'; return; }
   board.className = 'state'; board.textContent = 'Loading matchup…';
 
-  const url = `${location.pathname}?a=${A}&b=${B}`;
-  history.replaceState(null, '', url);
+  // Keep ?from= across team changes, or a reload would forget where to go back to
+  const from = new URLSearchParams(location.search).get('from');
+  history.replaceState(null, '', `${location.pathname}?a=${A}&b=${B}${from ? `&from=${from}` : ''}`);
 
   try { await Promise.all([window._build(A), window._build(B)]); }
   catch (e) { board.className = 'state'; board.textContent = 'Could not load — ' + e.message; return; }

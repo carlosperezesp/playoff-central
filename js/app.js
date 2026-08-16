@@ -5232,7 +5232,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   // A game is two clubs, and matchup.html already compares any two on rotation,
   // bullpen and lineup. The game object carries both ids — this is a link, not a compute.
   const matchupLink = g =>
-    `<a class="wb-matchup-link" href="matchup.html?a=${g.teams.away.team.id}&b=${g.teams.home.team.id}"
+    `<a class="wb-matchup-link" href="matchup.html?a=${g.teams.away.team.id}&b=${g.teams.home.team.id}&from=topgames"
         onclick="event.stopPropagation()">Compare rotations, pens &amp; lineups &rarr;</a>`;
 
   function fillDetail(g){ if(g.status.abstractGameState==='Final') fillStars(g); else fillPTW(g); }
