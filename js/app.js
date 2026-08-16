@@ -5155,7 +5155,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     el.innerHTML=games.map(g=>{
       const live=g.status.abstractGameState==='Live', open=expanded.has(g.gamePk);
       const ih=Array.from({length:9},(_,i)=>`<div class="wb-gi">${i+1}</div>`).join('')+`<div class="wb-gi wb-r">R</div>`;
-      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div>`:`<div class="wb-dh">${g.status.abstractGameState==='Preview'?'Probable starters':'Starting pitchers'}</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}</div>`;
+      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div>`:`<div class="wb-dh">${g.status.abstractGameState==='Preview'?'Probable starters':'Starting pitchers'}</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
     }).join('');
     expanded.forEach(pk=>{const g=games.find(x=>x.gamePk===pk);if(g)fillDetail(g);});
   }
@@ -5229,6 +5229,12 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     if(!$('wbstars-'+g.gamePk))return;
     box.innerHTML=stars.length?`<div class="wb-ptw-grid">${stars.map(starCard).join('')}</div>`:'<div class="wb-ptw-loading">No standout performances.</div>';
   }
+  // A game is two clubs, and matchup.html already compares any two on rotation,
+  // bullpen and lineup. The game object carries both ids — this is a link, not a compute.
+  const matchupLink = g =>
+    `<a class="wb-matchup-link" href="matchup.html?a=${g.teams.away.team.id}&b=${g.teams.home.team.id}"
+        onclick="event.stopPropagation()">Compare rotations, pens &amp; lineups &rarr;</a>`;
+
   function fillDetail(g){ if(g.status.abstractGameState==='Final') fillStars(g); else fillPTW(g); }
 
   function toggle(pk){
