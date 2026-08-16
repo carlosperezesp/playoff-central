@@ -652,5 +652,12 @@
       "ops": 0.709,
       "hr": 9
     }
-  ]
+  ],
+  "narration": {
+    "title": "Rays Grab the Top While Padres Charge",
+    "intro": "It's a tight race at the top, and Tampa Bay now sits first at 74-48 after a 4-2 week. Below them the Padres are the story, surging five spots on the strength of a 5-1 run.",
+    "power_lead": "The Rays climbed three spots to number one, riding a 13-for-28 week from Yandy D\u00edaz and a plus-17 run differential. Right behind, the Cubs made their own jump on the back of Alex Bregman, who hit four homers and drove in ten with a 1.394 OPS; the Brewers, still owners of the best record at 76-48, slipped a bit after a 3-4 week and a minus-8 differential. And keep an eye on San Diego, up to seventh after going 5-1.",
+    "offense_lead": "The Nationals lead all lineups at .766 team OPS, a nose ahead of the Dodgers at .763 and the Cubs at .755. It's tighter than the order suggests, but Washington's bats are quietly setting the pace.",
+    "staffs_lead": "The Tigers own the best rotation by starter ERA at 3.39, with the Yankees a hair back at 3.40. On the other side of the ball, the Red Sox run the league's best bullpen at 2.99, just ahead of those same Yankees at 3.09 \u2014 New York doubling up on both lists."
+  }
 }
