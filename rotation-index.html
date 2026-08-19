@@ -54,8 +54,20 @@
   .prow .pbody{min-width:0;flex:1}
   .prow .pname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .prow .pteam{font-weight:800;font-size:10.5px;letter-spacing:1.1px;padding:2px 7px;border-radius:5px}
+  .prow{cursor:pointer}
+  .prow:hover{background:rgba(243,239,224,.07)}
+  .pdet{margin:-3px 0 9px 41px;padding:11px 14px;border-radius:0 0 12px 12px;
+    background:rgba(0,0,0,.22);border:1px solid var(--line);border-top:none}
+  .pdet .pdl{font-weight:800;font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:8px}
+  .tline{display:flex;flex-wrap:wrap;gap:7px}
+  .tspan{display:flex;align-items:center;gap:8px;padding:5px 11px;border-radius:999px;
+    border:1px solid rgba(243,239,224,.16);background:rgba(243,239,224,.05)}
+  .tspan b{font-weight:800;font-size:11.5px;letter-spacing:1px}
+  .tspan span{font-size:12px;color:var(--ink-dim)}
+  .tspan i{font-style:normal;font-size:10.5px;color:var(--ink-soft)}
   @media(max-width:640px){.prow{gap:9px;padding:8px 10px}.prow .pface{display:none}
-    .prow .pname{font-size:13.5px}}
+    .prow .pname{font-size:13.5px}.pdet{margin-left:0}}
   .filter-note{font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft)}
 
   .lede{font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.6;color:var(--ink-dim);max-width:70ch;margin-bottom:6px}
@@ -583,6 +595,66 @@ function togglePlayoffFilter() {
   render();
 }
 
+// Team history per player, fetched on demand. yearByYear carries the club for
+// every season a man played, so a career reads as spans: 5 years here, 3 there.
+const timelineCache = {};
+const openPlayers = new Set();
+
+async function loadTimeline(pid) {
+  if (timelineCache[pid]) return;
+  try {
+    const d = await fj(`${API}/people?personIds=${pid}&hydrate=stats(type=yearByYear,group=pitching)`);
+    const splits = (d.people?.[0]?.stats?.find(g => g.group?.displayName === 'pitching')?.splits) || [];
+    // One entry per (season, club) — a mid-season trade yields two for that year
+    // A traded player's season yields one row per club PLUS a combined row that
+    // carries numTeams and no club at all. Keep the club rows, drop the summary —
+    // otherwise the timeline invents a phantom stint with no name.
+    const rows = splits
+      .filter(sp => sp.team?.id && !sp.numTeams)
+      .map(sp => ({
+        yr: parseInt(sp.season, 10),
+        id: sp.team.id, name: sp.team.name || '—',
+        g: +(sp.stat?.gamesPlayed) || 0,
+      })).filter(r => r.yr).sort((a, b) => a.yr - b.yr || b.g - a.g);
+    // Collapse seasons at the same club into one span. Adjacency in this list —
+    // not year adjacency — is the test: a missed season (injury, minors) must not
+    // split a stay in two, but a genuine leave-and-return has another club
+    // between the two stints and so still reads as two.
+    const spans = [];
+    rows.forEach(r => {
+      const last = spans[spans.length - 1];
+      if (last && last.id === r.id) { last.to = Math.max(last.to, r.yr); last.g += r.g; last.n++; }
+      else spans.push({ id: r.id, name: r.name, from: r.yr, to: r.yr, g: r.g, n: 1 });
+    });
+    timelineCache[pid] = spans;
+  } catch (e) { timelineCache[pid] = []; }
+}
+
+function timelineHTML(pid) {
+  const spans = timelineCache[pid];
+  if (!spans) return `<div class="pdet"><div class="pdl">Career</div><span class="tspan"><span>Loading…</span></span></div>`;
+  if (!spans.length) return `<div class="pdet"><div class="pdl">Career</div><span class="tspan"><span>No season history available.</span></span></div>`;
+  const yrs = spans.reduce((a, s) => a + s.n, 0);   // seasons played, not span width
+  return `<div class="pdet"><div class="pdl">Career · ${yrs} season${yrs === 1 ? '' : 's'} · ${spans.length} club${spans.length === 1 ? '' : 's'}</div>
+    <div class="tline">${spans.map(s => {
+      // Some club colours are near-black (White Sox #27251F, Padres #2F241D) and
+      // vanish on this background — lift anything too dark to read.
+      const raw = PRIMARY[s.id], n = raw ? parseInt(raw.slice(1), 16) : 0;
+      const lum = raw ? (0.299*((n>>16)&255) + 0.587*((n>>8)&255) + 0.114*(n&255)) : 0;
+      const c = (!raw || lum < 70) ? 'var(--ink)' : raw;
+      return `<span class="tspan"><b style="color:${c}">${s.name}</b>
+        <span>${s.from === s.to ? s.from : `${s.from}–${s.to}`}</span><i>${s.g} G</i></span>`;
+    }).join('')}</div></div>`;
+}
+
+async function togglePlayer(pid) {
+  if (openPlayers.has(pid)) { openPlayers.delete(pid); return render(); }
+  openPlayers.add(pid);
+  render();
+  await loadTimeline(pid);
+  if (openPlayers.has(pid)) render();
+}
+
 function setView(v) {
   view = v;
   ['teams','players'].forEach(k => {
@@ -605,7 +677,7 @@ function renderPitchers(el) {
     `${rows.length} starters${playoffOnly ? ' on playoff clubs' : ''} · ranked on season ERA and WHIP`;
   el.innerHTML = rows.map((s, i) => {
     const col = tier(s.form), c = PRIMARY[s.team.id] || '#26324a';
-    return `<div class="prow">
+    return `<div class="prow" onclick="togglePlayer(${s.pid})">
       <span class="prank">${i + 1}</span>
       <span class="pform" style="background:${col};color:${onTier(col)}">${s.form}</span>
       <span class="pface" style="background:linear-gradient(150deg,${c} 0%,${shade(c,.45)} 100%)">
@@ -621,7 +693,7 @@ function renderPitchers(el) {
           ${stat(s.ipTxt, 'IP', s.ipCol)}<span class="dot">·</span>
           ${stat(s.k, 'K', s.kCol)}
         </span></span>
-    </div>`;
+    </div>${openPlayers.has(s.pid) ? timelineHTML(s.pid) : ''}`;
   }).join('');
 }
 
