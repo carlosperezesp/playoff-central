@@ -564,9 +564,14 @@
     .standings-table th, .standings-table td { padding: 7px 8px; }
     .team-cell { gap: 6px; }
     .team-logo-sm { width: 22px; height: 22px; }
-    /* Hide secondary columns on mobile — keep TEAM W L PCT L10 STRK HIST */
+    /* Nine columns do not fit 390px. LAST 5 SEASONS is the widest and the least
+       urgent — five-year background against a live race — so it goes, and the
+       rest stay. It was already truncating in divisions with no magic number,
+       and being pushed clean off screen in the ones that have one (NL West once
+       the Dodgers' MN appeared). Desktop keeps it. */
     .div-col-strk { display: table-cell; }
-    .div-col-l10, .div-col-mn, .div-col-hist { display: table-cell; }
+    .div-col-l10, .div-col-mn { display: table-cell; }
+    .div-col-hist { display: none; }
     /* Show abbr instead of full name on mobile */
     .team-name-full { display: none; }
     .team-name-abbr { display: inline; }
