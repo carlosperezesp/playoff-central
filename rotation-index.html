@@ -54,6 +54,20 @@
   .prow .pbody{min-width:0;flex:1}
   .prow .pname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .prow .pteam{font-weight:800;font-size:10.5px;letter-spacing:1.1px;padding:2px 7px;border-radius:5px}
+  .fstrip-head{font-size:11.5px;color:var(--ink-dim);margin:2px 0 7px}
+  .fstrip-load{font-size:12px;color:var(--ink-soft);padding:3px 0}
+  .fstrip{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:9px}
+  .fstrip i{width:9px;height:16px;border-radius:2px;display:block}
+  .fcounts{display:flex;gap:13px;flex-wrap:wrap}
+  .fct{display:flex;align-items:center;gap:5px;font-weight:800;font-size:12px}
+  .fct i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .fct em{font-style:normal;font-weight:600;font-size:10px;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:.9px}
+  .yrtabs{display:flex;gap:5px;flex-wrap:wrap;margin:11px 0 9px}
+  .yrtab{font-family:inherit;font-weight:800;font-size:11px;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line);background:transparent;color:var(--ink-dim);cursor:pointer}
+  .yrtab:hover{background:rgba(243,239,224,.08)}
+  .yrtab.on{background:var(--ink);border-color:var(--ink);color:#0d2016}
   .prow{cursor:pointer}
   .prow:hover{background:rgba(243,239,224,.07)}
   .pdet{margin:-3px 0 9px 41px;padding:11px 14px;border-radius:0 0 12px 12px;
@@ -595,6 +609,85 @@ function togglePlayoffFilter() {
   render();
 }
 
+
+// ---- Season form: one dot per game -------------------------------------
+// Ported from the Baseball100 engine so a dot means the same thing in both.
+// data/game-tiers.json ships the raw score at each colour boundary per (role,
+// season) — 5 KB — and the game log comes from the MLB API on demand, so no
+// precomputed player data has to be carried here.
+let GAME_TIERS = null;
+const gamesCache = {};   // `${pid}-${season}` -> [{date, raw, pa, role, color}]
+
+const W_BAT = {base:40, single:3, double:5, triple:6, hr:8, walk:2, hbp:2, run:0, rbi:0, sb:2, out:-1.5};
+const W_PIT = {base:40, perOut:2, k:1, bb:-2, h:-2, r:-3, hr:-6};
+const MIN_PA = 3;        // below this a game is grey: too small to read
+
+function ipOuts(ip) {
+  const s = String(ip ?? '0'), [w, f] = s.split('.');
+  return (parseInt(w, 10) || 0) * 3 + (parseInt(f, 10) || 0);
+}
+function batRaw(st) {
+  const ab = +st.atBats || 0, h = +st.hits || 0, d2 = +st.doubles || 0,
+        t3 = +st.triples || 0, hr = +st.homeRuns || 0, s1 = h - d2 - t3 - hr;
+  return W_BAT.base + W_BAT.single*s1 + W_BAT.double*d2 + W_BAT.triple*t3 + W_BAT.hr*hr
+       + W_BAT.walk*(+st.baseOnBalls || 0) + W_BAT.hbp*(+st.hitByPitch || 0)
+       + W_BAT.sb*(+st.stolenBases || 0) + W_BAT.out*(ab - h);
+}
+function pitRaw(st) {
+  return W_PIT.base + W_PIT.perOut*ipOuts(st.inningsPitched) + W_PIT.k*(+st.strikeOuts || 0)
+       + W_PIT.bb*(+st.baseOnBalls || 0) + W_PIT.h*(+st.hits || 0)
+       + W_PIT.r*(+st.runs || 0) + W_PIT.hr*(+st.homeRuns || 0);
+}
+function gameColor(raw, role, season) {
+  const t = GAME_TIERS?.tiers?.[`${role}|${season}`];
+  if (!t) return null;                       // no baseline for that year — stays grey
+  if (raw >= t.green)      return TIERS[0];
+  if (raw >= t.lightGreen) return TIERS[1];
+  if (raw >= t.yellow)     return TIERS[2];
+  if (raw >= t.orange)     return TIERS[3];
+  return TIERS[4];
+}
+
+async function loadSeasonGames(pid, season) {
+  const key = `${pid}-${season}`;
+  if (gamesCache[key]) return gamesCache[key];
+  if (!GAME_TIERS) GAME_TIERS = await fj('data/game-tiers.json').catch(() => ({ tiers: {} }));
+  try {
+    const d = await fj(`${API}/people/${pid}/stats?stats=gameLog&group=pitching&season=${season}`);
+    const sp = d.stats?.[0]?.splits || [];
+    gamesCache[key] = sp
+      .filter(s => (s.sport?.id ?? 1) === 1)
+      .map(s => {
+        const st = s.stat || {};
+        const isBat = 'pitching' === 'hitting';
+        const pa = isBat ? (+st.plateAppearances || 0) : (+st.battersFaced || 0);
+        const raw = isBat ? batRaw(st) : pitRaw(st);
+        const role = isBat ? 'bat' : ((+st.gamesStarted || 0) >= 1 ? 'SP' : 'RP');
+        return { date: s.date, opp: s.opponent?.abbreviation || '', pa, raw, role,
+                 color: pa < MIN_PA ? null : gameColor(raw, role, season) };
+      })
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  } catch (e) { gamesCache[key] = []; }
+  return gamesCache[key];
+}
+
+function formStripHTML(pid, season) {
+  const g = gamesCache[`${pid}-${season}`];
+  if (!g) return `<div class="fstrip-load">Loading ${season}…</div>`;
+  if (!g.length) return `<div class="fstrip-load">No game log for ${season}.</div>`;
+  const counted = g.filter(x => x.color);
+  const n = c => counted.filter(x => x.color === c).length;
+  const pct = v => counted.length ? Math.round(100 * v / counted.length) : 0;
+  const legend = [[TIERS[0],'elite'],[TIERS[1],'good'],[TIERS[2],'avg'],[TIERS[3],'poor'],[TIERS[4],'bad']]
+    .map(([c,l]) => `<span class="fct"><i style="background:${c}"></i>${n(c)}<em>${l}</em></span>`).join('');
+  const grey = g.length - counted.length;
+  return `<div class="fstrip-head">${counted.length} game${counted.length===1?'':'s'} scored${grey ? ` · ${grey} too short to read` : ''}
+      · ${pct(n(TIERS[0]) + n(TIERS[1]))}% green or better</div>
+    <div class="fstrip">${g.map(x => `<i style="background:${x.color || 'rgba(243,239,224,.14)'}"
+      title="${x.date}${x.opp ? ' vs ' + x.opp : ''} · ${x.raw.toFixed(1)}"></i>`).join('')}</div>
+    <div class="fcounts">${legend}</div>`;
+}
+
 // Team history per player, fetched on demand. yearByYear carries the club for
 // every season a man played, so a career reads as spans: 5 years here, 3 there.
 const timelineCache = {};
@@ -630,11 +723,18 @@ async function loadTimeline(pid) {
   } catch (e) { timelineCache[pid] = []; }
 }
 
+// Which season's dots are showing, per player
+const openSeason = {};
+
 function timelineHTML(pid) {
   const spans = timelineCache[pid];
   if (!spans) return `<div class="pdet"><div class="pdl">Career</div><span class="tspan"><span>Loading…</span></span></div>`;
   if (!spans.length) return `<div class="pdet"><div class="pdl">Career</div><span class="tspan"><span>No season history available.</span></span></div>`;
   const yrs = spans.reduce((a, s) => a + s.n, 0);   // seasons played, not span width
+  const years = [];
+  spans.forEach(s => { for (let y = s.from; y <= s.to; y++) if (!years.includes(y)) years.push(y); });
+  years.sort((a, b) => b - a);
+  const sel = openSeason[pid] ?? years[0];
   return `<div class="pdet"><div class="pdl">Career · ${yrs} season${yrs === 1 ? '' : 's'} · ${spans.length} club${spans.length === 1 ? '' : 's'}</div>
     <div class="tline">${spans.map(s => {
       // Some club colours are near-black (White Sox #27251F, Padres #2F241D) and
@@ -644,7 +744,20 @@ function timelineHTML(pid) {
       const c = (!raw || lum < 70) ? 'var(--ink)' : raw;
       return `<span class="tspan"><b style="color:${c}">${s.name}</b>
         <span>${s.from === s.to ? s.from : `${s.from}–${s.to}`}</span><i>${s.g} G</i></span>`;
-    }).join('')}</div></div>`;
+    }).join('')}</div>
+    <div class="pdl" style="margin-top:13px">Season form · one dot per game</div>
+    <div class="yrtabs">${years.map(y =>
+      `<button class="yrtab${y === sel ? ' on' : ''}" type="button"
+         onclick="event.stopPropagation();showSeason(${pid},${y})">${y}</button>`).join('')}</div>
+    ${formStripHTML(pid, sel)}
+  </div>`;
+}
+
+async function showSeason(pid, yr) {
+  openSeason[pid] = yr;
+  render();
+  await loadSeasonGames(pid, yr);
+  if (openPlayers.has(pid)) render();
 }
 
 async function togglePlayer(pid) {
@@ -652,7 +765,13 @@ async function togglePlayer(pid) {
   openPlayers.add(pid);
   render();
   await loadTimeline(pid);
-  if (openPlayers.has(pid)) render();
+  if (!openPlayers.has(pid)) return;
+  render();
+  // Default to the most recent season the club history knows about
+  const spans = timelineCache[pid] || [];
+  const latest = spans.length ? Math.max(...spans.map(s => s.to)) : null;
+  if (latest) { await loadSeasonGames(pid, openSeason[pid] ?? latest);
+                if (openPlayers.has(pid)) render(); }
 }
 
 function setView(v) {
