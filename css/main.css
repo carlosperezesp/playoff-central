@@ -778,9 +778,13 @@
     transition: all .18s ease;
   }
   /* Tier ring: arc length encodes performance, so the signal survives greyscale
-     and colour-vision deficiency. --tier-arc is set inline per player; 0 draws
-     nothing (no data). */
-  .dfield-circle[style*="--tier-arc"]::after {
+     and colour-vision deficiency (the 5-tier palette is non-monotonic in
+     luminance — elite green and bad red are 0.045 apart, the same shade in grey).
+     OFF BY DEFAULT: it reads as visual noise when you can see the colours, which
+     already carry the tier. Opt in with <html data-tier-arcs>; a future
+     accessibility toggle only has to set that attribute. --tier-arc is still
+     written inline per player, so nothing else has to change when it is turned on. */
+  :root[data-tier-arcs] .dfield-circle[style*="--tier-arc"]::after {
     content: ''; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
     background: conic-gradient(from 180deg, rgba(26,32,39,.78) 0 calc(var(--tier-arc, 0) * 1%), transparent 0);
     -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
