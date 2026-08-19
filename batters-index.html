@@ -59,6 +59,13 @@
   .prow .pbody{min-width:0;flex:1}
   .prow .pname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .prow .pteam{font-weight:800;font-size:10.5px;letter-spacing:1.1px;padding:2px 7px;border-radius:5px}
+  .axes{display:grid;gap:5px}
+  .ax{display:grid;grid-template-columns:96px 1fr 30px;align-items:center;gap:9px}
+  .axn{font-size:11.5px;color:var(--ink-dim)}
+  .axbar{height:7px;border-radius:4px;background:rgba(243,239,224,.1);overflow:hidden}
+  .axbar i{display:block;height:100%;border-radius:0 4px 4px 0}
+  .axv{font-weight:800;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+  @media(max-width:640px){.ax{grid-template-columns:78px 1fr 26px;gap:7px}.axn{font-size:10.5px}}
   .fstrip-head{font-size:11.5px;color:var(--ink-dim);margin:2px 0 7px}
   .fstrip-load{font-size:12px;color:var(--ink-soft);padding:3px 0}
   .fstrip{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:9px}
@@ -364,6 +371,7 @@ const pool = rows => {
 };
 
 let TEAMS = [];
+let LINE = {};                 // season lines for the whole league, kept for the axis pool
 let PLAYOFF_IDS = new Set();   // the 12 clubs in the playoff field
 let PLAYOFF_SET = false;       // true once every one of them has clinched
 let playoffOnly = false;       // filter pill state
@@ -419,7 +427,7 @@ async function load() {
   }));
   ROSTER_MODE = !Object.keys(byTeam).length;
 
-  const line = {};
+  const line = LINE = {};
   ((stats.stats || [])[0]?.splits || []).forEach(s => {
     const st = s.stat || {};
     line[s.player.id] = {
@@ -752,6 +760,63 @@ function togglePlayoffFilter() {
 }
 
 
+
+// ---- Axes: what kind of hitter is he -----------------------------------
+// Percentile among qualified bats, computed from the league-wide season lines
+// this page already holds — no extra fetch, no shipped file. Current season
+// only: an older year would need that year's league pool, which is not loaded.
+let AXIS_POOL = null;
+const isoOf  = l => (l.slg != null && l.avg != null) ? l.slg - l.avg : null;
+const eyeOf  = l => (l.obp != null && l.avg != null) ? l.obp - l.avg : null;
+const rateOf = (n, d) => d > 0 ? n / d : null;
+
+function buildAxisPool() {
+  if (AXIS_POOL) return AXIS_POOL;
+  const rows = [];
+  Object.values(LINE || {}).forEach(l => {
+    if (!l || l.pa < paFloor) return;
+    rows.push({ avg: l.avg, kRate: rateOf(l.so, l.pa), iso: isoOf(l),
+                hrRate: rateOf(l.hr, l.pa), bbRate: rateOf(l.bb, l.pa), eye: eyeOf(l) });
+  });
+  const out = {};
+  ['avg','kRate','iso','hrRate','bbRate','eye'].forEach(k => {
+    out[k] = rows.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a,b) => a-b);
+  });
+  return (AXIS_POOL = out);
+}
+function pctOf(sorted, v, invert) {
+  if (v == null || !isFinite(v) || !sorted.length) return null;
+  let lo = 0, hi = sorted.length;
+  while (lo < hi) { const m = (lo+hi) >> 1; if (sorted[m] < v) lo = m+1; else hi = m; }
+  const p = 100 * lo / sorted.length;
+  return Math.max(0, Math.min(100, Math.round(invert ? 100 - p : p)));
+}
+const blend = (a, b) => (a != null && b != null) ? Math.round((a + b) / 2) : (a ?? b);
+
+function batterAxes(pid) {
+  const l = (LINE || {})[pid];
+  if (!l || l.pa < paFloor) return null;
+  const P = buildAxisPool();
+  return [
+    ['Contact',    blend(pctOf(P.avg, l.avg, false), pctOf(P.kRate, rateOf(l.so, l.pa), true))],
+    ['Power',      blend(pctOf(P.iso, isoOf(l), false), pctOf(P.hrRate, rateOf(l.hr, l.pa), false))],
+    ['Discipline', blend(pctOf(P.bbRate, rateOf(l.bb, l.pa), false), pctOf(P.eye, eyeOf(l), false))],
+  ];
+}
+function axesHTML(pid, season) {
+  if (season !== SEASON) return '';          // pool is this season's; don't fake older years
+  const ax = batterAxes(pid);
+  if (!ax || ax.every(([,v]) => v == null)) return '';
+  return `<div class="pdl" style="margin-top:13px">Profile · percentile among qualified bats this season</div>
+    <div class="axes">${ax.map(([n,v]) => {
+      if (v == null) return '';
+      const c = scale(v / 100, [.75, .60, .40, .25]);
+      return `<div class="ax"><span class="axn">${n}</span>
+        <span class="axbar"><i style="width:${v}%;background:${c}"></i></span>
+        <span class="axv" style="color:${c}">${v}</span></div>`;
+    }).join('')}</div>`;
+}
+
 // ---- Season form: one dot per game -------------------------------------
 // Ported from the Baseball100 engine so a dot means the same thing in both.
 // data/game-tiers.json ships the raw score at each colour boundary per (role,
@@ -893,6 +958,7 @@ function timelineHTML(pid) {
       `<button class="yrtab${y === sel ? ' on' : ''}" type="button"
          onclick="event.stopPropagation();showSeason(${pid},${y})">${y}</button>`).join('')}</div>
     ${formStripHTML(pid, sel)}
+    ${axesHTML(pid, sel)}
   </div>`;
 }
 
