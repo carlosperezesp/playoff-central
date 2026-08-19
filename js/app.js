@@ -2458,6 +2458,16 @@ function getDiamondPlayerColor(value, type) {
   }
 }
 
+// Colour alone cannot carry performance: measured relative luminance puts elite
+// green at 0.269 and bad red at 0.224 — near-identical in greyscale — and the
+// five-tier scale is not even monotonic (0.27 -> 0.52 -> 0.59 -> 0.37 -> 0.22),
+// so it reads as a hill, not a ramp. Red-green colourblind users cannot tell the
+// best player on the field from the worst. This returns the tier as a share of a
+// ring drawn around each circle: arc LENGTH is a channel that survives both
+// greyscale and every colour-vision deficiency.
+const TIER_ARC = { '#16a34a': 100, '#b1c882': 78, '#ffc000': 56, '#ff8100': 34, '#ff2200': 14 };
+function diamondTierArc(color) { return TIER_ARC[color] ?? 0; }
+
 function diamondTextColor(bg) {
   return ['#16a34a', '#ff2200', '#ff8100'].includes(bg) ? '#fff' : '#1a1209';
 }
@@ -3962,7 +3972,7 @@ function renderDiamondPanel(teamId, impact) {
     return `<button class="dfield-btn" id="pb-${key}"
       style="left:${xy.left};top:${xy.top};--btn-color:${color}"
       onclick="selectDiamondKey('${key}',${teamId})">
-      <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}${tradedBadgeHTML(p?.tradedIn)}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
+      <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};--tier-arc:${diamondTierArc(color)};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}${tradedBadgeHTML(p?.tradedIn)}<span style="font-size:12px;font-weight:800;line-height:1">${pos}</span>${flagHtml}</div>
       <div class="dfield-pill">${nameLabel}</div>
     </button>`;
   }
@@ -3987,7 +3997,7 @@ function renderDiamondPanel(teamId, impact) {
       const extras = restPart ? `<div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${restPart}</div>` : '';
       return `<button class="dfield-btn-inline" id="pb-${key}" style="--btn-color:${color}"
         onclick="selectDiamondKey('${key}',${teamId})">
-        <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}${tradedBadgeHTML(p.tradedIn)}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
+        <div class="dfield-circle${shiny}" style="background:${color};color:${txtColor};--tier-arc:${diamondTierArc(color)};position:relative;flex-direction:column;gap:1px">${pips}${rookieStar}${tradedBadgeHTML(p.tradedIn)}<span style="font-size:12px;font-weight:800;line-height:1">${label}</span>${flagHtml}</div>
         <div class="dfield-pill">${p.name}</div>
         ${extras}
       </button>`;

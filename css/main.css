@@ -570,8 +570,11 @@
     /* Show abbr instead of full name on mobile */
     .team-name-full { display: none; }
     .team-name-abbr { display: inline; }
-    /* Hide DIV/WC badges on mobile, use row background color instead */
-    .badge-div, .badge-wc { display: none; }
+    /* DIV/WC stay on mobile. They used to be hidden, leaving the coloured left
+       border as the ONLY signal of playoff position — unreadable without colour
+       vision, and nothing on screen said what the border meant. Shrunk to fit
+       rather than dropped. */
+    .badge-div, .badge-wc { display: inline; font-size: 9px; padding: 1px 4px; letter-spacing: .5px; }
     .div-table tr.div-leader td:first-child { background: none; border-left: 3px solid var(--win); }
     .div-table tr.div-leader:hover td { background: var(--surface2); }
     .div-table tr.wc-spot td:first-child { background: none; border-left: 3px solid #1565d8; }
@@ -773,7 +776,17 @@
     border: 2.5px solid rgba(255,255,255,.8);
     box-shadow: 0 4px 12px rgba(22,28,39,.15);
     transition: all .18s ease;
-  }  .dfield-btn.active .dfield-circle, .dfield-btn-inline.active .dfield-circle {
+  }
+  /* Tier ring: arc length encodes performance, so the signal survives greyscale
+     and colour-vision deficiency. --tier-arc is set inline per player; 0 draws
+     nothing (no data). */
+  .dfield-circle[style*="--tier-arc"]::after {
+    content: ''; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(from 180deg, rgba(26,32,39,.78) 0 calc(var(--tier-arc, 0) * 1%), transparent 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  }
+  .dfield-btn.active .dfield-circle, .dfield-btn-inline.active .dfield-circle {
     width: 48px; height: 48px;
     border: 3px solid rgba(255,255,255,.95);
     box-shadow: 0 8px 20px rgba(0,66,117,.22);
