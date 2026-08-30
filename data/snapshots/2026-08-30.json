@@ -1,0 +1,663 @@
+{
+  "date": "2026-08-30",
+  "power_ranking": [
+    {
+      "name": "Milwaukee Brewers",
+      "rank": 1
+    },
+    {
+      "name": "Atlanta Braves",
+      "rank": 2
+    },
+    {
+      "name": "Los Angeles Dodgers",
+      "rank": 3
+    },
+    {
+      "name": "Philadelphia Phillies",
+      "rank": 4
+    },
+    {
+      "name": "New York Yankees",
+      "rank": 5
+    },
+    {
+      "name": "Tampa Bay Rays",
+      "rank": 6
+    },
+    {
+      "name": "Boston Red Sox",
+      "rank": 7
+    },
+    {
+      "name": "Chicago White Sox",
+      "rank": 8
+    },
+    {
+      "name": "Chicago Cubs",
+      "rank": 9
+    },
+    {
+      "name": "Kansas City Royals",
+      "rank": 10
+    },
+    {
+      "name": "Cleveland Guardians",
+      "rank": 11
+    },
+    {
+      "name": "Arizona Diamondbacks",
+      "rank": 12
+    },
+    {
+      "name": "San Diego Padres",
+      "rank": 13
+    },
+    {
+      "name": "Baltimore Orioles",
+      "rank": 14
+    },
+    {
+      "name": "Pittsburgh Pirates",
+      "rank": 15
+    },
+    {
+      "name": "Miami Marlins",
+      "rank": 16
+    },
+    {
+      "name": "Houston Astros",
+      "rank": 17
+    },
+    {
+      "name": "Washington Nationals",
+      "rank": 18
+    },
+    {
+      "name": "Toronto Blue Jays",
+      "rank": 19
+    },
+    {
+      "name": "Seattle Mariners",
+      "rank": 20
+    },
+    {
+      "name": "Texas Rangers",
+      "rank": 21
+    },
+    {
+      "name": "St. Louis Cardinals",
+      "rank": 22
+    },
+    {
+      "name": "Detroit Tigers",
+      "rank": 23
+    },
+    {
+      "name": "New York Mets",
+      "rank": 24
+    },
+    {
+      "name": "Cincinnati Reds",
+      "rank": 25
+    },
+    {
+      "name": "Minnesota Twins",
+      "rank": 26
+    },
+    {
+      "name": "San Francisco Giants",
+      "rank": 27
+    },
+    {
+      "name": "Athletics",
+      "rank": 28
+    },
+    {
+      "name": "Los Angeles Angels",
+      "rank": 29
+    },
+    {
+      "name": "Colorado Rockies",
+      "rank": 30
+    }
+  ],
+  "hitters": [
+    {
+      "name": "Yordan Alvarez",
+      "ops": 1.048,
+      "hr": 37
+    },
+    {
+      "name": "Pete Crow-Armstrong",
+      "ops": 0.944,
+      "hr": 36
+    },
+    {
+      "name": "James Wood",
+      "ops": 0.928,
+      "hr": 30
+    },
+    {
+      "name": "Shohei Ohtani",
+      "ops": 0.918,
+      "hr": 30
+    },
+    {
+      "name": "Willson Contreras",
+      "ops": 0.906,
+      "hr": 26
+    },
+    {
+      "name": "Junior Caminero",
+      "ops": 0.9,
+      "hr": 36
+    },
+    {
+      "name": "Kyle Schwarber",
+      "ops": 0.889,
+      "hr": 40
+    },
+    {
+      "name": "Jake Bauers",
+      "ops": 0.888,
+      "hr": 23
+    },
+    {
+      "name": "Bryce Harper",
+      "ops": 0.888,
+      "hr": 27
+    },
+    {
+      "name": "Nick Kurtz",
+      "ops": 0.879,
+      "hr": 21
+    },
+    {
+      "name": "Luis Garc\u00eda Jr.",
+      "ops": 0.877,
+      "hr": 28
+    },
+    {
+      "name": "Ben Rice",
+      "ops": 0.877,
+      "hr": 35
+    },
+    {
+      "name": "Hunter Goodman",
+      "ops": 0.866,
+      "hr": 36
+    },
+    {
+      "name": "Matt Olson",
+      "ops": 0.865,
+      "hr": 37
+    },
+    {
+      "name": "Munetaka Murakami",
+      "ops": 0.864,
+      "hr": 29
+    },
+    {
+      "name": "Seiya Suzuki",
+      "ops": 0.862,
+      "hr": 23
+    },
+    {
+      "name": "Pete Alonso",
+      "ops": 0.861,
+      "hr": 32
+    },
+    {
+      "name": "CJ Abrams",
+      "ops": 0.856,
+      "hr": 29
+    },
+    {
+      "name": "Miguel Vargas",
+      "ops": 0.855,
+      "hr": 29
+    },
+    {
+      "name": "Gabriel Moreno",
+      "ops": 0.848,
+      "hr": 11
+    },
+    {
+      "name": "Jordan Walker",
+      "ops": 0.845,
+      "hr": 27
+    },
+    {
+      "name": "Yandy D\u00edaz",
+      "ops": 0.838,
+      "hr": 20
+    },
+    {
+      "name": "Max Muncy",
+      "ops": 0.838,
+      "hr": 26
+    },
+    {
+      "name": "Jac Caglianone",
+      "ops": 0.833,
+      "hr": 23
+    },
+    {
+      "name": "Alec Burleson",
+      "ops": 0.831,
+      "hr": 21
+    },
+    {
+      "name": "Freddie Freeman",
+      "ops": 0.83,
+      "hr": 15
+    },
+    {
+      "name": "Randy Arozarena",
+      "ops": 0.827,
+      "hr": 20
+    },
+    {
+      "name": "Elly De La Cruz",
+      "ops": 0.825,
+      "hr": 21
+    },
+    {
+      "name": "Corbin Carroll",
+      "ops": 0.822,
+      "hr": 19
+    },
+    {
+      "name": "Sal Stewart",
+      "ops": 0.821,
+      "hr": 30
+    },
+    {
+      "name": "Jackson Chourio",
+      "ops": 0.82,
+      "hr": 20
+    },
+    {
+      "name": "Michael Harris II",
+      "ops": 0.82,
+      "hr": 22
+    },
+    {
+      "name": "TJ Rumfield",
+      "ops": 0.819,
+      "hr": 13
+    },
+    {
+      "name": "Bobby Witt Jr.",
+      "ops": 0.819,
+      "hr": 16
+    },
+    {
+      "name": "Liam Hicks",
+      "ops": 0.817,
+      "hr": 17
+    },
+    {
+      "name": "Riley Greene",
+      "ops": 0.816,
+      "hr": 16
+    },
+    {
+      "name": "Rafael Devers",
+      "ops": 0.813,
+      "hr": 29
+    },
+    {
+      "name": "Drake Baldwin",
+      "ops": 0.81,
+      "hr": 22
+    },
+    {
+      "name": "Tyler Soderstrom",
+      "ops": 0.81,
+      "hr": 19
+    },
+    {
+      "name": "Mike Trout",
+      "ops": 0.806,
+      "hr": 20
+    }
+  ],
+  "pitchers": [
+    {
+      "name": "Jacob Misiorowski",
+      "era": 1.73,
+      "forma": 97.4
+    },
+    {
+      "name": "Chris Sale",
+      "era": 2.06,
+      "forma": 85.4
+    },
+    {
+      "name": "Cam Schlittler",
+      "era": 2.09,
+      "forma": 86.4
+    },
+    {
+      "name": "Dylan Cease",
+      "era": 2.33,
+      "forma": 80.4
+    },
+    {
+      "name": "Parker Messick",
+      "era": 2.5,
+      "forma": 80.1
+    },
+    {
+      "name": "Eduardo Rodriguez",
+      "era": 2.5,
+      "forma": 72.6
+    },
+    {
+      "name": "Cristopher S\u00e1nchez",
+      "era": 2.52,
+      "forma": 72.4
+    },
+    {
+      "name": "Yoshinobu Yamamoto",
+      "era": 2.56,
+      "forma": 84.5
+    },
+    {
+      "name": "Chase Burns",
+      "era": 2.77,
+      "forma": 71.3
+    },
+    {
+      "name": "Sonny Gray",
+      "era": 2.82,
+      "forma": 69.5
+    },
+    {
+      "name": "Drew Rasmussen",
+      "era": 2.95,
+      "forma": 78.5
+    },
+    {
+      "name": "Nick Martinez",
+      "era": 2.99,
+      "forma": 70.9
+    },
+    {
+      "name": "Nolan McLean",
+      "era": 3.06,
+      "forma": 69.3
+    },
+    {
+      "name": "Jes\u00fas Luzardo",
+      "era": 3.09,
+      "forma": 69.0
+    },
+    {
+      "name": "Cade Cavalli",
+      "era": 3.12,
+      "forma": 65.3
+    },
+    {
+      "name": "Foster Griffin",
+      "era": 3.21,
+      "forma": 67.7
+    },
+    {
+      "name": "Robbie Ray",
+      "era": 3.21,
+      "forma": 59.8
+    },
+    {
+      "name": "Michael King",
+      "era": 3.23,
+      "forma": 65.4
+    },
+    {
+      "name": "Keider Montero",
+      "era": 3.24,
+      "forma": 72.8
+    },
+    {
+      "name": "Sean Burke",
+      "era": 3.32,
+      "forma": 65.2
+    },
+    {
+      "name": "Michael Wacha",
+      "era": 3.32,
+      "forma": 67.3
+    },
+    {
+      "name": "Logan Gilbert",
+      "era": 3.36,
+      "forma": 70.2
+    },
+    {
+      "name": "Jos\u00e9 Soriano",
+      "era": 3.45,
+      "forma": 58.3
+    },
+    {
+      "name": "Sandy Alcantara",
+      "era": 3.46,
+      "forma": 62.0
+    },
+    {
+      "name": "Reid Detmers",
+      "era": 3.54,
+      "forma": 66.1
+    },
+    {
+      "name": "Emerson Hancock",
+      "era": 3.57,
+      "forma": 62.8
+    },
+    {
+      "name": "Braxton Ashcraft",
+      "era": 3.59,
+      "forma": 65.5
+    },
+    {
+      "name": "Ryan Weathers",
+      "era": 3.6,
+      "forma": 59.2
+    },
+    {
+      "name": "Joey Cantillo",
+      "era": 3.7,
+      "forma": 48.5
+    },
+    {
+      "name": "J.T. Ginn",
+      "era": 3.71,
+      "forma": 57.1
+    },
+    {
+      "name": "Logan Webb",
+      "era": 3.72,
+      "forma": 62.8
+    },
+    {
+      "name": "Shota Imanaga",
+      "era": 3.78,
+      "forma": 61.3
+    },
+    {
+      "name": "Paul Skenes",
+      "era": 3.79,
+      "forma": 61.2
+    },
+    {
+      "name": "Michael McGreevy",
+      "era": 3.86,
+      "forma": 55.0
+    },
+    {
+      "name": "Tanner Bibee",
+      "era": 3.88,
+      "forma": 58.6
+    },
+    {
+      "name": "Bryce Elder",
+      "era": 3.95,
+      "forma": 54.4
+    },
+    {
+      "name": "Taj Bradley",
+      "era": 3.97,
+      "forma": 52.6
+    },
+    {
+      "name": "Noah Cameron",
+      "era": 3.98,
+      "forma": 54.9
+    },
+    {
+      "name": "Gavin Williams",
+      "era": 3.98,
+      "forma": 59.1
+    },
+    {
+      "name": "Shane Baz",
+      "era": 4.01,
+      "forma": 49.2
+    }
+  ],
+  "rookies": [
+    {
+      "name": "Eduardo Valencia",
+      "ops": 0.978,
+      "hr": 6
+    },
+    {
+      "name": "Esmerlyn Valdez",
+      "ops": 0.883,
+      "hr": 15
+    },
+    {
+      "name": "Munetaka Murakami",
+      "ops": 0.864,
+      "hr": 29
+    },
+    {
+      "name": "Rafael Flores Jr.",
+      "ops": 0.859,
+      "hr": 7
+    },
+    {
+      "name": "Sal Stewart",
+      "ops": 0.821,
+      "hr": 30
+    },
+    {
+      "name": "TJ Rumfield",
+      "ops": 0.819,
+      "hr": 13
+    },
+    {
+      "name": "Tristan Peters",
+      "ops": 0.812,
+      "hr": 12
+    },
+    {
+      "name": "Bryce Eldridge",
+      "ops": 0.804,
+      "hr": 15
+    },
+    {
+      "name": "Chase DeLauter",
+      "ops": 0.803,
+      "hr": 13
+    },
+    {
+      "name": "Pedro Ram\u00edrez",
+      "ops": 0.801,
+      "hr": 4
+    },
+    {
+      "name": "Kevin McGonigle",
+      "ops": 0.797,
+      "hr": 14
+    },
+    {
+      "name": "Cole Carrigg",
+      "ops": 0.789,
+      "hr": 6
+    },
+    {
+      "name": "Carson Benge",
+      "ops": 0.765,
+      "hr": 16
+    },
+    {
+      "name": "Brett Bateman",
+      "ops": 0.761,
+      "hr": 0
+    },
+    {
+      "name": "Sam Antonacci",
+      "ops": 0.755,
+      "hr": 8
+    },
+    {
+      "name": "Kazuma Okamoto",
+      "ops": 0.745,
+      "hr": 27
+    },
+    {
+      "name": "Konnor Griffin",
+      "ops": 0.736,
+      "hr": 5
+    },
+    {
+      "name": "Victor Mesa Jr.",
+      "ops": 0.735,
+      "hr": 10
+    },
+    {
+      "name": "Max Clark",
+      "ops": 0.734,
+      "hr": 2
+    },
+    {
+      "name": "Wade Meckler",
+      "ops": 0.731,
+      "hr": 3
+    },
+    {
+      "name": "Abimelec Ortiz",
+      "ops": 0.728,
+      "hr": 5
+    },
+    {
+      "name": "Hao-Yu Lee",
+      "ops": 0.725,
+      "hr": 7
+    },
+    {
+      "name": "Luis Lara",
+      "ops": 0.724,
+      "hr": 1
+    },
+    {
+      "name": "Samuel Basallo",
+      "ops": 0.722,
+      "hr": 17
+    },
+    {
+      "name": "Dylan Beavers",
+      "ops": 0.72,
+      "hr": 6
+    }
+  ],
+  "narration": {
+    "title": "Atlanta Sweeps Its Way Into the Top Three",
+    "intro": "The Braves went 6-0 this week and jumped six spots to third in the power ranking. Nobody else near the top moved much, but Atlanta didn't leave a choice.",
+    "power_lead": "Milwaukee stays first at 85-51, Christian Yelich going 9-for-16 to keep the engine humming. The real climb belongs to Atlanta, a perfect 6-0 with a Chris Sale nine-inning shutout in the middle of it, and to Tampa Bay, up six to sixth on a 5-1 week behind Junior Caminero.",
+    "offense_lead": "The Cubs still own the best team OPS at .767, a hair ahead of the Dodgers at .757. Washington sits third at .755, quietly one of the more productive lineups in the league.",
+    "staffs_lead": "The Yankees have the best rotation ERA at 3.34, with Detroit (3.42) and Milwaukee (3.43) right behind. Boston's bullpen leads the relief board at 2.94, so the Red Sox and Yankees are covering both ends of the game about as well as anyone."
+  }
+}
