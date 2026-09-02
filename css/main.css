@@ -100,7 +100,7 @@
   }
   .rankings-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
   }
   .ranking-link {
@@ -138,6 +138,7 @@
   .ranking-link--rotation { --ranking-accent: #16a34a; }
   .ranking-link--bullpen { --ranking-accent: #1565d8; }
   .ranking-link--batters { --ranking-accent: #e05a2b; }
+  .ranking-link--matchup { --ranking-accent: #e8c23a; }
   .ranking-kicker {
     position: relative;
     width: fit-content;
