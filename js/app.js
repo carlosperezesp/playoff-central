@@ -3733,7 +3733,7 @@ function playerDetailHTML(p, type, roleOrPos) {
 
   return `<div class="impact-row">
     <div class="impact-row-left">
-      <img class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(selectedTeamId)}" alt="${p.name}"
+      <img loading="lazy" class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(selectedTeamId)}" alt="${p.name}"
         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
       <div class="impact-name-block">
         <div class="impact-name">${p.name} ${handBadge}${secPosBadges}${rookieBadge}${p.tradedIn ? '<span class="traded-badge">TRADE</span>' : ''}${p.isRookie ? '' : awardInlineBadges(p.id)}${restBadge}</div>
@@ -4049,7 +4049,7 @@ function renderDiamondPanel(teamId, impact) {
       else if (!p.isPitcher && ilCareer?.ops && p.ops) ilTrend = trendBadgeHTML(p.ops, ilCareer.ops, 'ops');
       return `<div class="il-row">
         <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-          <img class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(selectedTeamId)}" alt="${p.name}"
+          <img loading="lazy" class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(selectedTeamId)}" alt="${p.name}"
             onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
           <div class="impact-name-block">
             <div class="impact-name" style="opacity:.8">${p.name}
@@ -4771,8 +4771,18 @@ function trendFormaHTML(currentScore, careerScore) {
 
 const loaded = { standings: true, bracket: false, schedule: false, rosters: false, rankings: true, topgames: false, players: false, mvp: false };
 
+// Warm the three tabs the reader has not opened yet, so switching to one is
+// instant. The standings he is looking at are done in well under a second;
+// these panels are another hundred requests behind them, and on a fixed 250 ms
+// timer they used to start while the visible tab was still pulling its logos.
+// Waiting for the browser to fall idle puts them properly second in line, and
+// a phone on Data Saver or a 2G radio skips the speculation altogether —
+// switchTab loads any tab on demand, so nothing is lost but the head start.
 function warmAppData() {
-  setTimeout(() => {
+  const conn = navigator.connection || {};
+  if (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')) return;
+
+  const warm = () => {
     ensureMvpLists().catch(e => console.warn('MVP preload failed:', e));
 
     if (!loaded.topgames) {
@@ -4784,7 +4794,24 @@ function warmAppData() {
       loaded.rosters = true;
       loadRosters().catch(e => console.warn('Rosters preload failed:', e));
     }
-  }, 250);
+  };
+
+  // Wait for the standings the reader is actually looking at to finish their
+  // logos. requestIdleCallback is the wrong signal: it measures a free main
+  // thread, and the contention here is the network — on a quick machine it
+  // fires sooner than the old fixed timer and puts a hundred speculative
+  // requests ahead of the visible tab.
+  const pending = [...document.querySelectorAll('#standingsContent img')].filter(i => !i.complete);
+  if (!pending.length) { setTimeout(warm, 250); return; }
+
+  let left = pending.length, started = false;
+  const go = () => { if (!started) { started = true; setTimeout(warm, 100); } };
+  pending.forEach(img => {
+    const done = () => { if (--left === 0) go(); };
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', done, { once: true });
+  });
+  setTimeout(go, 2500);   // one stalled logo must not hold the prefetch forever
 }
 
 function switchTab(tab) {
@@ -5176,7 +5203,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     const nm=(t.team.teamName||t.team.name||'').toUpperCase();
     if(!p)return `<div class="wb-sp"><div class="wb-sp-head"><div class="wb-sp-id"><div class="wb-lab">${nm}</div><div class="wb-nm">TBD</div></div></div></div>`;
     const f=forma(p.era,p.whip), c=tier(f);
-    return `<div class="wb-sp" style="background:${lighten(c,0.84)};border:1px solid ${lighten(c,0.48)}"><div class="wb-sp-head"><img class="wb-sp-face" src="${head(pp.id)}" style="background:${teamBg(t.team.id)}" onerror="this.style.visibility='hidden'"><div class="wb-sp-id"><div class="wb-lab">${nm}</div><div class="wb-nm">${p.name}${p.num?`<span class="wb-num">#${p.num}</span>`:''}</div></div><div class="wb-sp-form" style="color:${shade(c,0.18)}"><div class="wb-fv">${f!=null?f:'—'}</div><div class="wb-fl">FORM</div></div></div><div class="wb-st"><b>${p.era!=null?p.era.toFixed(2):'—'}</b> ERA · <b>${p.whip!=null?p.whip.toFixed(2):'—'}</b> WHIP · ${p.w}-${p.l} · ${p.ip} IP · ${p.so} K</div></div>`;
+    return `<div class="wb-sp" style="background:${lighten(c,0.84)};border:1px solid ${lighten(c,0.48)}"><div class="wb-sp-head"><img loading="lazy" class="wb-sp-face" src="${head(pp.id)}" style="background:${teamBg(t.team.id)}" onerror="this.style.visibility='hidden'"><div class="wb-sp-id"><div class="wb-lab">${nm}</div><div class="wb-nm">${p.name}${p.num?`<span class="wb-num">#${p.num}</span>`:''}</div></div><div class="wb-sp-form" style="color:${shade(c,0.18)}"><div class="wb-fv">${f!=null?f:'—'}</div><div class="wb-fl">FORM</div></div></div><div class="wb-st"><b>${p.era!=null?p.era.toFixed(2):'—'}</b> ERA · <b>${p.whip!=null?p.whip.toFixed(2):'—'}</b> WHIP · ${p.w}-${p.l} · ${p.ip} IP · ${p.so} K</div></div>`;
   }
 
   function render(games,people){
@@ -5207,7 +5234,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     for(const k of ['MVP','CY','ROY']){const f=sets[k].find(p=>p.pid===pid);if(f&&f.rank<=th[k])return `<span class="wb-race">${lab[k]}</span>`;}
     return '';
   }
-  function ptwCard(p,abbr,teamId){return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(p.id)}" style="background:${teamBg(teamId)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${p.name}<span class="wb-ptw-tm">${abbr}</span></div><div class="wb-ptw-st">${fmt3(p.avg)} AVG · ${p.hr} HR · ${p.rbi} RBI · ${fmt3(p.ops)} OPS</div></div>${raceChip(p.id)}</div>`;}
+  function ptwCard(p,abbr,teamId){return `<div class="wb-ptw-p"><img loading="lazy" class="wb-ptw-face" src="${head(p.id)}" style="background:${teamBg(teamId)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${p.name}<span class="wb-ptw-tm">${abbr}</span></div><div class="wb-ptw-st">${fmt3(p.avg)} AVG · ${p.hr} HR · ${p.rbi} RBI · ${fmt3(p.ops)} OPS</div></div>${raceChip(p.id)}</div>`;}
   async function fillPTW(g){
     const box=$('wbptw-'+g.gamePk); if(!box)return;
     let data=ptwCache[g.gamePk];
@@ -5252,7 +5279,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
       starsCache[pk]=stars.slice(0,3); return starsCache[pk];
     }catch(e){return [];}
   }
-  function starCard(s){return `<div class="wb-ptw-p"><img class="wb-ptw-face" src="${head(s.pid)}" style="background:${teamBg(s.tid)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${s.name}<span class="wb-ptw-tm">${s.abbr}</span></div><div class="wb-ptw-st">${s.line}</div></div></div>`;}
+  function starCard(s){return `<div class="wb-ptw-p"><img loading="lazy" class="wb-ptw-face" src="${head(s.pid)}" style="background:${teamBg(s.tid)}" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><div class="wb-ptw-nm">${s.name}<span class="wb-ptw-tm">${s.abbr}</span></div><div class="wb-ptw-st">${s.line}</div></div></div>`;}
   async function fillStars(g){
     const box=$('wbstars-'+g.gamePk); if(!box)return;
     const stars=await loadStars(g);
@@ -5489,7 +5516,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
         <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${lc};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
         <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
           <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-            <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+            <img loading="lazy" class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
               onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
             <div class="impact-name-block">
               <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name} ${rookieBadge}</div>
@@ -5553,7 +5580,7 @@ async function _tgLoadFuture(day, dateD, dateStr, contentEl) {
       else if (!isPitcher && stats.avg) statsLine = `AVG ${stats.avg} · HR ${stats.homeRuns??'—'} · RBI ${stats.rbi??'—'}`;
       return `<div class="impact-row">
         <div class="impact-row-left">
-          <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+          <img loading="lazy" class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
             onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
           <div class="impact-name-block">
             <div class="impact-name">${c.name||'?'} ${rookieBadge} ${teamPill}</div>
@@ -5877,7 +5904,7 @@ async function _tgLoadAyer(dateD, dateStr, contentEl) {
     const statsLine = p.topStats.join(' · ') || (p.type==='pitcher' ? '0 ER' : '1 H');
     return `<div class="impact-row">
       <div class="impact-row-left">
-        <img class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(p.teamMeta)}" onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
+        <img loading="lazy" class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(p.teamMeta)}" onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
         <div class="impact-name-block">
           <div class="impact-name">${p.name} ${roleBadge} ${rookieBadge} ${teamPill}</div>
           <div class="impact-stats-line">${statsLine}</div>
@@ -6622,7 +6649,7 @@ async function _OLD_loadTopGames() {
       const statsLine = p.topStats.join(' · ') || (p.type === 'pitcher' ? '0 ER' : '1 H');
       return `<div class="impact-row">
         <div class="impact-row-left">
-          <img class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(p.teamMeta)}"
+          <img loading="lazy" class="impact-photo" src="${p.photoUrl}" style="background:${teamPhotoBg(p.teamMeta)}"
             onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
           <div class="impact-name-block">
             <div class="impact-name">${p.name} ${roleBadge} ${rookieBadge} ${teamPill}</div>
@@ -6801,7 +6828,7 @@ async function _OLD_loadTopGames() {
           <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${labelColor};text-transform:uppercase;margin-bottom:6px">${spLabel}</div>
           <div style="display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:start">
             <div class="impact-row-left" style="grid-column:1;grid-row:1/3">
-              <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+              <img loading="lazy" class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
               <div class="impact-name-block">
                 <div class="impact-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name} ${rookieBadge}</div>
@@ -6864,7 +6891,7 @@ async function _OLD_loadTopGames() {
           const statsLine = `ERA ${ps.era||'—'} · WHIP ${ps.whip||'—'} · IP ${ps.inningsPitched||'—'} · GS ${ps.gamesStarted??'—'}`;
           return `<div class="impact-row">
             <div class="impact-row-left">
-              <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+              <img loading="lazy" class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
               <div class="impact-name-block">
                 <div class="impact-name">${c.name} ${posBadge} ${rookieBadge} ${teamPill}</div>
@@ -6891,7 +6918,7 @@ async function _OLD_loadTopGames() {
           const statsLine2 = `RBI ${hs.rbi??'—'} · SB ${hs.stolenBases??'—'}`;
           return `<div class="impact-row">
             <div class="impact-row-left">
-              <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+              <img loading="lazy" class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
                 onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
               <div class="impact-name-block">
                 <div class="impact-name">${c.name} ${posBadge} ${rookieBadge} ${teamPill}</div>
@@ -6913,7 +6940,7 @@ async function _OLD_loadTopGames() {
         // No stats yet
         return `<div class="impact-row">
           <div class="impact-row-left">
-            <img class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
+            <img loading="lazy" class="impact-photo" src="${photoUrl}" style="background:${photoBg}"
               onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
             <div class="impact-name-block">
               <div class="impact-name">${c.name} ${posBadge} ${teamPill}</div>
@@ -7580,7 +7607,7 @@ async function loadPlayers() {
       const teamLogo = teamMeta ? `<img src="${teamMeta.logo}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px" onerror="this.style.display='none'">` : '';
       return `<div class="player-rank-card">
         <div class="player-rank-num${p.rank <= 3 ? ' top3' : ''}">${p.rank}</div>
-        <img class="player-rank-photo" src="${photoUrl}" style="background:${teamPhotoBg(p.teamId)}" alt="${p.name}"
+        <img loading="lazy" class="player-rank-photo" src="${photoUrl}" style="background:${teamPhotoBg(p.teamId)}" alt="${p.name}"
           onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_213,q_auto:best/v1/people/0/headshot/silo/current'">
         <div class="player-rank-info">
           <div class="player-rank-name">${p.name}</div>
@@ -8363,7 +8390,7 @@ async function _loadMVPTracker() {
       return `<details class="mvp-row-wrap">
         <summary class="mvp-row ${rankCls}">
         <div class="mvp-rank ${p.rank <= 3 ? 'top' : ''}">${p.rank}</div>
-        <img class="mvp-photo" src="${photoUrl}" alt="${p.name}" style="background:${teamPhotoBg(p.teamId)}"
+        <img loading="lazy" class="mvp-photo" src="${photoUrl}" alt="${p.name}" style="background:${teamPhotoBg(p.teamId)}"
           onerror="this.src='${siloHeadshot(0)}'">
         <div class="mvp-info">
           <div class="mvp-name">${rookieBadge}${posHtml}<span class="mvp-name-text">${p.name}</span></div>
