@@ -270,6 +270,7 @@
   </a>
 </nav>
 
+<script src="js/apicache.js?v=20260902-perf3"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const WINDOW_DAYS = 30;
@@ -342,7 +343,9 @@ const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
 const int = v => parseInt(v, 10) || 0;
 const isStarter = ln => !!ln && (ln.gs >= 3 || (ln.g >= 3 && ln.gs / ln.g >= 0.5));
 const posOf = p => { const a = (p.primaryPosition || {}).abbreviation; return (a === 'TWP' || a === 'P') ? 'DH' : a; };
-const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+// Served from the shared 15-minute cache when a sister board just asked for
+// the same thing; a plain fetch wherever the Cache API is not available.
+const fj = u => cachedJSON(u);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const opsPool = rows => {

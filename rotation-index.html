@@ -309,6 +309,7 @@
   </a>
 </nav>
 
+<script src="js/apicache.js?v=20260902-perf3"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 
@@ -323,7 +324,7 @@ const F = {
   pitching:  'stats,splits,player,id,fullName,stat,gamesPlayed,gamesStarted,era,whip,'
              + 'inningsPitched,strikeOuts,wins,losses,earnedRuns,hits,baseOnBalls',
   teams:     'teams,id,teamName,name,abbreviation',
-  roster:    'roster,status,code,person,id,fullName',
+  roster:    'roster,status,code,person,id,fullName,position,abbreviation',
   hand:      'people,id,pitchHand,code',
   career:    'people,id,stats,group,displayName,splits,season,stat,inningsPitched,earnedRuns,'
              + 'hits,baseOnBalls,era,whip',
@@ -371,7 +372,9 @@ const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
 // Starter or reliever, from the season line. One start in one appearance says
 // nothing — that is a spot start or an opener, not a rotation arm.
 const isStarter = ln => !!ln && (ln.gs >= 3 || (ln.g >= 3 && ln.gs / ln.g >= 0.5));
-const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+// Served from the shared 15-minute cache when a sister board just asked for
+// the same thing; a plain fetch wherever the Cache API is not available.
+const fj = u => cachedJSON(u);
 
 let TEAMS = [];
 let LINE = {};                 // season lines for the whole league, kept for the axis pool

@@ -359,6 +359,7 @@
   </a>
 </nav>
 
+<script src="js/apicache.js?v=20260902-perf3"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 
@@ -372,7 +373,7 @@ const F = {
              + 'primaryPosition,abbreviation',
   hitting:   'stats,splits,player,id,fullName,stat,avg,obp,slg,ops,plateAppearances,atBats,hits,'
              + 'totalBases,baseOnBalls,hitByPitch,sacFlies,strikeOuts,homeRuns,rbi,stolenBases,gamesPlayed',
-  roster:    'roster,position,abbreviation,status,code,person,id,fullName',
+  roster:    'roster,status,code,person,id,fullName,position,abbreviation',
   bats:      'people,id,batSide,code',
   career:    'people,id,stats,group,displayName,splits,season,stat,atBats,hits,baseOnBalls,hitByPitch,'
              + 'sacFlies,totalBases,plateAppearances,homeRuns,rbi,stolenBases,strikeOuts,ops',
@@ -421,7 +422,9 @@ const face = id => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:g
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
 const int = v => parseInt(v, 10) || 0;
-const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+// Served from the shared 15-minute cache when a sister board just asked for
+// the same thing; a plain fetch wherever the Cache API is not available.
+const fj = u => cachedJSON(u);
 // A pitcher or a two-way player in the lineup is there to hit — the app files him at DH
 const posOf = p => { const a = (p.primaryPosition || {}).abbreviation; return (a === 'TWP' || a === 'P') ? 'DH' : a; };
 // OBP and SLG pooled from raw totals, never an average of averages
