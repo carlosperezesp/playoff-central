@@ -18,7 +18,7 @@
     background:#0d1a12 radial-gradient(120% 75% at 50% -8%, #223d2a 0%, #16281c 52%, #0d1a1200 100%) fixed;
     padding:24px 14px 70px; -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:900px;margin:0 auto}
+  .wrap{max-width:1100px;margin:0 auto}
 
   /* ── Page header ─────────────────────────────────────────── */
   .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
@@ -52,6 +52,29 @@
     color:var(--ink-dim);background:none;border:0;cursor:pointer;padding:4px}
   .swap:hover{color:var(--ink)}
 
+  .matchup-summary{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:12px;margin-bottom:16px}
+  .team-card{position:relative;overflow:hidden;border:1px solid rgba(243,239,224,.16);border-radius:14px;
+    padding:15px 16px;background:rgba(243,239,224,.035);min-height:136px}
+  .team-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--team-color),transparent 62%);
+    opacity:.22;pointer-events:none}
+  .team-card.b{text-align:right}
+  .team-card img{position:absolute;right:13px;bottom:10px;width:74px;height:74px;object-fit:contain;opacity:.24}
+  .team-card.b img{right:auto;left:13px}
+  .team-label{position:relative;z-index:1;font-weight:800;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft)}
+  .team-name{position:relative;z-index:1;font-family:'Bebas Neue';font-size:38px;line-height:.95;letter-spacing:1.6px;color:#fff;margin-top:8px}
+  .team-score{position:relative;z-index:1;display:flex;align-items:baseline;gap:8px;margin-top:12px}
+  .team-card.b .team-score{justify-content:flex-end}
+  .team-score b{font-family:'Bebas Neue';font-weight:400;font-size:38px;line-height:1}
+  .team-score span{font-weight:800;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft)}
+  .verdict{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:136px;
+    border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(0,0,0,.14);text-align:center}
+  .verdict span{font-weight:800;font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-soft)}
+  .verdict b{font-family:'Bebas Neue';font-weight:400;font-size:28px;line-height:1;color:var(--gold);letter-spacing:1px}
+  .adv-strip{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+  .adv-pill{font-weight:800;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;border:1px solid var(--line);
+    border-radius:999px;padding:4px 8px;background:rgba(243,239,224,.04);color:var(--ink-dim)}
+  .adv-pill.win{border-color:rgba(22,163,74,.45);background:rgba(22,163,74,.12);color:#4ade80}
+
   /* ── Comparison blocks ───────────────────────────────────── */
   .block{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px;
     background:rgba(243,239,224,.02)}
@@ -73,27 +96,109 @@
   .bar{height:7px;border-radius:99px;overflow:hidden;display:flex;margin:0 16px 14px}
   .bar i{display:block;height:100%}
 
+  .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 16px 16px}
+  .metric{border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.12);padding:8px}
+  .metric-name{display:block;font-weight:800;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
+    margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .metric-values{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .metric-val{font-weight:800;font-size:16px;line-height:1;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+  .metric-val.b{text-align:right}
+  .metric-val.win{color:#4ade80}
+
   .rosters{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--line)}
   .roster{padding:12px 16px 14px}
   .roster + .roster{border-left:1px solid var(--line)}
-  .man{display:flex;align-items:center;gap:9px;padding:4px 0}
-  .man-n{font-weight:800;font-size:11.5px;padding:2px 6px;border-radius:4px;min-width:34px;text-align:center;
-    flex-shrink:0}
-  .man-name{font-weight:600;font-size:13.5px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;
+  /* ── Player rows, in the Rotation / Bullpen / Batters language ─────────── */
+  .sec{display:flex;align-items:center;gap:10px;margin:2px 2px 6px}
+  .sec.gap{margin-top:14px}
+  .sec-l{font-weight:800;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft);
     white-space:nowrap}
-  .man-slot{font-weight:800;font-size:9.5px;letter-spacing:1px;color:var(--ink-soft);flex-shrink:0}
+  .sec-r{flex:1;height:1px;background:var(--line)}
+  .sp{display:grid;grid-template-columns:44px 44px minmax(0,1fr);gap:11px;align-items:center;
+    padding:9px 2px;border-bottom:1px solid var(--line)}
+  .sp.bat{grid-template-columns:18px 44px 44px minmax(0,1fr);gap:9px}
+  .men .sp:last-child{border-bottom:0}
+  .ord{font-family:'Bebas Neue';font-size:17px;line-height:1;color:var(--ink-soft);text-align:center}
+  /* same treatment as the social card's form chip */
+  .sp-form{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Barlow Condensed';font-weight:800;font-size:21px;line-height:1;flex-shrink:0;
+    border:2px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 -5px 10px rgba(0,0,0,.22), 0 4px 10px rgba(0,0,0,.32)}
+  .sp-form.ops{font-size:16px}
+  .sp-face{width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0}
+  .sp-face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .sp-name{font-family:'Bebas Neue';font-size:20px;letter-spacing:.9px;line-height:1.1;color:#fff;
+    display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .pos{font-family:'Barlow Condensed';font-weight:800;font-size:9.5px;letter-spacing:1.2px;padding:2px 6px;
+    border-radius:4px;background:rgba(255,255,255,.13);color:#fff}
+  .hand{font-family:'Barlow Condensed';font-weight:800;font-size:9.5px;letter-spacing:1px;padding:2px 6px;
+    border-radius:4px;background:rgba(184,15,33,.22);color:#ff8a97}
+  .hand.L{background:rgba(21,101,216,.28);color:#8fc4ff}
+  .hand.S{background:rgba(232,194,58,.2);color:#e8c23a}
+  .role{font-family:'Barlow Condensed';font-weight:800;font-size:9.5px;letter-spacing:1.2px;padding:2px 6px;
+    border-radius:4px;background:rgba(232,194,58,.18);color:#e8c23a}
+  .role.set{background:rgba(159,180,166,.18);color:#c3d4c9}
+  .sp-sub{font-weight:600;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim)}
+  .statline{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 8px;margin-top:4px;
+    font-weight:700;font-size:12px}
+  .statline .s{white-space:nowrap}
+  .statline .s b{font-weight:800;font-size:14.5px;letter-spacing:.3px}
+  .statline .s i{font-style:normal;font-size:9.5px;letter-spacing:1px;color:var(--ink-soft);margin-left:2px}
+  .statline .sep{color:var(--ink-soft);font-size:11px}
+  /* Where he stands against his own past: the arrow, then five seasons of dots */
+  .sp-hist{display:flex;align-items:center;gap:9px;margin-top:5px}
+  .sp-hist:empty{display:none}
+  .trend{font-family:'Inter',sans-serif;font-size:9px;font-weight:700;line-height:1.2;
+    padding:3px 6px;border-radius:4px;letter-spacing:.2px;white-space:nowrap}
+  .dots{display:flex;gap:3px;align-items:center}
+  .dots .dl{font-weight:700;font-size:8.5px;letter-spacing:.8px;color:var(--ink-soft);margin-right:2px}
+  .dots i{width:8px;height:8px;border-radius:50%;opacity:.9;display:block}
+  /* Men the club is without. Shown, never scored. */
+  .outs{display:flex;flex-wrap:wrap;gap:7px;margin:2px 2px 0}
+  .out{display:flex;align-items:center;gap:8px;padding:5px 11px 5px 5px;border:1px solid rgba(243,239,224,.2);
+    border-radius:999px;background:rgba(243,239,224,.06)}
+  .out-f{font-weight:800;font-size:12px;padding:3px 7px;border-radius:5px;min-width:32px;text-align:center}
+  .out-n{font-weight:600;font-size:13.5px;color:var(--ink)}
+  .out-il{font-weight:800;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:#f0b429;
+    padding:2px 6px;border-radius:4px;background:rgba(240,180,41,.14);white-space:nowrap}
   .thin{font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft);padding:6px 0}
 
   .state{padding:60px 10px;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;
     color:var(--ink-soft)}
   .note{font-family:'Inter',sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);margin-top:20px}
+  .bottom-nav{display:none}
 
-  @media (max-width:640px){
+  @media (max-width:768px){
+    body{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
     .brand-txt{font-size:22px}.back-pill{font-size:10px;padding:6px 10px;letter-spacing:1px}
     .top-pill{font-size:10px;padding:6px 11px;letter-spacing:1.2px}
+    .top{align-items:flex-start;flex-direction:column;gap:12px}
+    .top-actions{gap:6px}
+    .pickers{grid-template-columns:1fr;gap:9px}
+    .matchup-summary{grid-template-columns:1fr;gap:10px}
+    .team-card.b{text-align:left}
+    .team-card.b img{left:auto;right:13px}
+    .team-card.b .team-score{justify-content:flex-start}
+    .verdict{min-width:0}
     .side-num{font-size:34px}
+    .metric-grid{grid-template-columns:1fr 1fr;padding:0 12px 14px}
     .rosters{grid-template-columns:1fr}
     .roster + .roster{border-left:0;border-top:1px solid var(--line)}
+    .roster{padding:10px 12px 12px}
+    .sp{grid-template-columns:40px 40px minmax(0,1fr);gap:9px}
+    .sp.bat{grid-template-columns:16px 40px 40px minmax(0,1fr);gap:8px}
+    .sp-form,.sp-face{width:40px;height:40px}
+    .sp-form{font-size:19px}
+    .sp-name{font-size:18px}
+    .bottom-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));position:fixed;bottom:0;left:0;right:0;height:58px;
+      padding-bottom:env(safe-area-inset-bottom);background:#0d2016;box-shadow:0 -2px 16px rgba(0,0,0,.2);
+      z-index:200}
+    .bnav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;
+      padding:6px 2px;border:0;background:none;color:rgba(255,255,255,.4);text-decoration:none;
+      font-family:'Barlow Condensed';font-size:9px;font-weight:700;letter-spacing:.45px;text-transform:uppercase}
+    .bnav-btn svg{width:19px;height:19px;flex-shrink:0}
+    .bnav-btn span{white-space:nowrap}
+    .bnav-btn.active{color:#16a34a}
   }
 </style>
 </head>
@@ -130,6 +235,33 @@
   <p class="note" id="note" hidden></p>
 </div>
 
+<nav class="bottom-nav" aria-label="Primary navigation">
+  <a class="bnav-btn" href="index.html#standings">
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12,22 22,15 22,2 2,2 2,15"/></svg>
+    <span>HOME</span>
+  </a>
+  <a class="bnav-btn" href="index.html#topgames">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>TOP GAMES</span>
+  </a>
+  <a class="bnav-btn" href="index.html#rosters">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>TEAMS</span>
+  </a>
+  <a class="bnav-btn active" href="index.html#rankings" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>RANKINGS</span>
+  </a>
+  <a class="bnav-btn" href="index.html#mvp">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+    <span>MVP RACE</span>
+  </a>
+  <a class="bnav-btn" href="index.html#info">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <span>INFO</span>
+  </a>
+</nav>
+
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const WINDOW_DAYS = 30;
@@ -165,7 +297,15 @@ const PRIMARY = {108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0
   134:'#FDB827',135:'#2F241D',136:'#0C2C56',137:'#FD5A1E',138:'#C41E3A',139:'#092C5C',140:'#003278',141:'#134A8E',
   142:'#002B5C',143:'#E81828',144:'#CE1141',145:'#27251F',146:'#00A3E0',147:'#003087',158:'#12284B'};
 
+const svPctColor = p => p == null ? '#9ca3af' : p >= .90 ? TIERS[0] : p >= .80 ? TIERS[1] : p >= .70 ? TIERS[2] : p >= .60 ? TIERS[3] : TIERS[4];
+const irsColor = p => p == null ? '#9ca3af' : p >= .85 ? TIERS[0] : p >= .75 ? TIERS[1] : p >= .65 ? TIERS[2] : p >= .55 ? TIERS[3] : TIERS[4];
+const pctColor = (w,l) => (w + l) === 0 ? '#9ca3af'
+  : (p => p >= .650 ? TIERS[0] : p >= .550 ? TIERS[1] : p >= .450 ? TIERS[2] : p >= .350 ? TIERS[3] : TIERS[4])(w / (w + l));
+const AVG_T = [.300, .255, .205, .160], OBP_T = [.380, .330, .275, .250], SLG_T = [.545, .425, .315, .270];
+const rgba = (h,a) => { const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; };
+
 const logo = id => `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg`;
+const face = id => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_180,q_auto:best/v1/people/${id}/headshot/silo/current`;
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const ipToFloat = ip => { const s=String(ip ?? '0'); if(!s.includes('.')) return parseFloat(s)||0;
   const [w,f]=s.split('.'); return (parseInt(w,10)||0)+(parseInt(f,10)||0)/3; };
@@ -178,7 +318,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 
 const opsPool = rows => {
   const t = rows.reduce((a,s) => ({ ab:a.ab+s.ab, h:a.h+s.h, bb:a.bb+s.bb, hbp:a.hbp+s.hbp, sf:a.sf+s.sf,
-    tb:a.tb+s.tb, pa:a.pa+s.pa }), {ab:0,h:0,bb:0,hbp:0,sf:0,tb:0,pa:0});
+    tb:a.tb+s.tb, pa:a.pa+s.pa, hr:a.hr+s.hr, rbi:a.rbi+s.rbi, sb:a.sb+s.sb }),
+    {ab:0,h:0,bb:0,hbp:0,sf:0,tb:0,pa:0,hr:0,rbi:0,sb:0});
+  t.avg = t.ab > 0 ? t.h / t.ab : null;
   const onBase = t.ab + t.bb + t.hbp + t.sf;
   t.obp = onBase > 0 ? (t.h + t.bb + t.hbp) / onBase : null;
   t.slg = t.ab > 0 ? t.tb / t.ab : null;
@@ -214,8 +356,14 @@ const BACK = {
 // ── State ────────────────────────────────────────────────────────────────────
 let SEASON = new Date().getFullYear();
 let META = {};              // teamId → {id, name, abbr}
-let ROT = {}, PEN = {}, BAT = {};   // teamId → {score, men:[]}
+let ROT = {}, PEN = {}, BAT = {};   // teamId → {score, men:[], out:[]}
 let A = null, B = null;
+// Which pool each board is reading — decides whether a row says "this season"
+// or "in the last 30 days", exactly as the index pages word it
+let ROT_ROSTER = false, PEN_ROSTER = false, BAT_ROSTER = false;
+// Cached by player, not by club, so swapping teams never refetches a man twice
+const SIDE = {};            // pid → {p:pitchHand, b:batSide}
+const CAREER_P = {}, CAREER_B = {};
 
 // ── Load: league-wide stats once, rosters only for the two clubs on screen ───
 async function load() {
@@ -248,12 +396,17 @@ async function load() {
   ((seasonPitch.stats || [])[0]?.splits || []).forEach(s => {
     const st = s.stat || {};
     pit[s.player.id] = { fullName: s.player.fullName, g: int(st.gamesPlayed), gs: int(st.gamesStarted),
-      era: num(st.era), whip: num(st.whip), ip: ipToFloat(st.inningsPitched) };
+      era: num(st.era), whip: num(st.whip), ip: ipToFloat(st.inningsPitched), k: int(st.strikeOuts),
+      sv: int(st.saves), svo: int(st.saveOpportunities), hld: int(st.holds), gf: int(st.gamesFinished),
+      w: int(st.wins), l: int(st.losses),
+      ir: int(st.inheritedRunners), irs: int(st.inheritedRunnersScored) };
   });
   const hit = {};
   ((seasonHit.stats || [])[0]?.splits || []).forEach(s => {
     const st = s.stat || {};
-    hit[s.player.id] = { fullName: s.player.fullName, ops: num(st.ops), pa: int(st.plateAppearances),
+    hit[s.player.id] = { fullName: s.player.fullName, avg: num(st.avg), obp: num(st.obp), slg: num(st.slg),
+      ops: num(st.ops), pa: int(st.plateAppearances), g: int(st.gamesPlayed),
+      hr: int(st.homeRuns), rbi: int(st.rbi), sb: int(st.stolenBases),
       ab: int(st.atBats), h: int(st.hits), tb: int(st.totalBases), bb: int(st.baseOnBalls),
       hbp: int(st.hitByPitch), sf: int(st.sacFlies) };
   });
@@ -270,7 +423,7 @@ async function load() {
       if (!lastStart[pp.id] || d.date >= lastStart[pp.id].date) lastStart[pp.id] = { date: d.date, team: team.id };
     });
   }));
-  const rotRoster = post || !(schedPitch.dates || []).some(d => (d.games || []).length);
+  const rotRoster = ROT_ROSTER = post || !(schedPitch.dates || []).some(d => (d.games || []).length);
 
   // Bullpen: relief work in the window, by the club he actually worked for
   const penBy = {};
@@ -282,7 +435,7 @@ async function load() {
     if (int(st.gamesStarted) > 0 || apps < MIN_APPS) return;
     (penBy[tid] = penBy[tid] || []).push({ pid: s.player.id, name: s.player.fullName, apps });
   });
-  const penRoster = post || !windowSplits.length;
+  const penRoster = PEN_ROSTER = post || !windowSplits.length;
 
   // Lineup: every lineup card of the window
   const batBy = {};
@@ -297,16 +450,20 @@ async function load() {
       });
     });
   }));
-  const batRoster = !Object.keys(batBy).length;
+  const batRoster = BAT_ROSTER = !Object.keys(batBy).length;
 
   // Only the two clubs on screen need a roster call — the index pages fetch 30
   // because they rank 30; here two is the whole board.
   window._build = async (id) => {
     if (ROT[id]) return;
+    // The 40-man carries a status per man: A is the roster tonight, D* the
+    // injured lists. One call gives both the group a club has and who it misses.
     const r = await fj(`${API}/teams/${id}/roster/40Man`).catch(() => null);
-    const act = new Set(), actBat = new Set(), rosterPos = {};
+    const act = new Set(), actBat = new Set(), rosterPos = {}, il = [];
     (r?.roster || []).forEach(e => {
-      if ((e.status?.code || '') !== 'A') return;
+      const code = e.status?.code || '';
+      if (code[0] === 'D') { il.push({ pid: e.person.id, name: e.person.fullName, il: code.slice(1) }); return; }
+      if (code !== 'A') return;
       act.add(e.person.id);
       if (e.position?.abbreviation !== 'P') {
         actBat.add(e.person.id);
@@ -315,6 +472,10 @@ async function load() {
       }
     });
     const live = r ? act : null, liveBat = r ? actBat : null;
+    // Shown, never scored — the same six-man cap the index pages use
+    const outs = (table, test, val) => il.map(m => { const ln = table[m.pid];
+        return (ln && test(ln)) ? { ...m, n: val(ln) } : null; })
+      .filter(Boolean).sort((a,b) => (b.n ?? -1) - (a.n ?? -1)).slice(0, 6);
 
     // ── Rotation ──
     const rotPool = rotRoster
@@ -325,7 +486,9 @@ async function load() {
       .filter(s => rotRoster || s.ip >= MIN_IP)
       .sort((a,b) => b.starts - a.starts || b.ip - a.ip).slice(0, 5)
       .sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
-    ROT[id] = { score: weighted(starters), men: starters.map(s => ({ n: s.form, name: s.name })) };
+    const rotScore = weighted(starters);
+    ROT[id] = { score: rotScore, stats: groupPitchStats(starters, { score: rotScore }), men: starters,
+      out: outs(pit, ln => isStarter(ln) && ln.ip >= MIN_IP, ln => forma(ln.era, ln.whip)) };
 
     // ── Bullpen ──
     const penPool = penRoster
@@ -336,7 +499,15 @@ async function load() {
       .filter(s => s && (penRoster || s.ip >= ipFloor))
       .sort((a,b) => b.apps - a.apps || b.ip - a.ip).slice(0, PEN_SIZE)
       .sort((a,b) => (b.form ?? -1) - (a.form ?? -1));
-    PEN[id] = { score: weighted(arms), men: arms.map(s => ({ n: s.form, name: s.name })) };
+    arms.forEach(s => {
+      s.irsPct  = s.ir >= 3 ? (s.ir - s.irs) / s.ir : null;      // share of inherited runners stranded
+      s.svPct   = s.svo > 0 ? s.sv / s.svo : null;
+      s.isClose = s.sv >= 5 || (s.svo >= 5 && s.gf >= 10);
+      s.isSetup = !s.isClose && s.hld >= 8;
+    });
+    const penScore = weighted(arms);
+    PEN[id] = { score: penScore, stats: groupPitchStats(arms, { score: penScore, bullpen: true }), men: arms,
+      out: outs(pit, ln => !isStarter(ln) && ln.ip >= ipFloor, ln => forma(ln.era, ln.whip)) };
 
     // ── Lineup ──
     let cands = batRoster
@@ -347,7 +518,8 @@ async function load() {
       .sort((a,b) => b.starts - a.starts || b.pa - a.pa);
     const lineup = fillLineup(cands);
     const agg = opsPool(lineup);
-    BAT[id] = { score: agg.ops, men: lineup.map(s => ({ n: s.ops, name: s.name, slot: s.slot })) };
+    BAT[id] = { score: agg.ops, stats: groupBatStats(lineup, agg), men: lineup,
+      out: outs(hit, ln => ln.pa >= paFloor, ln => ln.ops) };
   };
 
   document.getElementById('meta').textContent =
@@ -360,6 +532,224 @@ function weighted(men) {
   let wsum = 0, ipsum = 0;
   men.forEach(s => { if (s.form != null && s.ip > 0) { wsum += s.form * s.ip; ipsum += s.ip; } });
   return ipsum > 0 ? Math.round(wsum / ipsum) : null;
+}
+
+function weightedNum(men, key) {
+  let wsum = 0, ipsum = 0;
+  men.forEach(s => { if (s[key] != null && s.ip > 0) { wsum += s[key] * s.ip; ipsum += s.ip; } });
+  return ipsum > 0 ? wsum / ipsum : null;
+}
+
+function sum(men, key) {
+  return men.reduce((a, s) => a + (s[key] || 0), 0);
+}
+
+function groupPitchStats(arms, extra = {}) {
+  const sv = sum(arms, 'sv'), svo = sum(arms, 'svo'), ir = sum(arms, 'ir'), irs = sum(arms, 'irs');
+  return {
+    score: extra.score,
+    era: weightedNum(arms, 'era'),
+    whip: weightedNum(arms, 'whip'),
+    ip: sum(arms, 'ip'),
+    k: sum(arms, 'k'),
+    count: arms.length,
+    svPct: svo ? sv / svo : null,
+    irsPct: ir ? (ir - irs) / ir : null,
+  };
+}
+
+function groupBatStats(lineup, agg) {
+  return {
+    ops: agg.ops,
+    avg: agg.avg,
+    obp: agg.obp,
+    slg: agg.slg,
+    hr: agg.hr,
+    rbi: agg.rbi,
+    sb: agg.sb,
+    pa: agg.pa,
+    count: lineup.length,
+  };
+}
+
+function ipFmt(v) {
+  if (v == null) return '—';
+  const whole = Math.floor(v);
+  const frac = Math.round((v - whole) * 3);
+  return frac ? `${whole}.${frac}` : String(whole);
+}
+
+// ── Handedness and career, fetched once the board is already on screen ───────
+// Neither number changes the matchup's verdict, so the reader gets the answer
+// first and the context a moment later. Both caches are keyed by player, so
+// swapping clubs back and forth never asks for the same man twice.
+const uniq = a => [...new Set(a)];
+
+async function enrich() {
+  const arms = uniq([...ROT[A].men, ...ROT[B].men, ...PEN[A].men, ...PEN[B].men].map(s => s.pid));
+  const bats = uniq([...BAT[A].men, ...BAT[B].men].map(s => s.pid));
+  const needSide = uniq([...arms, ...bats]).filter(pid => !SIDE[pid]);
+  const needArm  = arms.filter(pid => !CAREER_P[pid]);
+  const needBat  = bats.filter(pid => !CAREER_B[pid]);
+
+  await Promise.all([
+    needSide.length && fj(`${API}/people?personIds=${needSide.join(',')}`)
+      .then(d => (d.people || []).forEach(pp =>
+        SIDE[pp.id] = { p: pp.pitchHand?.code || '', b: pp.batSide?.code || '' })).catch(() => {}),
+    needArm.length && fj(`${API}/people?personIds=${needArm.join(',')}&hydrate=stats(type=yearByYear,group=pitching)`)
+      .then(absorbArmCareer).catch(() => {}),
+    needBat.length && fj(`${API}/people?personIds=${needBat.join(',')}&hydrate=stats(type=yearByYear,group=hitting)`)
+      .then(absorbBatCareer).catch(() => {}),
+  ]);
+  // A man the API had nothing for is still answered — otherwise every repaint refetches him
+  needSide.forEach(pid => SIDE[pid] = SIDE[pid] || { p:'', b:'' });
+  needArm.forEach(pid => CAREER_P[pid] = CAREER_P[pid] || { careerIP:0, careerForm:null, years:{} });
+  needBat.forEach(pid => CAREER_B[pid] = CAREER_B[pid] || { careerPA:0, careerOPS:null, years:{} });
+}
+
+// Career = every prior season pooled, the same way the index pages pool it
+function absorbArmCareer(d) {
+  (d.people || []).forEach(pp => {
+    const splits = (pp.stats?.find(g => g.group?.displayName === 'pitching')?.splits || [])
+      .filter(sp => parseInt(sp.season, 10) < SEASON);
+    const tot = splits.reduce((a,sp) => { const st = sp.stat || {};
+      return { ip:a.ip + ipToFloat(st.inningsPitched), er:a.er + int(st.earnedRuns),
+               h:a.h + int(st.hits), bb:a.bb + int(st.baseOnBalls) }; }, {ip:0,er:0,h:0,bb:0});
+    const years = {};
+    splits.forEach(sp => { const yr = parseInt(sp.season,10), st = sp.stat || {};
+      if (yr >= SEASON - 5 && ipToFloat(st.inningsPitched) > 0) years[yr] = forma(num(st.era), num(st.whip));
+    });
+    CAREER_P[pp.id] = { careerIP: tot.ip, years,
+      careerForm: tot.ip > 0 ? forma(tot.er * 9 / tot.ip, (tot.h + tot.bb) / tot.ip) : null };
+  });
+}
+
+function absorbBatCareer(d) {
+  (d.people || []).forEach(pp => {
+    const splits = (pp.stats?.find(g => g.group?.displayName === 'hitting')?.splits || [])
+      .filter(sp => parseInt(sp.season, 10) < SEASON);
+    const tot = opsPool(splits.map(sp => { const st = sp.stat || {};
+      return { ab:int(st.atBats), h:int(st.hits), bb:int(st.baseOnBalls), hbp:int(st.hitByPitch),
+               sf:int(st.sacFlies), tb:int(st.totalBases), pa:int(st.plateAppearances),
+               hr:int(st.homeRuns), rbi:int(st.rbi), sb:int(st.stolenBases) }; }));
+    const years = {};
+    splits.forEach(sp => { const yr = parseInt(sp.season,10), st = sp.stat || {};
+      if (yr >= SEASON - 5 && int(st.plateAppearances) > 0) years[yr] = num(st.ops);
+    });
+    CAREER_B[pp.id] = { careerPA: tot.pa, careerOPS: tot.ops, years };
+  });
+}
+
+// ── Row parts ────────────────────────────────────────────────────────────────
+const SEP = '<span class="sep">·</span>';
+const stat = (v, label, color) =>
+  `<span class="s" style="color:${color}"><b>${v}</b>${label ? `<i>${label}</i>` : ''}</span>`;
+const handHTML = pid => { const h = SIDE[pid]?.p; return h ? `<span class="hand ${h}">${h}HP</span>` : ''; };
+const batsHTML = pid => { const b = SIDE[pid]?.b;
+  return b ? `<span class="hand ${b}">${b === 'S' ? 'SWITCH' : b + 'HB'}</span>` : ''; };
+const faceHTML = (pid, c) =>
+  `<div class="sp-face" style="background:linear-gradient(150deg,${c} 0%,${shade(c,.45)} 100%)">
+    <img src="${face(pid)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></div>`;
+
+// Same thresholds as the index pages: for an arm <5 FORM is flat and >=12 a
+// different pitcher; a rotation needs 20 career innings to say so, a pen 15.
+function armTrend(cur, career, careerIP, floorIP) {
+  if (cur == null || career == null || careerIP < floorIP) return '';
+  const d = cur - career, abs = Math.abs(d);
+  if (abs < 5) { const c = tierForm(cur); return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">≈ career</span>`; }
+  const c = d > 0 ? (abs >= 12 ? TIERS[0] : TIERS[1]) : (abs >= 12 ? TIERS[4] : TIERS[3]);
+  return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">${d > 0 ? '▲' : '▼'} ${abs} vs career</span>`;
+}
+
+// And for a bat, .025 of OPS is the line between noise and a real move
+function batTrend(cur, career, careerPA) {
+  if (cur == null || career == null || careerPA < 300) return '';
+  const d = cur - career, abs = Math.abs(d);
+  if (abs < .025) { const c = tierOps(cur); return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">≈ career</span>`; }
+  const c = d > 0 ? (abs >= .075 ? TIERS[0] : TIERS[1]) : (abs >= .075 ? TIERS[4] : TIERS[3]);
+  return `<span class="trend" style="background:${rgba(c,.18)};color:${c}">${d > 0 ? '▲' : '▼'} ${d3(abs)} vs career</span>`;
+}
+
+function dotsHTML(years, tint, label) {
+  const list = Array.from({length:5}, (_,k) => SEASON - 5 + k).filter(yr => years?.[yr] != null);
+  if (!list.length) return '';
+  return `<span class="dots"><span class="dl">5Y</span>` +
+    list.map(yr => `<i style="background:${tint(years[yr])}" title="${label(years[yr])} (${yr})"></i>`).join('') +
+    `</span>`;
+}
+
+// ── The three rows ───────────────────────────────────────────────────────────
+function rotRowHTML(s, c) {
+  const col = tierForm(s.form), career = CAREER_P[s.pid];
+  return `<div class="sp">
+    <div class="sp-form" style="background:${col};color:${onTier(col)}">${s.form ?? '—'}</div>
+    ${faceHTML(s.pid, c)}
+    <div>
+      <div class="sp-name">${esc(s.name)}${handHTML(s.pid)}
+        <span class="sp-sub">${s.starts} start${s.starts === 1 ? '' : 's'} ${ROT_ROSTER ? 'this season' : `in ${WINDOW_DAYS}d`}</span>
+      </div>
+      <div class="statline">
+        ${stat(d2(s.era), 'ERA', tierForm(forma(s.era, null)))}${SEP}
+        ${stat(d2(s.whip), 'WHIP', tierForm(forma(null, s.whip)))}${SEP}
+        ${stat(`${s.w}-${s.l}`, '', pctColor(s.w, s.l))}${SEP}
+        ${stat(ipFmt(s.ip), 'IP', '#9ca3af')}${SEP}
+        ${stat(s.k, 'K', '#9ca3af')}
+      </div>
+      <div class="sp-hist">${armTrend(s.form, career?.careerForm, career?.careerIP ?? 0, 20)}${dotsHTML(career?.years, tierForm, v => `FORM ${v}`)}</div>
+    </div>
+  </div>`;
+}
+
+function penRowHTML(s, c) {
+  const col = tierForm(s.form), career = CAREER_P[s.pid];
+  // A closer lives on save conversion, a setup man on holds — show the one that
+  // is his job, not the two chances a middle reliever happened to inherit
+  const job = (s.isClose || s.svo > s.hld)
+    ? stat(`${s.sv}/${s.svo}`, 'SV', svPctColor(s.svPct))
+    : stat(s.hld, 'HLD', s.hld >= 15 ? TIERS[0] : s.hld >= 8 ? TIERS[1] : '#9ca3af');
+  return `<div class="sp">
+    <div class="sp-form" style="background:${col};color:${onTier(col)}">${s.form ?? '—'}</div>
+    ${faceHTML(s.pid, c)}
+    <div>
+      <div class="sp-name">${esc(s.name)}${handHTML(s.pid)}
+        ${s.isClose ? '<span class="role">CLOSER</span>' : s.isSetup ? '<span class="role set">SETUP</span>' : ''}
+        <span class="sp-sub">${PEN_ROSTER ? `${s.g} app this season` : `${s.apps} app in ${WINDOW_DAYS}d`}</span>
+      </div>
+      <div class="statline">
+        ${stat(d2(s.era), 'ERA', tierForm(forma(s.era, null)))}${SEP}
+        ${stat(d2(s.whip), 'WHIP', tierForm(forma(null, s.whip)))}${SEP}
+        ${job}${SEP}
+        ${stat(pct0(s.irsPct), 'IRS', irsColor(s.irsPct))}${SEP}
+        ${stat(ipFmt(s.ip), 'IP', '#9ca3af')}${SEP}
+        ${stat(s.k, 'K', '#9ca3af')}
+      </div>
+      <div class="sp-hist">${armTrend(s.form, career?.careerForm, career?.careerIP ?? 0, 15)}${dotsHTML(career?.years, tierForm, v => `FORM ${v}`)}</div>
+    </div>
+  </div>`;
+}
+
+function batRowHTML(s, c, n) {
+  const col = tierOps(s.ops), career = CAREER_B[s.pid];
+  return `<div class="sp bat">
+    <div class="ord">${n}</div>
+    <div class="sp-form ops" style="background:${col};color:${onTier(col)}">${d3(s.ops)}</div>
+    ${faceHTML(s.pid, c)}
+    <div>
+      <div class="sp-name">${esc(s.name)}<span class="pos">${esc(s.slot)}</span>${batsHTML(s.pid)}
+        <span class="sp-sub">${BAT_ROSTER ? `${s.g} game${s.g === 1 ? '' : 's'} this season`
+                                          : `${s.starts} start${s.starts === 1 ? '' : 's'} in ${WINDOW_DAYS}d`}</span>
+      </div>
+      <div class="statline">
+        ${stat(d3(s.avg), 'AVG', scale(s.avg, AVG_T))}${SEP}
+        ${stat(d3(s.obp), 'OBP', scale(s.obp, OBP_T))}${SEP}
+        ${stat(d3(s.slg), 'SLG', scale(s.slg, SLG_T))}${SEP}
+        ${stat(s.hr, 'HR', '#9ca3af')}${SEP}
+        ${stat(s.rbi, 'RBI', '#9ca3af')}${SEP}
+        ${stat(s.sb, 'SB', '#9ca3af')}
+      </div>
+      <div class="sp-hist">${batTrend(s.ops, career?.careerOPS, career?.careerPA ?? 0)}${dotsHTML(career?.years, tierOps, d3)}</div>
+    </div>
+  </div>`;
 }
 
 // ── UI ───────────────────────────────────────────────────────────────────────
@@ -389,9 +779,14 @@ function swapTeams() {
   render();
 }
 
+// A repaint that lands after the reader has already moved on to another pair
+// would overwrite the board with the old one, so every render carries a token.
+let paintToken = 0;
+
 async function render() {
   const board = document.getElementById('board');
-  if (A === B) { board.className = 'state'; board.textContent = 'Pick two different clubs'; return; }
+  if (A === B) { paintToken++; board.className = 'state'; board.textContent = 'Pick two different clubs'; return; }
+  const tok = ++paintToken;
   board.className = 'state'; board.textContent = 'Loading matchup…';
 
   // Keep ?from= across team changes, or a reload would forget where to go back to
@@ -399,24 +794,126 @@ async function render() {
   history.replaceState(null, '', `${location.pathname}?a=${A}&b=${B}${from ? `&from=${from}` : ''}`);
 
   try { await Promise.all([window._build(A), window._build(B)]); }
-  catch (e) { board.className = 'state'; board.textContent = 'Could not load — ' + e.message; return; }
+  catch (e) {
+    if (tok === paintToken) { board.className = 'state'; board.textContent = 'Could not load — ' + e.message; }
+    return;
+  }
+  if (tok !== paintToken) return;
+  paint();
 
+  // Handedness and career colour the rows in; neither moves a score, so the
+  // matchup is readable before they land.
+  await enrich().catch(() => {});
+  if (tok === paintToken) paint();
+}
+
+function paint() {
+  const blocks = [
+    {
+      title: 'Rotation',
+      sub: 'Five current starters, FORM weighted by innings',
+      data: ROT,
+      group: 'rotation',
+      row: rotRowHTML,
+      fmt: v => v ?? '—',
+      tint: tierForm,
+      metrics: [
+        { label: 'FORM', key: 'score', fmt: v => v ?? '—', better: 'high' },
+        { label: 'ERA', key: 'era', fmt: d2, better: 'low' },
+        { label: 'WHIP', key: 'whip', fmt: d2, better: 'low' },
+        { label: 'IP banked', key: 'ip', fmt: ipFmt, better: 'high' },
+      ],
+    },
+    {
+      title: 'Bullpen',
+      sub: 'Recent relief group, FORM weighted by innings',
+      data: PEN,
+      group: 'bullpen',
+      row: penRowHTML,
+      fmt: v => v ?? '—',
+      tint: tierForm,
+      metrics: [
+        { label: 'FORM', key: 'score', fmt: v => v ?? '—', better: 'high' },
+        { label: 'ERA', key: 'era', fmt: d2, better: 'low' },
+        { label: 'WHIP', key: 'whip', fmt: d2, better: 'low' },
+        { label: 'IRS held', key: 'irsPct', fmt: pct0, better: 'high' },
+      ],
+    },
+    {
+      title: 'Lineup',
+      sub: 'The nine who take the field, pooled into one batting line',
+      data: BAT,
+      group: 'lineup',
+      row: batRowHTML,
+      fmt: d3,
+      tint: tierOps,
+      metrics: [
+        { label: 'OPS', key: 'ops', fmt: d3, better: 'high' },
+        { label: 'OBP', key: 'obp', fmt: d3, better: 'high' },
+        { label: 'SLG', key: 'slg', fmt: d3, better: 'high' },
+        { label: 'Power', key: 'hr', fmt: fmtInt, better: 'high' },
+      ],
+    },
+  ];
+  const board = document.getElementById('board');
   board.className = '';
-  board.innerHTML = [
-    blockHTML('Rotation', 'Five current starters, FORM weighted by innings', ROT, v => v ?? '—', tierForm),
-    blockHTML('Bullpen', 'The arms the manager actually calls, FORM weighted by innings', PEN, v => v ?? '—', tierForm),
-    blockHTML('Lineup', 'The nine who take the field, pooled into one OPS', BAT, d3, tierOps),
-  ].join('');
+  board.innerHTML = summaryHTML(blocks) + blocks.map(blockHTML).join('');
 
   document.getElementById('note').hidden = false;
   document.getElementById('note').textContent =
-    'Higher is better in all three. A club missing a starter or a bat shows the men it actually has — '
-    + 'open its own index for who is unavailable.';
+    'The headline score stays identical to the index pages, and so does every player row underneath it — '
+    + 'same arms, same bats, same colours. Injured men are listed, never scored.';
 }
 
 const d3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/, '');
+const d2 = v => v == null ? '—' : v.toFixed(2);
+const pct0 = v => v == null ? '—' : `${Math.round(v * 100)}%`;
+const fmtInt = v => v == null ? '—' : String(v);
 
-function blockHTML(title, sub, data, fmt, tint) {
+function areaWinner(block) {
+  const a = block.data[A]?.score, b = block.data[B]?.score;
+  if (a == null || b == null || a === b) return null;
+  return a > b ? A : B;
+}
+
+function overallFor(id) {
+  const values = [ROT[id]?.score, PEN[id]?.score, BAT[id]?.score == null ? null : BAT[id].score * 100]
+    .filter(v => v != null && isFinite(v));
+  return values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+}
+
+function summaryHTML(blocks) {
+  const winsA = blocks.filter(b => areaWinner(b) === A).length;
+  const winsB = blocks.filter(b => areaWinner(b) === B).length;
+  const overallA = overallFor(A), overallB = overallFor(B);
+  const lead = overallA == null || overallB == null ? null : overallA === overallB ? null : overallA > overallB ? A : B;
+  const verdict = lead ? `${META[lead].abbr} edge` : 'Even matchup';
+  return `<section class="matchup-summary" aria-label="Matchup summary">
+    ${teamCardHTML(A, overallA, 'Club A')}
+    <div class="verdict">
+      <span>Overall read</span>
+      <b>${esc(verdict)}</b>
+      <div class="adv-strip">
+        <span class="adv-pill${winsA > winsB ? ' win' : ''}">${esc(META[A].abbr)} ${winsA}</span>
+        <span class="adv-pill${winsB > winsA ? ' win' : ''}">${esc(META[B].abbr)} ${winsB}</span>
+      </div>
+    </div>
+    ${teamCardHTML(B, overallB, 'Club B', true)}
+  </section>`;
+}
+
+function teamCardHTML(id, score, label, right = false) {
+  const c = PRIMARY[id] || '#26324a';
+  return `<article class="team-card${right ? ' b' : ''}" style="--team-color:${c}">
+    <img src="${logo(id)}" alt="" onerror="this.style.display='none'">
+    <span class="team-label">${label}</span>
+    <h2 class="team-name">${esc(META[id].name)}</h2>
+    <div class="team-score"><b style="color:${tierForm(score)}">${score ?? '—'}</b><span>composite</span></div>
+  </article>`;
+}
+
+function blockHTML(block) {
+  const { title, sub, data, fmt, tint } = block;
   const a = data[A] || { score: null, men: [] }, b = data[B] || { score: null, men: [] };
   const cA = PRIMARY[A] || '#26324a', cB = PRIMARY[B] || '#26324a';
   const both = a.score != null && b.score != null;
@@ -444,23 +941,47 @@ function blockHTML(title, sub, data, fmt, tint) {
       </div>
     </div>
     <div class="bar"><i style="width:${shareA}%;background:${cA}"></i><i style="width:${100-shareA}%;background:${cB}"></i></div>
+    <div class="metric-grid">${block.metrics.map(m => metricHTML(m, a.stats || {}, b.stats || {})).join('')}</div>
     <div class="rosters">
-      <div class="roster">${menHTML(a.men, fmt, tint)}</div>
-      <div class="roster">${menHTML(b.men, fmt, tint)}</div>
+      <div class="roster">${sideHTML(block, A, a)}</div>
+      <div class="roster">${sideHTML(block, B, b)}</div>
     </div>
   </div>`;
 }
 
-function menHTML(men, fmt, tint) {
-  if (!men.length) return '<p class="thin">Not enough playing time to read this group yet.</p>';
-  return men.map(m => {
-    const c = tint(m.n);
-    return `<div class="man">
-      <span class="man-n" style="background:${c};color:${onTier(c)}">${fmt(m.n)}</span>
-      <span class="man-name">${esc(m.name)}</span>
-      ${m.slot ? `<span class="man-slot">${esc(m.slot)}</span>` : ''}
-    </div>`;
-  }).join('');
+function metricWinner(av, bv, better) {
+  if (!better || av == null || bv == null || av === bv) return null;
+  return better === 'low' ? (av < bv ? 'a' : 'b') : (av > bv ? 'a' : 'b');
+}
+
+function metricHTML(metric, aStats, bStats) {
+  const av = aStats[metric.key], bv = bStats[metric.key], win = metricWinner(av, bv, metric.better);
+  return `<div class="metric">
+    <span class="metric-name">${esc(metric.label)}</span>
+    <span class="metric-values">
+      <span class="metric-val${win === 'a' ? ' win' : ''}">${metric.fmt(av)}</span>
+      <span class="metric-val b${win === 'b' ? ' win' : ''}">${metric.fmt(bv)}</span>
+    </span>
+  </div>`;
+}
+
+function sideHTML(block, id, side) {
+  const c = PRIMARY[id] || '#26324a';
+  const men = side.men || [];
+  return `<div class="sec"><span class="sec-l">${esc(META[id].abbr)} ${block.group}</span><span class="sec-r"></span></div>
+    <div class="men">${men.length
+      ? men.map((m, i) => block.row(m, c, i + 1)).join('')
+      : '<p class="thin">Not enough playing time to read this group yet.</p>'}</div>
+    ${outsHTML(side.out, block.tint, block.fmt)}`;
+}
+
+function outsHTML(out, tint, fmt) {
+  if (!out || !out.length) return '';
+  return `<div class="sec gap"><span class="sec-l">Unavailable</span><span class="sec-r"></span></div>
+    <div class="outs">${out.map(o => { const oc = tint(o.n);
+      return `<span class="out"><i class="out-f" style="background:${oc};color:${onTier(oc)}">${fmt(o.n)}</i>` +
+             `<span class="out-n">${esc(o.name)}</span><span class="out-il">${esc(o.il)}-day IL</span></span>`;
+    }).join('')}</div>`;
 }
 
 load().catch(err => {
