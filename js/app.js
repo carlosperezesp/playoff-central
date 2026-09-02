@@ -4394,20 +4394,22 @@ async function fetchRecentHitting(pids) {
   if (!missing.length) return;
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-  // Batch in chunks of 20
-  for (let i = 0; i < missing.length; i += 20) {
-    const chunk = missing.slice(i, i+20).join(',');
-    await fetchWithTimeout(
-      `${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=byDateRange,group=hitting,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
+  // Chunks of 20, all in flight at once — awaiting them in a loop laid three
+  // round trips end to end for what one wave can carry.
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 20) chunks.push(missing.slice(i, i + 20));
+  await Promise.all(chunks.map(chunk =>
+    fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk.join(',')}&hydrate=stats(type=byDateRange,group=hitting,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
     ).then(r => r.json()).then(d => {
       (d.people || []).forEach(p => {
         const s = p.stats?.find(g => g.group?.displayName?.toLowerCase() === 'hitting')?.splits?.[0]?.stat;
         recentHittingCache[p.id] = s ? parseFloat(s.ops)||0 : null;
       });
-    }).catch(() => {
-      missing.slice(i, i+20).forEach(id => { recentHittingCache[id] = null; });
-    });
-  }
+    }).catch(() => {}).then(() => {
+      chunk.forEach(id => { if (!(id in recentHittingCache)) recentHittingCache[id] = null; });
+    })
+  ));
 }
 
 async function fetchRecentPitching(pids) {
@@ -4415,15 +4417,25 @@ async function fetchRecentPitching(pids) {
   if (!missing.length) return;
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0];
-  await Promise.all(missing.map(pid =>
-    fetchWithTimeout(`${MLB_API}/people/${pid}/stats?stats=byDateRange&group=pitching&startDate=${startDate}&endDate=${endDate}&season=${CURRENT_YEAR}`)
-      .then(r => r.json()).then(d => {
-        const s = d.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
-        recentPitchingCache[pid] = s ? {
+  // One request per twenty arms, the way the hitting side next door already
+  // asks. Per-pitcher it was two dozen round trips for one panel.
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 20) chunks.push(missing.slice(i, i + 20));
+  await Promise.all(chunks.map(chunk =>
+    fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk.join(',')}&hydrate=stats(type=byDateRange,group=pitching,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
+    ).then(r => r.json()).then(d => {
+      (d.people || []).forEach(p => {
+        const s = p.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
+        recentPitchingCache[p.id] = s ? {
           era: parseFloat(s.era), whip: parseFloat(s.whip),
           ip: parseFloat(s.inningsPitched) || 0,
         } : null;
-      }).catch(() => { recentPitchingCache[pid] = null; })
+      });
+    }).catch(() => {}).then(() => {
+      // A man the API left out still needs an answer, or he is asked for again
+      chunk.forEach(id => { if (!(id in recentPitchingCache)) recentPitchingCache[id] = null; });
+    })
   ));
 }
 
@@ -4438,10 +4450,11 @@ async function fetchMvpHeatHitting(pids) {
   if (!missing.length) return;
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0];
-  for (let i = 0; i < missing.length; i += 20) {
-    const chunk = missing.slice(i, i+20).join(',');
-    await fetchWithTimeout(
-      `${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=byDateRange,group=hitting,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 20) chunks.push(missing.slice(i, i + 20));
+  await Promise.all(chunks.map(chunk =>
+    fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk.join(',')}&hydrate=stats(type=byDateRange,group=hitting,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
     ).then(r => r.json()).then(d => {
       (d.people || []).forEach(p => {
         const s = p.stats?.find(g => g.group?.displayName?.toLowerCase() === 'hitting')?.splits?.[0]?.stat;
@@ -4450,10 +4463,10 @@ async function fetchMvpHeatHitting(pids) {
           ab:  parseInt(s.atBats) || 0,
         } : null;
       });
-    }).catch(() => {
-      missing.slice(i, i+20).forEach(id => { mvpHeatHittingCache[id] = null; });
-    });
-  }
+    }).catch(() => {}).then(() => {
+      chunk.forEach(id => { if (!(id in mvpHeatHittingCache)) mvpHeatHittingCache[id] = null; });
+    })
+  ));
 }
 
 async function fetchMvpHeatPitching(pids) {
@@ -4461,15 +4474,22 @@ async function fetchMvpHeatPitching(pids) {
   if (!missing.length) return;
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 15 * 86400000).toISOString().split('T')[0];
-  await Promise.all(missing.map(pid =>
-    fetchWithTimeout(`${MLB_API}/people/${pid}/stats?stats=byDateRange&group=pitching&startDate=${startDate}&endDate=${endDate}&season=${CURRENT_YEAR}`)
-      .then(r => r.json()).then(d => {
-        const s = d.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
-        mvpHeatPitchingCache[pid] = s ? {
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 20) chunks.push(missing.slice(i, i + 20));
+  await Promise.all(chunks.map(chunk =>
+    fetchWithTimeout(
+      `${MLB_API}/people?personIds=${chunk.join(',')}&hydrate=stats(type=byDateRange,group=pitching,startDate=${startDate},endDate=${endDate},season=${CURRENT_YEAR})`
+    ).then(r => r.json()).then(d => {
+      (d.people || []).forEach(p => {
+        const s = p.stats?.find(g => g.group?.displayName === 'pitching')?.splits?.[0]?.stat;
+        mvpHeatPitchingCache[p.id] = s ? {
           era: parseFloat(s.era),
           ip: parseFloat(s.inningsPitched) || 0,
         } : null;
-      }).catch(() => { mvpHeatPitchingCache[pid] = null; })
+      });
+    }).catch(() => {}).then(() => {
+      chunk.forEach(id => { if (!(id in mvpHeatPitchingCache)) mvpHeatPitchingCache[id] = null; });
+    })
   ));
 }
 
