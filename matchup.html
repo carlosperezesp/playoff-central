@@ -6,6 +6,14 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Matchup — Baseball Lens</title>
 <link rel="icon" type="image/png" href="./icon.png">
+<!-- The four hosts every board talks to. Warming the connection here
+     overlaps DNS + TLS with parsing the page instead of paying for it
+     on the first request. -->
+<link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://img.mlbstatic.com">
+<link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -266,6 +274,27 @@
 const API = 'https://statsapi.mlb.com/api/v1';
 const WINDOW_DAYS = 30;
 
+const F = {
+  standings: 'records,teamRecords,wins,losses',
+  teams:     'teams,id,teamName,name,abbreviation',
+  post:      'dates,games,gamePk',
+  probables: 'dates,date,games,teams,away,home,team,id,probablePitcher,fullName',
+  lineups:   'dates,games,teams,home,away,team,id,lineups,homePlayers,awayPlayers,fullName,'
+             + 'primaryPosition,abbreviation',
+  pitching:  'stats,splits,player,id,fullName,stat,gamesPlayed,gamesStarted,gamesFinished,era,whip,'
+             + 'inningsPitched,strikeOuts,saves,saveOpportunities,holds,wins,losses,'
+             + 'inheritedRunners,inheritedRunnersScored',
+  relief:    'stats,splits,player,id,fullName,team,stat,gamesPlayed,gamesStarted',
+  hitting:   'stats,splits,player,id,fullName,stat,avg,obp,slg,ops,plateAppearances,gamesPlayed,'
+             + 'homeRuns,rbi,stolenBases,atBats,hits,totalBases,baseOnBalls,hitByPitch,sacFlies',
+  roster:    'roster,status,code,person,id,fullName,position,abbreviation',
+  side:      'people,id,pitchHand,batSide,code',
+  armYears:  'people,id,stats,group,displayName,splits,season,stat,inningsPitched,earnedRuns,hits,'
+             + 'baseOnBalls,era,whip',
+  batYears:  'people,id,stats,group,displayName,splits,season,stat,atBats,hits,baseOnBalls,hitByPitch,'
+             + 'sacFlies,totalBases,plateAppearances,homeRuns,rbi,stolenBases,ops',
+};
+
 // ── Scoring constants, copied verbatim from the three index pages so a club's
 // number here can never disagree with the number on its own board ────────────
 const MIN_IP = 10;          // rotation: a spot starter with 5 innings is not a member
@@ -371,7 +400,7 @@ async function load() {
   start.setDate(start.getDate() - (WINDOW_DAYS - 1));
 
   // A season that hasn't thrown a pitch yet means we're in the winter — show the last one
-  const standings = await fj(`${API}/standings?leagueId=103,104&season=${SEASON}`).catch(() => ({}));
+  const standings = await fj(`${API}/standings?leagueId=103,104&season=${SEASON}&fields=${F.standings}`).catch(() => ({}));
   const recs = (standings.records || []).flatMap(r => r.teamRecords || []);
   if (recs.length && !recs.some(t => (t.wins || 0) + (t.losses || 0) > 0)) SEASON -= 1;
   const games = recs.length ? recs.reduce((a,t) => a + (t.wins||0) + (t.losses||0), 0) / recs.length : 0;
@@ -379,14 +408,14 @@ async function load() {
   const paFloor = games ? Math.max(5, Math.min(MIN_PA, MIN_PA * games / PA_AT)) : MIN_PA;
 
   const [teamList, post, schedPitch, schedLineups, seasonPitch, windowPitch, seasonHit] = await Promise.all([
-    fj(`${API}/teams?sportId=1&season=${SEASON}`),
-    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=F,D,L,W`)
+    fj(`${API}/teams?sportId=1&season=${SEASON}&fields=${F.teams}`),
+    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=F,D,L,W&fields=${F.post}`)
       .then(d => (d.dates || []).some(x => (x.games || []).length)).catch(() => false),
-    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R&hydrate=probablePitcher,team`),
-    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R,F,D,L,W&hydrate=lineups`),
-    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000`),
-    fj(`${API}/stats?stats=byDateRange&startDate=${ymd(start)}&endDate=${ymd(end)}&season=${SEASON}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000`),
-    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=hitting&gameType=R&playerPool=All&limit=2000`),
+    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R&hydrate=probablePitcher,team&fields=${F.probables}`),
+    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R,F,D,L,W&hydrate=lineups&fields=${F.lineups}`),
+    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000&fields=${F.pitching}`),
+    fj(`${API}/stats?stats=byDateRange&startDate=${ymd(start)}&endDate=${ymd(end)}&season=${SEASON}&sportId=1&group=pitching&gameType=R&playerPool=All&limit=2000&fields=${F.relief}`),
+    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=hitting&gameType=R&playerPool=All&limit=2000&fields=${F.hitting}`),
   ]);
 
   (teamList.teams || []).forEach(t => META[t.id] = { id: t.id, name: t.teamName || t.name, abbr: t.abbreviation || '' });
@@ -458,7 +487,7 @@ async function load() {
     if (ROT[id]) return;
     // The 40-man carries a status per man: A is the roster tonight, D* the
     // injured lists. One call gives both the group a club has and who it misses.
-    const r = await fj(`${API}/teams/${id}/roster/40Man`).catch(() => null);
+    const r = await fj(`${API}/teams/${id}/roster/40Man?fields=${F.roster}`).catch(() => null);
     const act = new Set(), actBat = new Set(), rosterPos = {}, il = [];
     (r?.roster || []).forEach(e => {
       const code = e.status?.code || '';
@@ -593,12 +622,12 @@ async function enrich() {
   const needBat  = bats.filter(pid => !CAREER_B[pid]);
 
   await Promise.all([
-    needSide.length && fj(`${API}/people?personIds=${needSide.join(',')}`)
+    needSide.length && fj(`${API}/people?personIds=${needSide.join(',')}&fields=${F.side}`)
       .then(d => (d.people || []).forEach(pp =>
         SIDE[pp.id] = { p: pp.pitchHand?.code || '', b: pp.batSide?.code || '' })).catch(() => {}),
-    needArm.length && fj(`${API}/people?personIds=${needArm.join(',')}&hydrate=stats(type=yearByYear,group=pitching)`)
+    needArm.length && fj(`${API}/people?personIds=${needArm.join(',')}&hydrate=stats(type=yearByYear,group=pitching)&fields=${F.armYears}`)
       .then(absorbArmCareer).catch(() => {}),
-    needBat.length && fj(`${API}/people?personIds=${needBat.join(',')}&hydrate=stats(type=yearByYear,group=hitting)`)
+    needBat.length && fj(`${API}/people?personIds=${needBat.join(',')}&hydrate=stats(type=yearByYear,group=hitting)&fields=${F.batYears}`)
       .then(absorbBatCareer).catch(() => {}),
   ]);
   // A man the API had nothing for is still answered — otherwise every repaint refetches him

@@ -50,8 +50,16 @@
   ]
 }
 </script>
+<!-- The four hosts every board talks to. Warming the connection here
+     overlaps DNS + TLS with parsing the page instead of paying for it
+     on the first request. -->
+<link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://img.mlbstatic.com">
+<link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=20260623-roster-white">
+<link rel="stylesheet" href="css/main.css?v=20260902-perf">
 <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -365,6 +373,6 @@
   </button>
 </nav>
 
-<script src="js/app.js?v=20260623-roster-white"></script>
+<script src="js/app.js?v=20260902-perf"></script>
 </body>
 </html>

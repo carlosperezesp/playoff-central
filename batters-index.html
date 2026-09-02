@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Batters Index — Baseball Lens</title>
+<!-- The four hosts every board talks to. Warming the connection here
+     overlaps DNS + TLS with parsing the page instead of paying for it
+     on the first request. -->
+<link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://img.mlbstatic.com">
+<link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -353,6 +361,26 @@
 
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
+
+// Ask for the fields the page reads and nothing else. A month of lineup cards
+// is 274 KB unprojected and 55 KB with this list. Add a field here before you
+// read it, or it comes back undefined and renders as a dash.
+const F = {
+  standings: 'records,teamRecords,wins,losses',
+  teams:     'teams,id,teamName,name,abbreviation',
+  lineups:   'dates,games,teams,home,away,team,id,lineups,homePlayers,awayPlayers,fullName,'
+             + 'primaryPosition,abbreviation',
+  hitting:   'stats,splits,player,id,fullName,stat,avg,obp,slg,ops,plateAppearances,atBats,hits,'
+             + 'totalBases,baseOnBalls,hitByPitch,sacFlies,strikeOuts,homeRuns,rbi,stolenBases,gamesPlayed',
+  roster:    'roster,position,abbreviation,status,code,person,id,fullName',
+  bats:      'people,id,batSide,code',
+  career:    'people,id,stats,group,displayName,splits,season,stat,atBats,hits,baseOnBalls,hitByPitch,'
+             + 'sacFlies,totalBases,plateAppearances,homeRuns,rbi,stolenBases,strikeOuts,ops',
+  field:     'records,league,id,teamRecords,wins,team,winningPercentage,clinched',
+  gameLog:   'stats,splits,sport,id,date,opponent,abbreviation,stat,plateAppearances,atBats,hits,'
+             + 'doubles,triples,homeRuns,baseOnBalls,hitByPitch,stolenBases,gamesStarted',
+  timeline:  'people,stats,group,displayName,splits,team,id,name,numTeams,season,stat,gamesPlayed',
+};
 const WINDOW_DAYS = 30;   // window used to decide who is actually starting now
 const MIN_PA = 25;        // a September call-up with six plate appearances has no OPS yet
 const PA_AT = 40;         // ...but nobody has banked 25 in the first week of April
@@ -425,7 +453,7 @@ const openTeams = new Set();
 const openAlts = new Set();    // lineup pids whose understudy is unfolded
 
 async function teamGames(season) {
-  return fj(`${API}/standings?leagueId=103,104&season=${season}`)
+  return fj(`${API}/standings?leagueId=103,104&season=${season}&fields=${F.standings}`)
     .then(d => { const g = (d.records || []).flatMap(r => r.teamRecords || []).map(t => (t.wins || 0) + (t.losses || 0));
       return g.length ? g.reduce((a,b)=>a+b,0) / g.length : 0; }).catch(() => 0);
 }
@@ -444,9 +472,9 @@ async function load() {
   // In October the lineup card is still a lineup card — the four postseason game
   // types just have to be asked for by name, since "P" only works on the stats API.
   const [teamList, sched, stats] = await Promise.all([
-    fj(`${API}/teams?sportId=1&season=${SEASON}`),
-    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R,F,D,L,W&hydrate=lineups`),
-    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=hitting&gameType=R&playerPool=All&limit=2000`),
+    fj(`${API}/teams?sportId=1&season=${SEASON}&fields=${F.teams}`),
+    fj(`${API}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}&gameType=R,F,D,L,W&hydrate=lineups&fields=${F.lineups}`),
+    fj(`${API}/stats?stats=season&season=${SEASON}&sportId=1&group=hitting&gameType=R&playerPool=All&limit=2000&fields=${F.hitting}`),
   ]);
 
   const meta = {};
@@ -484,7 +512,7 @@ async function load() {
   // lists. One call gives both the lineup the club has and the bats it is missing.
   const ids = Object.keys(meta).map(Number);
   const rosters = await Promise.all(ids.map(id =>
-    fj(`${API}/teams/${id}/roster/40Man`).then(r => {
+    fj(`${API}/teams/${id}/roster/40Man?fields=${F.roster}`).then(r => {
       const act = new Set(), il = [];
       (r.roster || []).filter(e => e.position?.abbreviation !== 'P').forEach(e => {
         const code = e.status?.code || '';
@@ -525,7 +553,7 @@ async function load() {
   // Batting side (cosmetic — render anyway if it fails)
   const pids = TEAMS.flatMap(t => t.lineup.flatMap(s => s.alt ? [s.pid, s.alt.pid] : [s.pid]));
   try {
-    const ppl = await fj(`${API}/people?personIds=${pids.join(',')}`);
+    const ppl = await fj(`${API}/people?personIds=${pids.join(',')}&fields=${F.bats}`);
     const bats = {}; (ppl.people || []).forEach(p => bats[p.id] = p.batSide?.code || '');
     TEAMS.forEach(t => t.lineup.forEach(s => {
       s.bats = bats[s.pid] || '';
@@ -613,7 +641,7 @@ function rankAll() {
 async function loadCareer(team) {
   const need = team.lineup.map(s => s.pid).filter(pid => !careerCache[pid]);
   if (!need.length) return;
-  const d = await fj(`${API}/people?personIds=${need.join(',')}&hydrate=stats(type=yearByYear,group=hitting)`);
+  const d = await fj(`${API}/people?personIds=${need.join(',')}&hydrate=stats(type=yearByYear,group=hitting)&fields=${F.career}`);
   (d.people || []).forEach(p => {
     const splits = (p.stats?.find(g => g.group?.displayName === 'hitting')?.splits || [])
       .filter(sp => parseInt(sp.season, 10) < SEASON);
@@ -773,7 +801,7 @@ function panelHTML(t) {
 // through October, the very same read resolves to the real field.
 async function playoffField(season) {
   try {
-    const d = await fj(`${API}/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason`);
+    const d = await fj(`${API}/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&fields=${F.field}`);
     const ids = new Set();
     let clinched = 0;
     [103, 104].forEach(lg => {
@@ -902,7 +930,7 @@ async function loadSeasonGames(pid, season) {
   if (gamesCache[key]) return gamesCache[key];
   if (!GAME_TIERS) GAME_TIERS = await fj('data/game-tiers.json').catch(() => ({ tiers: {} }));
   try {
-    const d = await fj(`${API}/people/${pid}/stats?stats=gameLog&group=hitting&season=${season}`);
+    const d = await fj(`${API}/people/${pid}/stats?stats=gameLog&group=hitting&season=${season}&fields=${F.gameLog}`);
     const sp = d.stats?.[0]?.splits || [];
     gamesCache[key] = sp
       .filter(s => (s.sport?.id ?? 1) === 1)
@@ -945,7 +973,7 @@ const openPlayers = new Set();
 async function loadTimeline(pid) {
   if (timelineCache[pid]) return;
   try {
-    const d = await fj(`${API}/people?personIds=${pid}&hydrate=stats(type=yearByYear,group=hitting)`);
+    const d = await fj(`${API}/people?personIds=${pid}&hydrate=stats(type=yearByYear,group=hitting)&fields=${F.timeline}`);
     const splits = (d.people?.[0]?.stats?.find(g => g.group?.displayName === 'hitting')?.splits) || [];
     // One entry per (season, club) — a mid-season trade yields two for that year
     // A traded player's season yields one row per club PLUS a combined row that
