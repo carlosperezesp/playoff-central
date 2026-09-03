@@ -17,7 +17,14 @@
     --loss: #dc2626;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background: #0d2016 radial-gradient(125% 85% at 50% 0%, #214a30 0%, #1a2e1f 42%, #0d2016 78%) fixed; color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  body { background: #0d2016; color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  /* The page's gradient used to be painted with background-attachment: fixed,
+     which asks the browser to repaint the whole gradient on every scroll frame
+     and gives up the fast scroll path. Same picture, drawn once onto a fixed
+     layer the compositor can simply hold still. */
+  body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(125% 85% at 50% 0%, #214a30 0%, #1a2e1f 42%, #0d2016 78%)}
+
 
   header {
     background: #0d2016;

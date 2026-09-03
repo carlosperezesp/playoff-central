@@ -13,7 +13,7 @@
 <link rel="dns-prefetch" href="https://img.mlbstatic.com">
 <link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/fonts.css?v=20260903-boxcache">
+<link rel="stylesheet" href="css/fonts.css?v=20260903-scroll">
 <style>
   :root{
     --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
@@ -22,9 +22,16 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{
     font-family:'Barlow Condensed',system-ui,sans-serif; color:var(--ink); min-height:100vh;
-    background:#0d1a12 radial-gradient(120% 75% at 50% -8%, #223d2a 0%, #16281c 52%, #0d1a1200 100%) fixed;
+    background:#0d1a12;
     padding:24px 14px 70px; -webkit-font-smoothing:antialiased;
   }
+  /* The page's gradient used to be painted with background-attachment: fixed,
+     which asks the browser to repaint the whole gradient on every scroll frame
+     and gives up the fast scroll path. Same picture, drawn once onto a fixed
+     layer the compositor can simply hold still. */
+  body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(120% 75% at 50% -8%, #223d2a 0%, #16281c 52%, #0d1a1200 100%)}
+
   .wrap{max-width:1100px;margin:0 auto}
 
   /* ── Page header ─────────────────────────────────────────── */
@@ -269,7 +276,7 @@
   </a>
 </nav>
 
-<script src="js/apicache.js?v=20260903-boxcache"></script>
+<script src="js/apicache.js?v=20260903-scroll"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const WINDOW_DAYS = 30;
