@@ -2969,8 +2969,12 @@ async function fetchTeamImpact(teamId) {
   // Fetch all season boxscores for QS calculation AND full-season hitter pos tracking
   // (Previously only last-15 were used for hitters, which caused wrong starters when
   //  a player returned from the IL with few recent appearances despite more total games)
+  // Only the latest lineup card is still read out of a boxscore: the season's
+  // games at each position come from the league fielding line, and the staff's
+  // work from its game log. Three, not one, so a suspended or oddly-recorded
+  // game cannot leave the panel with no lineup to lock its starters to.
   const last15 = allGameIds.slice(-15);
-  const recentGameIds = [...new Set(last15)];
+  const recentGameIds = [...new Set(allGameIds.slice(-3))];
   // Also store the date of each game by gamePk
   const gamePkToDate = {};
   (schedData.dates || []).forEach(d => {
@@ -2986,7 +2990,6 @@ async function fetchTeamImpact(teamId) {
     hitterPosCount[pid] = { ...fielding[pid] };
     if (fielding[pid].DH) dhCount[pid] = fielding[pid].DH;
   });
-  const hitterPosRecent  = {}; // pid → {pos → lastDate}
   const pitcherApps      = {}; // pid → {starts, relief, closerApps, lastPitchDate, qualityStarts}
   const lineupSnapshots  = []; // [{ date, gamePk, starters:[{pid,pos}] }]
 
@@ -3023,20 +3026,9 @@ async function fetchTeamImpact(teamId) {
         const battingOrder = String(pl.battingOrder || '');
         const isStartingBatter = battingOrder.endsWith('00');
 
-        // Track hitter positions across ALL games this season (not just last 15)
-        // Use gamePrimaryPos so we track where they actually played, not their roster slot
-        const trackPos = gamePrimaryPos;
-        if (trackPos && trackPos !== 'P' && trackPos !== 'TWP' && trackPos !== 'N/A') {
-          if (!hitterPosCount[pid]) hitterPosCount[pid] = {};
-          hitterPosCount[pid][trackPos] = (hitterPosCount[pid][trackPos] || 0) + 1;
-          if (trackPos === 'DH') dhCount[pid] = (dhCount[pid] || 0) + 1;
-          if (gameDate) {
-            if (!hitterPosRecent[pid]) hitterPosRecent[pid] = {};
-            if (!hitterPosRecent[pid][trackPos] || gameDate > hitterPosRecent[pid][trackPos]) {
-              hitterPosRecent[pid][trackPos] = gameDate;
-            }
-          }
-        }
+        // The season's games at each position are seeded above from the league
+        // fielding line, which already counts these ones. Adding them again
+        // counted the last fortnight twice over.
         if (isStartingBatter && gamePrimaryPos && gamePrimaryPos !== 'P' && gamePrimaryPos !== 'TWP' && gamePrimaryPos !== 'N/A') {
           lineupStarters.push({ pid, pos: gamePrimaryPos });
         }
@@ -3174,7 +3166,6 @@ async function fetchTeamImpact(teamId) {
       rosterPos,
       isTWP,
       posCount,
-      posRecent: hitterPosRecent[pid] || {},
       lastLineupPos: latestLineupByPid[pid] || null,
       bestBoxscorePos,
       fallbackPos,
