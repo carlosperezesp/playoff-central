@@ -1533,6 +1533,91 @@
     font-family: 'Barlow Condensed'; font-size: 11px; color: var(--muted);
     letter-spacing: 1px; margin-top: 12px; text-align: right;
   }
+
+  /* ── MVP Race, in the Rankings language ────────────────────────────────
+     The board is unchanged — same rows, same numbers, same behaviour. What
+     changes is the ground it stands on: white cards on a dark page, which
+     is the app's language for Standings and Teams, become the dark accented
+     panels the Rankings hub and the three index boards use. A ranking now
+     looks like a ranking wherever you find it.
+
+     Every rule in the tab above is written against --text, --muted,
+     --border, --surface and --surface2, so redefining those five here turns
+     all seventy-eight of them over at once. Only the colours that were
+     written as literals have to be named again, and they are the short list
+     at the end. */
+  .mvp-hub {
+    --text: #eef3ef;
+    --muted: rgba(238,243,239,.56);
+    --border: rgba(255,255,255,.14);
+    --surface: rgba(13,32,22,.5);
+    --surface2: rgba(255,255,255,.06);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 8px 0 24px;
+  }
+  .mvp-hub .mvp-hub-meta {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-size: 11.5px;
+    letter-spacing: 1.4px; text-transform: uppercase; color: rgba(238,243,239,.4);
+    margin: -12px 0 16px;
+  }
+  .mvp-hub .mvp-tabs-row { margin-bottom: 18px; }
+
+  /* Same card as a ranking-link: the diagonal sheen and a corner of accent,
+     held to the top of the panel so a long leaderboard is not washed in it. */
+  .mvp-hub .mvp-tracker-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 8px;
+    background: linear-gradient(145deg, rgba(13,32,22,.96), rgba(31,55,38,.9));
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+  }
+  .mvp-hub .mvp-tracker-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 150px;
+    opacity: .22;
+    background:
+      linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,.28) 45% 46%, transparent 46% 100%),
+      radial-gradient(80% 100% at 82% 14%, var(--award-accent), transparent 58%);
+    pointer-events: none;
+  }
+  /* the accent is absolutely positioned, so the content has to be lifted over it */
+  .mvp-hub .mvp-card-header,
+  .mvp-hub .mvp-card-body { position: relative; }
+
+  .mvp-hub .mvp-tracker-card--mvp { --award-accent: #e8c23a; }
+  .mvp-hub .mvp-tracker-card--cy  { --award-accent: #1565d8; }
+  .mvp-hub .mvp-tracker-card--roy { --award-accent: #16a34a; }
+
+  .mvp-hub .mvp-card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255,255,255,.14);
+    padding: 15px 18px 13px;
+  }
+  .mvp-hub .mvp-card-title { font-size: 22px; letter-spacing: 2.4px; }
+
+  /* The literals the variables cannot reach. */
+  .mvp-hub .mvp-tab-btn:hover:not(.active) { border-color: rgba(255,255,255,.34); }
+  .mvp-hub .mvp-row-wrap[open] .mvp-row { background: rgba(255,255,255,.07); }
+  .mvp-hub .mvp-row-detail { background: rgba(255,255,255,.04); }
+  .mvp-hub .mvp-snapshot-stat { background: rgba(0,0,0,.22); }
+  .mvp-hub .mvp-heat.hot  { color: #f87171; }   /* both ran dark enough to read */
+  .mvp-hub .mvp-heat.warm { color: #e8c23a; }   /* on white and vanish on green */
+  .mvp-hub .mvp-award-badge { color: #f0c355; border-color: rgba(245,158,11,.45); }
+  .mvp-hub .mvp-photo { border-color: rgba(255,255,255,.18); }
+  /* The rank was drawn in --border: a pale grey on white, all but invisible
+     once the card went dark. The top three keep their green. */
+  .mvp-hub .mvp-rank { color: rgba(238,243,239,.42); }
+  /* Shared with the Teams panel, where it sits on white and must stay white —
+     so it is turned over here only, and the colour it hands down with it. */
+  .mvp-hub .impact-detail-card {
+    background: rgba(0,0,0,.22);
+    border-color: rgba(255,255,255,.14);
+    color: var(--text);
+  }
+
   @media (max-width: 768px) {
     .mvp-row-detail { padding: 0 12px 12px; }
     .mvp-snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -8486,7 +8486,7 @@ async function _loadMVPTracker() {
       const rows = players.length
         ? players.map(p => rowHTML(p, awardType)).join('')
         : `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed';text-align:center;letter-spacing:1px">${emptyMsg}</div>`;
-      return `<div class="mvp-tracker-card">
+      return `<div class="mvp-tracker-card mvp-tracker-card--${awardType}">
         <div class="mvp-card-header">
           <span class="mvp-card-title">${title} RANKING</span>
         </div>
@@ -8615,20 +8615,18 @@ async function _loadMVPTracker() {
       }
 
       el.innerHTML = `
-        <div class="mvp-page-header">
-          <div>
-            <div class="mvp-page-title">AWARD TRACKING</div>
-            <div class="mvp-page-subtitle">REAL-TIME CANDIDATES · ${CURRENT_YEAR} SEASON</div>
-          </div>
+        <section class="mvp-hub" aria-labelledby="awardTrackingTitle">
+          <h1 class="section-title" id="awardTrackingTitle">Award Tracking</h1>
+          <div class="mvp-hub-meta">Real-time candidates · ${CURRENT_YEAR} season</div>
           <div class="mvp-tabs-row">
             <button class="mvp-tab-btn ${filter==='all'?'active':''}" onclick="setMVPFilter('all')">ALL</button>
             <button class="mvp-tab-btn ${filter==='mvp'?'active':''}" onclick="setMVPFilter('mvp')">MVP</button>
             <button class="mvp-tab-btn ${filter==='cy'?'active':''}" onclick="setMVPFilter('cy')">CY YOUNG</button>
             <button class="mvp-tab-btn ${filter==='roy'?'active':''}" onclick="setMVPFilter('roy')">ROOKIE</button>
           </div>
-        </div>
-        <div class="mvp-grid">${grid}</div>
-        <div class="mvp-last-update">Updated ${today} at ${now} · Scores normalized vs league average · Min. ${minPA} PA / ${minIP} IP</div>`;
+          <div class="mvp-grid">${grid}</div>
+          <div class="mvp-last-update">Updated ${today} at ${now} · Scores normalized vs league average · Min. ${minPA} PA / ${minIP} IP</div>
+        </section>`;
     }
 
     window._renderMVPView = renderMVPView;
