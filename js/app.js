@@ -8,6 +8,15 @@ const CURRENT_YEAR = new Date().getFullYear();
 // What the team panel reads out of a recent boxscore: who played, where, and
 // in what order. The arms are read from their game logs instead, so none of
 // the pitching lines are wanted here.
+// What the team panel reads back out of a player's history. Unprojected, a
+// yearByYear hydrate carries every split of every season for forty men.
+const CAREER_HIT_FIELDS = 'people,id,mlbDebutDate,stats,group,type,displayName,splits,season,stat,'
+  + 'atBats,hits,doubles,triples,homeRuns,baseOnBalls,hitByPitch,sacFlies';
+const CAREER_PIT_FIELDS = 'people,id,mlbDebutDate,stats,group,type,displayName,splits,season,stat,'
+  + 'inningsPitched,earnedRuns,hits,baseOnBalls';
+const HISTORY_FIELDS = 'people,id,stats,group,type,displayName,splits,season,stat,ops,era,whip';
+const AWARD_FIELDS = 'people,id,awards,award,name,awardId';
+
 const IMPACT_BOXSCORE_FIELDS = 'teams,away,home,team,id,players,person,position,abbreviation,'
   + 'allPositions,battingOrder';
 
@@ -2839,7 +2848,7 @@ async function fetchTeamImpact(teamId) {
   const today     = getDateOffset(0);
 
   // Fetch roster (hydrated), schedule (for boxscores + yesterday's games), and IL list in parallel
-  const [rosterData, schedData, ilData, fielding] = await Promise.all([
+  const [rosterData, schedData, ilData, fielding, txRes] = await Promise.all([
     fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${season}&hydrate=person(birthCountry,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
     fetchWithTimeout(`${MLB_API}/schedule?sportId=1&teamId=${teamId}&season=${season}&gameType=R&startDate=${season}-03-01&endDate=${today}`)
@@ -2848,6 +2857,10 @@ async function fetchTeamImpact(teamId) {
     fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(birthCountry,pitchHand,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
     leagueFielding(season),
+    // The IL placement dates. This asked nothing of the three above it and
+    // still waited for all of them, a round trip spent on nothing.
+    fetchWithTimeout(`${MLB_API}/transactions?teamId=${teamId}&startDate=${season}-01-01&endDate=${today}&sportId=1`)
+      .then(r => r.json()).catch(() => ({ transactions: [] })),
   ]);
 
   const roster = rosterData.roster || [];
@@ -2864,10 +2877,6 @@ async function fetchTeamImpact(teamId) {
   // Fetch recent transactions to get the actual IL placement date for each player
   const ilPlacementDates = {}; // pid → date string 'YYYY-MM-DD'
   try {
-    const seasonStart = `${season}-01-01`;
-    const txRes = await fetchWithTimeout(
-      `${MLB_API}/transactions?teamId=${teamId}&startDate=${seasonStart}&endDate=${today}&sportId=1`
-    ).then(r => r.json()).catch(() => ({ transactions: [] }));
     // Sort newest-first so we capture the most recent IL placement per player
     const txList = (txRes.transactions || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     txList.forEach(tx => {
@@ -3449,13 +3458,21 @@ async function fetchAwards(pids) {
   const missing = pids.filter(id => !(id in awardsCache));
   if (!missing.length) return;
   missing.forEach(id => { awardsCache[id] = { allStar:false, goldGlove:false, silverSlugger:false, mvp:false, cyYoung:false }; });
-  await Promise.all(missing.map(pid =>
-    fetchWithTimeout(`${MLB_API}/people/${pid}/awards`)
+  // A roster is forty men, and this used to be forty requests. The same
+  // awards come back hydrated onto a batch of people, verified man by man
+  // against the per-player endpoint.
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 20) chunks.push(missing.slice(i, i + 20));
+  await Promise.all(chunks.map(chunk =>
+    fetchWithTimeout(`${MLB_API}/people?personIds=${chunk.join(',')}&hydrate=awards&fields=${AWARD_FIELDS}`)
       .then(r => r.json()).then(d => {
-        (d.awards || []).forEach(a => {
+        (d.people || []).forEach(person => {
+        const pid = person.id;
+        (person.awards || []).forEach(a => {
           const name = (a.award?.name || a.name || '').toLowerCase();
           const id   = (a.awardId || '').toUpperCase();
           const cache = awardsCache[pid];
+          if (!cache) return;
           // All-Star: ASG selection award
           if (name.includes('all-star') || name.includes('all star') ||
               id.includes('ASGSEL') || id === 'ASG') cache.allStar = true;
@@ -3463,6 +3480,7 @@ async function fetchAwards(pids) {
           if (name.includes('gold glove')) cache.goldGlove = true;
           // Silver Slugger — exact match only
           if (name.includes('silver slugger')) cache.silverSlugger = true;
+        });
         });
       }).catch(() => {})
   ));
@@ -4682,27 +4700,29 @@ function ilBadgeHTML(p) {
 async function fetchCareerStats(pids) {
   const missing = pids.filter(id => !(id in careerStatsCache));
   if (!missing.length) return;
-  for (let i = 0; i < missing.length; i += 20) {
-    const chunk = missing.slice(i, i+20).join(',');
-    await Promise.all([
-      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting)`).then(r=>r.json()).then(d=>{
+  // Chunks in flight together, not one after the other: forty men meant two
+  // round trips laid end to end for what one wave carries.
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 20) chunks.push(missing.slice(i, i + 20).join(','));
+  await Promise.all(chunks.flatMap(chunk => [
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting)&fields=${CAREER_HIT_FIELDS}`).then(r=>r.json()).then(d=>{
         (d.people||[]).forEach(p => {
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
           if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
           Object.assign(careerStatsCache[p.id], summarizePriorHitting(p));
         });
       }).catch(()=>{}),
-      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching)`).then(r=>r.json()).then(d=>{
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching)&fields=${CAREER_PIT_FIELDS}`).then(r=>r.json()).then(d=>{
         (d.people||[]).forEach(p => {
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
           if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
           Object.assign(careerStatsCache[p.id], summarizePriorPitching(p));
         });
-      }).catch(()=>{})
-    ]);
-  }
-
-  await fetchSeasonHistory(pids);
+      }).catch(()=>{}),
+    // The five prior seasons write to a different cache and ask a different
+    // question; they were waiting on the career totals for no reason.
+    fetchSeasonHistory(pids),
+  ]));
 }
 
 async function fetchSeasonHistory(pids) {
@@ -4717,11 +4737,11 @@ async function fetchSeasonHistory(pids) {
   });
   if (!missingHistory.length) return;
 
-  for (let i = 0; i < missingHistory.length; i += 20) {
-    const chunk = missingHistory.slice(i, i+20).join(',');
-    await Promise.all([
+  const chunks = [];
+  for (let i = 0; i < missingHistory.length; i += 20) chunks.push(missingHistory.slice(i, i + 20).join(','));
+  await Promise.all(chunks.flatMap(chunk => [
       // Hitting seasons
-      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting,startSeason=${seasons[0]},endSeason=${prevYear})`)
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=hitting,startSeason=${seasons[0]},endSeason=${prevYear})&fields=${HISTORY_FIELDS}`)
         .then(r=>r.json()).then(d=>{
           (d.people||[]).forEach(p => {
             if (!seasonHistoryCache[p.id]) seasonHistoryCache[p.id] = { hit: {}, pitch: {} };
@@ -4736,7 +4756,7 @@ async function fetchSeasonHistory(pids) {
           });
         }).catch(()=>{}),
       // Pitching seasons
-      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching,startSeason=${seasons[0]},endSeason=${prevYear})`)
+      fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching,startSeason=${seasons[0]},endSeason=${prevYear})&fields=${HISTORY_FIELDS}`)
         .then(r=>r.json()).then(d=>{
           (d.people||[]).forEach(p => {
             if (!seasonHistoryCache[p.id]) seasonHistoryCache[p.id] = { hit: {}, pitch: {} };
@@ -4751,8 +4771,7 @@ async function fetchSeasonHistory(pids) {
             });
           });
         }).catch(()=>{})
-    ]);
-  }
+  ]));
 }
 
 // Generate colored dots for each season with data (up to 5) for OPS (hitters) or FORMA (pitchers)
