@@ -1,3 +1,8 @@
+/* The first three rules below — :root, * and body — are mirrored in
+   css/blog-base.css, which the blog loads on its own. Change them here and
+   change them there. Everything else in this file is the app's, and a blog
+   page matches none of it. */
+
   :root {
     --bg: #f4f6f9;
     --surface: #ffffff;

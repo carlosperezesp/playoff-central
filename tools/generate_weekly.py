@@ -2405,8 +2405,11 @@ PAGE = """<!DOCTYPE html>
 <meta property="og:url" content="{canonical}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="{rel}icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{rel}css/main.css">
+<link rel="dns-prefetch" href="https://img.mlbstatic.com">
+<link rel="dns-prefetch" href="https://www.mlbstatic.com">
+<link rel="preload" href="{rel}fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{rel}css/fonts.css?v=20260903-boxcache">
+<link rel="stylesheet" href="{rel}css/blog-base.css?v=20260903-boxcache">
 {jsonld}
 <style>{style}</style>
 </head>
@@ -2447,8 +2450,11 @@ INDEX_PAGE = """<!DOCTYPE html>
 <meta name="theme-color" content="#0d2016">
 <link rel="canonical" href="{site}/blog/">
 <link rel="icon" type="image/png" href="../icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css">
+<link rel="dns-prefetch" href="https://img.mlbstatic.com">
+<link rel="dns-prefetch" href="https://www.mlbstatic.com">
+<link rel="preload" href="../fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../css/fonts.css?v=20260903-boxcache">
+<link rel="stylesheet" href="../css/blog-base.css?v=20260903-boxcache">
 {jsonld}
 <style>
   body {{ background: #0d2016 radial-gradient(125% 85% at 50% 0%, #214a30 0%, #1a2e1f 42%, #0d2016 78%) fixed; }}

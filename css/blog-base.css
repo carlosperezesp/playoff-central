@@ -1,0 +1,27 @@
+/* The only three rules of main.css that a blog page ever matches.
+   Checked rule by rule against the index and against every kind of article:
+   of the 713 rules in main.css, an article matches :root, * and body and
+   nothing else — the rest is the app's furniture, and the article's own
+   look lives in the <style> block the generator writes into each page.
+   Loading all of main.css for these three cost 16 KB gzipped on a page
+   whose entire HTML is ten.
+
+   Kept in step with the head of css/main.css by hand. They are the site's
+   palette and reset and have not moved in months; if you change them there,
+   change them here. */
+
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #eef1f6;
+  --border: #dde2ea;
+  --accent: #16a34a;
+  --accent-blue: #1565d8;
+  --accent2: #e05a2b;
+  --text: #111827;
+  --muted: #6b7280;
+  --win: #16a34a;
+  --loss: #dc2626;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background: #0d2016 radial-gradient(125% 85% at 50% 0%, #214a30 0%, #1a2e1f 42%, #0d2016 78%) fixed; color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
