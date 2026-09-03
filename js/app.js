@@ -5,6 +5,12 @@ const CURRENT_YEAR = new Date().getFullYear();
 // (_aSelectStars / _aGameTagsHTML and their helpers). Cuts each boxscore
 // payload ~75% (≈184KB → 47KB). Verified to preserve the players map and
 // every consumed stat — keep in sync if those helpers read new fields.
+// What the team panel reads out of a recent boxscore: who played, where, and
+// in what order. The arms are read from their game logs instead, so none of
+// the pitching lines are wanted here.
+const IMPACT_BOXSCORE_FIELDS = 'teams,away,home,team,id,players,person,position,abbreviation,'
+  + 'allPositions,battingOrder';
+
 const TG_BOXSCORE_FIELDS = 'teams,away,home,team,id,abbreviation,players,person,fullName,allPositions,position,stats,batting,pitching,atBats,hits,doubles,triples,homeRuns,baseOnBalls,hitByPitch,sacFlies,rbi,runs,stolenBases,caughtStealing,strikeOuts,inningsPitched,earnedRuns,gamesStarted,battersFaced,pitchers,teamStats';
 
 const COUNTRY_FLAG = {
@@ -2801,13 +2807,39 @@ function getDateOffset(days) {
   return d.toISOString().split('T')[0];
 }
 
+// Games played at each position, every hitter in the league, in one request.
+// The team panel used to count this by reading a boxscore for every game the
+// club had played — a hundred and forty of them by September, per team. The
+// fielding line already holds the same tally, DH included, and being
+// league-wide it is fetched once and serves all thirty clubs.
+const FIELDING_FIELDS = 'stats,splits,player,id,position,abbreviation,stat,games';
+let leagueFieldingPromise = null;
+
+function leagueFielding(season) {
+  if (leagueFieldingPromise) return leagueFieldingPromise;
+  const url = `${MLB_API}/stats?stats=season&season=${season}&sportId=1&group=fielding`
+    + `&gameType=R&playerPool=All&limit=4000&fields=${FIELDING_FIELDS}`;
+  const get = typeof cachedJSON === 'function'
+    ? cachedJSON(url, { timeout: 12000 })
+    : fetchWithTimeout(url).then(r => r.json());
+  return (leagueFieldingPromise = get.then(d => {
+    const byPid = {};
+    ((d.stats || [])[0]?.splits || []).forEach(sp => {
+      const pid = sp.player?.id, pos = sp.position?.abbreviation, g = parseInt(sp.stat?.games) || 0;
+      if (!pid || !pos || !g) return;
+      (byPid[pid] = byPid[pid] || {})[pos] = (byPid[pid][pos] || 0) + g;
+    });
+    return byPid;
+  }).catch(() => ({})));
+}
+
 async function fetchTeamImpact(teamId) {
   const season = CURRENT_YEAR;
   const yesterday = getDateOffset(-1);
   const today     = getDateOffset(0);
 
   // Fetch roster (hydrated), schedule (for boxscores + yesterday's games), and IL list in parallel
-  const [rosterData, schedData, ilData] = await Promise.all([
+  const [rosterData, schedData, ilData, fielding] = await Promise.all([
     fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=active&season=${season}&hydrate=person(birthCountry,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
     fetchWithTimeout(`${MLB_API}/schedule?sportId=1&teamId=${teamId}&season=${season}&gameType=R&startDate=${season}-03-01&endDate=${today}`)
@@ -2815,6 +2847,7 @@ async function fetchTeamImpact(teamId) {
     // 40-man roster includes IL players with their status
     fetchWithTimeout(`${MLB_API}/teams/${teamId}/roster?rosterType=40Man&season=${season}&hydrate=person(birthCountry,pitchHand,stats(group=[hitting,pitching],type=season,season=${season}))`)
       .then(r => r.json()).catch(() => ({ roster: [] })),
+    leagueFielding(season),
   ]);
 
   const roster = rosterData.roster || [];
@@ -2905,32 +2938,49 @@ async function fetchTeamImpact(teamId) {
   // Fetch all season boxscores for QS calculation AND full-season hitter pos tracking
   // (Previously only last-15 were used for hitters, which caused wrong starters when
   //  a player returned from the IL with few recent appearances despite more total games)
-  const last15 = allGameIds.slice(-15); // kept for pitcher rest-days only
+  const last15 = allGameIds.slice(-15);
+  const recentGameIds = [...new Set(last15)];
   // Also store the date of each game by gamePk
   const gamePkToDate = {};
   (schedData.dates || []).forEach(d => {
     (d.games || []).forEach(g => { gamePkToDate[g.gamePk] = d.date; });
   });
 
+  // Seeded from the league fielding line rather than counted game by game
+  const hitterPosCount   = {}; // pid → {pos → games}
   const dhCount          = {}; // pid → # of DH appearances
-  const hitterPosCount   = {}; // pid → {pos → count}
+  [...roster, ...ilRoster].forEach(pl => {
+    const pid = pl.person?.id;
+    if (!pid || !fielding[pid]) return;
+    hitterPosCount[pid] = { ...fielding[pid] };
+    if (fielding[pid].DH) dhCount[pid] = fielding[pid].DH;
+  });
   const hitterPosRecent  = {}; // pid → {pos → lastDate}
   const pitcherApps      = {}; // pid → {starts, relief, closerApps, lastPitchDate, qualityStarts}
   const lineupSnapshots  = []; // [{ date, gamePk, starters:[{pid,pos}] }]
 
   // Use all games for pitcher stats (QS needs full season), last15 is still used for hitter positions
-  await Promise.all(allGameIds.map(async (gamePk) => {
-    const isRecent = last15.includes(gamePk);
+  // One boxscore per game the club has played, and by September that is well
+  // over a hundred. Two things make it bearable: the projection above, and the
+  // fact that a game which has finished is finished — its boxscore will never
+  // read differently, so it is cached for good. The first team costs a wait;
+  // every team after it reuses every game it shares with one already opened,
+  // and opening the same team again costs nothing at all.
+  // Only the recent games now: where a man has been playing lately, who is in
+  // the latest lineup card, and when each arm last threw. The season-long
+  // tallies above no longer come from here, so there is nothing to gain by
+  // reading April.
+  await Promise.all(recentGameIds.map(async (gamePk) => {
+    const isRecent = true;
     try {
-      const bData = await fetchWithTimeout(`${MLB_API}/game/${gamePk}/boxscore`).then(r => r.json());
+      const url = `${MLB_API}/game/${gamePk}/boxscore?fields=${IMPACT_BOXSCORE_FIELDS}`;
+      const bData = typeof cachedJSON === 'function'
+        ? await cachedJSON(url, { ttl: Infinity, timeout: 12000 })
+        : await fetchWithTimeout(url).then(r => r.json());
       const teamKey = Object.keys(bData.teams||{}).find(k => bData.teams[k].team?.id === teamId);
       if (!teamKey) return;
       const gameDate = gamePkToDate[gamePk] || null;
       const lineupStarters = [];
-
-      // The pitchers array lists them in order: index 0 = starter
-      const pitchersArr = bData.teams[teamKey].pitchers || [];
-      const starterPid = pitchersArr[0] || null;
 
       Object.values(bData.teams[teamKey].players || {}).forEach(pl => {
         const pid = pl.person?.id;
@@ -2960,40 +3010,54 @@ async function fetchTeamImpact(teamId) {
           lineupStarters.push({ pid, pos: gamePrimaryPos });
         }
 
-        // Check if this player pitched (primary pos P/TWP OR appears in pitchers array with pitching stats)
-        const pitchedThisGame = (pos === 'P' || pos === 'TWP') ||
-          (pid === starterPid) ||
-          (pl.allPositions || []).some(ap => ap.abbreviation === 'P' || ap.abbreviation === 'TWP');
-
-        if (pitchedThisGame) {
-          if (!pitcherApps[pid]) pitcherApps[pid] = { starts: 0, relief: 0, closerApps: 0, lastPitchDate: null, qualityStarts: 0 };
-          const pst = pl.stats?.pitching || {};
-          const ipThisGame = parseFloat(pst.inningsPitched) || 0;
-          if (ipThisGame > 0) {
-            if (pid === starterPid) {
-              pitcherApps[pid].starts++;
-              // Quality Start: starter pitches ≥6 IP and allows ≤3 earned runs
-              const erThisGame = parseInt(pst.earnedRuns) || 0;
-              if (ipThisGame >= 6.0 && erThisGame <= 3) {
-                pitcherApps[pid].qualityStarts++;
-              }
-            } else {
-              pitcherApps[pid].relief++;
-              if ((parseInt(pst.saves)||0) > 0 || (parseInt(pst.holds)||0) > 0 || (parseInt(pst.blownSaves)||0) > 0) {
-                pitcherApps[pid].closerApps++;
-              }
-            }
-            if (gameDate && (!pitcherApps[pid].lastPitchDate || gameDate > pitcherApps[pid].lastPitchDate)) {
-              pitcherApps[pid].lastPitchDate = gameDate;
-            }
-          }
-        }
       });
       if (lineupStarters.length && gameDate) {
         lineupSnapshots.push({ date: gameDate, gamePk, starters: lineupStarters });
       }
     } catch(e) {}
   }));
+
+  // Everything the panel knows about an arm — how often he starts, whether he
+  // works the ninth, when he last threw, how many quality starts he has — was
+  // counted by reading every boxscore of the season. One game log says all of
+  // it and the whole staff fits in a single request. Only this club's games
+  // count: a man who started elsewhere and relieves here belongs in the
+  // bullpen, which is what the panel is describing.
+  const armPids = roster
+    .filter(pl => pl.position?.abbreviation === 'P' || pl.position?.abbreviation === 'TWP')
+    .map(pl => pl.person?.id).filter(Boolean);
+  if (armPids.length) {
+    try {
+      const url = `${MLB_API}/people?personIds=${armPids.join(',')}`
+        + `&hydrate=stats(type=gameLog,group=pitching,season=${season})`
+        + `&fields=people,id,stats,group,displayName,splits,date,team,stat,gamesStarted,`
+        + `inningsPitched,earnedRuns,saves,holds,blownSaves`;
+      const d = typeof cachedJSON === 'function'
+        ? await cachedJSON(url, { timeout: 12000 })
+        : await fetchWithTimeout(url).then(r => r.json());
+      (d.people || []).forEach(pp => {
+        const splits = pp.stats?.find(g => g.group?.displayName === 'pitching')?.splits || [];
+        const a = pitcherApps[pp.id] = { starts: 0, relief: 0, closerApps: 0, lastPitchDate: null, qualityStarts: 0 };
+        splits.forEach(sp => {
+          if (sp.team?.id !== teamId) return;
+          const st = sp.stat || {};
+          const ip = parseFloat(st.inningsPitched) || 0;
+          if (ip <= 0) return;
+          if ((parseInt(st.gamesStarted) || 0) >= 1) {
+            a.starts++;
+            // Quality start: six innings or more, three earned runs or fewer
+            if (ip >= 6.0 && (parseInt(st.earnedRuns) || 0) <= 3) a.qualityStarts++;
+          } else {
+            a.relief++;
+            if ((parseInt(st.saves) || 0) > 0 || (parseInt(st.holds) || 0) > 0 || (parseInt(st.blownSaves) || 0) > 0) {
+              a.closerApps++;
+            }
+          }
+          if (sp.date && (!a.lastPitchDate || sp.date > a.lastPitchDate)) a.lastPitchDate = sp.date;
+        });
+      });
+    } catch(e) { /* the panel reads a missing arm as zero, as it always has */ }
+  }
 
   const latestLineup = lineupSnapshots
     .slice()
