@@ -11,9 +11,9 @@ const CURRENT_YEAR = new Date().getFullYear();
 // What the team panel reads back out of a player's history. Unprojected, a
 // yearByYear hydrate carries every split of every season for forty men.
 const CAREER_HIT_FIELDS = 'people,id,mlbDebutDate,stats,group,type,displayName,splits,season,stat,'
-  + 'atBats,hits,doubles,triples,homeRuns,baseOnBalls,hitByPitch,sacFlies';
+  + 'atBats,hits,doubles,triples,homeRuns,baseOnBalls,hitByPitch,sacFlies,ops';
 const CAREER_PIT_FIELDS = 'people,id,mlbDebutDate,stats,group,type,displayName,splits,season,stat,'
-  + 'inningsPitched,earnedRuns,hits,baseOnBalls';
+  + 'inningsPitched,earnedRuns,hits,baseOnBalls,era,whip';
 const HISTORY_FIELDS = 'people,id,stats,group,type,displayName,splits,season,stat,ops,era,whip';
 const AWARD_FIELDS = 'people,id,awards,award,name,awardId';
 
@@ -2752,7 +2752,10 @@ async function selectTeam(teamId) {
       }
     }
     if (!impact) {
-      impact = await fetchTeamImpact(teamId);
+      // The league table sits at the top of the panel, so it is wanted for the
+      // first paint; it is one league-wide call that every other club reuses.
+      const [built] = await Promise.all([fetchTeamImpact(teamId), fetchLeagueTeamStats()]);
+      impact = built;
       teamsImpactCache[teamId] = impact;
     }
     const allPids = [
@@ -2772,23 +2775,37 @@ async function selectTeam(teamId) {
     const hitterPids = [...new Set(
       Object.values(impact.hittersByPos).flat().map(p=>p.id).filter(Boolean)
     )];
+    // Rookie stars, trade arrows, award pips, the five-season dots and the
+    // recent-form half of a pitcher's FORMA all come from the caches below.
+    // None of them decides who is on the field or where he stands, so the
+    // club goes up as soon as it is known and they colour it in a beat later.
+    const decorate = () => {
+      Object.values(impact.hittersByPos).flat().forEach(p => { p.isRookie = isRookieEligible(p.id, 'hitter'); p.tradedIn = tradedCache[p.id] === teamId; });
+      [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => { p.isRookie = isRookieEligible(p.id, 'pitcher'); p.tradedIn = tradedCache[p.id] === teamId; });
+      impact.ilPlayers.forEach(p => { p.isRookie = isRookieEligible(p.id, p.isPitcher ? 'pitcher' : 'hitter'); p.tradedIn = tradedCache[p.id] === teamId; });
+      // Recalculate FORMA with recent data now available
+      [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => {
+        p.score = calcPitcherScoreWithRecent(p.stats || {}, p.id) ?? 0;
+      });
+    };
+
+    decorate();
+    renderDiamondPanel(teamId, impact);
+
     await Promise.all([
-      fetchLeagueTeamStats(),
       fetchCareerStats(uniquePids),
       fetchRecentPitching(pitcherPids),
       fetchRecentHitting(hitterPids),
       fetchAwards(uniquePids),
       fetchTrades(),
     ]);
-    Object.values(impact.hittersByPos).flat().forEach(p => { p.isRookie = isRookieEligible(p.id, 'hitter'); p.tradedIn = tradedCache[p.id] === teamId; });
-    [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => { p.isRookie = isRookieEligible(p.id, 'pitcher'); p.tradedIn = tradedCache[p.id] === teamId; });
-    impact.ilPlayers.forEach(p => { p.isRookie = isRookieEligible(p.id, p.isPitcher ? 'pitcher' : 'hitter'); p.tradedIn = tradedCache[p.id] === teamId; });
-    // Recalculate FORMA with recent data now available
-    [...impact.spList, ...impact.clList, ...impact.rpList].forEach(p => {
-      p.score = calcPitcherScoreWithRecent(p.stats || {}, p.id) ?? 0;
-    });
-    renderDiamondPanel(teamId, impact);
+    // A repaint that lands after the reader has moved to another club would
+    // put the old one back; one that lands after he has opened a player would
+    // shut the card under his finger.
+    decorate();
 
+    // Persist before deciding whether to repaint: the reader may have walked
+    // on, but the club was fetched and must not have to be fetched again.
     if (!fromStorage) {
       // Persist bundle so revisits (even after reload) skip all fetches today
       const pick = src => {
@@ -2805,6 +2822,11 @@ async function selectTeam(teamId) {
         seasonHist: pick(seasonHistoryCache),
       });
     }
+
+    // A repaint that lands after the reader has moved to another club would
+    // put the old one back; one that lands after he has opened a player would
+    // shut the card under his finger.
+    if (selectedTeamId === teamId && !selectedDiamondKey) renderDiamondPanel(teamId, impact);
   } catch(e) {
     panel.innerHTML = errorStateHTML(`selectTeam(${teamId})`);
   }
@@ -2979,7 +3001,7 @@ async function fetchTeamImpact(teamId) {
   // the latest lineup card, and when each arm last threw. The season-long
   // tallies above no longer come from here, so there is nothing to gain by
   // reading April.
-  await Promise.all(recentGameIds.map(async (gamePk) => {
+  const boxscores = Promise.all(recentGameIds.map(async (gamePk) => {
     const isRecent = true;
     try {
       const url = `${MLB_API}/game/${gamePk}/boxscore?fields=${IMPACT_BOXSCORE_FIELDS}`;
@@ -3032,6 +3054,8 @@ async function fetchTeamImpact(teamId) {
   // it and the whole staff fits in a single request. Only this club's games
   // count: a man who started elsewhere and relieves here belongs in the
   // bullpen, which is what the panel is describing.
+  // It is built from the roster, which came in with the first wave, and asks
+  // the boxscores for nothing — so it goes out alongside them, not behind.
   const armPids = roster
     .filter(pl => pl.position?.abbreviation === 'P' || pl.position?.abbreviation === 'TWP')
     .map(pl => pl.person?.id).filter(Boolean);
@@ -3067,6 +3091,8 @@ async function fetchTeamImpact(teamId) {
       });
     } catch(e) { /* the panel reads a missing arm as zero, as it always has */ }
   }
+
+  await boxscores;
 
   const latestLineup = lineupSnapshots
     .slice()
@@ -4710,6 +4736,7 @@ async function fetchCareerStats(pids) {
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
           if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
           Object.assign(careerStatsCache[p.id], summarizePriorHitting(p));
+          absorbSeasonDots(p, 'hitting');
         });
       }).catch(()=>{}),
       fetchWithTimeout(`${MLB_API}/people?personIds=${chunk}&hydrate=stats(type=yearByYear,group=pitching)&fields=${CAREER_PIT_FIELDS}`).then(r=>r.json()).then(d=>{
@@ -4717,12 +4744,32 @@ async function fetchCareerStats(pids) {
           careerStatsCache[p.id] = careerStatsCache[p.id] || {};
           if (p.mlbDebutDate) careerStatsCache[p.id].debutYear = parseInt(p.mlbDebutDate.slice(0,4));
           Object.assign(careerStatsCache[p.id], summarizePriorPitching(p));
+          absorbSeasonDots(p, 'pitching');
         });
       }).catch(()=>{}),
-    // The five prior seasons write to a different cache and ask a different
-    // question; they were waiting on the career totals for no reason.
-    fetchSeasonHistory(pids),
   ]));
+}
+
+// The five-season dots used to be a second round trip to the very endpoint the
+// career totals had just read — same yearByYear splits, a narrower window. They
+// are read out of the response already in hand. fetchSeasonHistory survives for
+// the MVP panels, which ask for men no roster has fetched.
+function absorbSeasonDots(person, group) {
+  const prevYear = CURRENT_YEAR - 1;
+  const sg = (person.stats || []).find(g => g.group?.displayName === group
+    && g.type?.displayName?.toLowerCase() === 'yearbyyear');
+  if (!sg) return;
+  const bag = seasonHistoryCache[person.id] = seasonHistoryCache[person.id] || { hit: {}, pitch: {} };
+  (sg.splits || []).forEach(sp => {
+    const yr = parseInt(sp.season, 10);
+    if (!yr || yr > prevYear || yr < prevYear - 4) return;
+    const st = sp.stat || {};
+    if (group === 'hitting') {
+      if (st.ops != null) bag.hit[yr] = parseFloat(st.ops) || 0;
+    } else if (st.era != null) {
+      bag.pitch[yr] = calcBaseScore(parseFloat(st.era), parseFloat(st.whip)) ?? null;
+    }
+  });
 }
 
 async function fetchSeasonHistory(pids) {
