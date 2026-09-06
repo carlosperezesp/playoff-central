@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Dugout — Baseball Lens</title>
+<link rel="icon" type="image/png" href="./icon.png">
+<link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+<link rel="dns-prefetch" href="https://img.mlbstatic.com">
+<link rel="dns-prefetch" href="https://www.mlbstatic.com">
+<link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css?v=20260903-scroll">
+<style>
+  :root{
+    --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
+    --line:rgba(243,239,224,.13); --gold:#e8c23a; --muted:#9fb4a6;
+    --hit:#4ade80; --walk:#8fc4ff; --whiff:#ff8a97; --err:#ff8100;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Barlow Condensed',system-ui,sans-serif; color:var(--ink); min-height:100vh;
+    background:#0d1a12;
+    padding:24px 14px 150px; -webkit-font-smoothing:antialiased;
+  }
+  body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(120% 75% at 50% -8%, #223d2a 0%, #16281c 52%, #0d1a1200 100%)}
+
+  .wrap{max-width:1100px;margin:0 auto}
+
+  /* ── Page header ─────────────────────────────────────────── */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand-ico{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;flex-shrink:0;overflow:hidden}
+  .brand-ico img{width:100%;height:100%;object-fit:cover;display:block}
+  .brand-txt{font-family:'Bebas Neue';font-size:27px;letter-spacing:2.5px;line-height:1;color:#fff}
+  .brand-txt b{font-weight:400;color:#3ddc7f}
+  .top-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .back-pill{font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink);
+    border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;white-space:nowrap;text-decoration:none;
+    background:rgba(243,239,224,.04);transition:background .15s,border-color .15s}
+  .back-pill:hover{background:rgba(243,239,224,.1);border-color:rgba(243,239,224,.28)}
+  .top-pill{font-weight:800;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--ink);
+    border:1.5px solid var(--line);border-radius:999px;padding:8px 16px;white-space:nowrap}
+  .lede{font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.6;color:var(--ink-dim);max-width:70ch;margin-bottom:6px}
+  .lede b{color:var(--ink);font-weight:600}
+  .meta{font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
+    margin-bottom:18px}
+
+  /* ── Delay control — pinned to the bottom edge, where the thumb already is,
+     so nudging the sync never means scrolling away from the game ──────────── */
+  .delaybar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    position:fixed;left:0;right:0;bottom:0;z-index:100;
+    border-top:1px solid var(--line);background:#0d2016;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    box-shadow:0 -2px 16px rgba(0,0,0,.3)}
+  .delaybar .lbl{font-weight:800;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft)}
+  .chip{font-family:inherit;font-weight:800;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--ink-dim);background:rgba(243,239,224,.05);border:1.5px solid var(--line);border-radius:999px;
+    padding:7px 13px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+  .chip:hover{background:rgba(243,239,224,.1);color:var(--ink)}
+  .chip.on{color:#0d1a12;background:var(--gold);border-color:var(--gold)}
+  .stepper{display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
+  .stepper button{font-family:inherit;font-weight:800;font-size:15px;color:var(--ink);background:rgba(243,239,224,.05);
+    border:0;padding:6px 13px;cursor:pointer}
+  .stepper button:hover{background:rgba(243,239,224,.12)}
+  .stepper .val{font-family:'Bebas Neue';font-size:19px;letter-spacing:1px;color:var(--gold);
+    padding:4px 12px;min-width:72px;text-align:center;font-variant-numeric:tabular-nums}
+  .delay-clock{font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-dim);margin-left:auto;
+    font-variant-numeric:tabular-nums}
+  .delay-clock b{color:var(--ink);font-weight:600}
+
+  /* ── Game list, in the Top Games language: compact rows, panel unfolds ───── */
+  .gamelist{border:1px solid rgba(243,239,224,.16);border-radius:14px;overflow:hidden;
+    background:rgba(243,239,224,.02)}
+  .gamecard{border-bottom:1px solid var(--line)}
+  .gamecard:last-child{border-bottom:0}
+  .grow{cursor:pointer;padding:2px 10px 7px;transition:background .1s}
+  .grow:hover{background:rgba(255,255,255,.04)}
+  .gamecard.open .grow{background:rgba(255,255,255,.05)}
+  .grow-scroll{overflow-x:auto}
+  .grow-grid{min-width:430px}
+  .gr{display:grid;grid-template-columns:minmax(130px,1fr) repeat(9,minmax(24px,44px)) 34px;
+    align-items:center}
+  .gr-head{padding:7px 0 2px}
+  .gr-status{font-weight:700;font-size:12px;letter-spacing:1px;color:var(--ink-dim);
+    text-transform:uppercase;white-space:nowrap;padding-left:2px}
+  .gr-status.live{color:#7fe07f}
+  .gr-status.live::before{content:'● '}
+  .gr-status.fin{color:var(--ink-soft)}
+  .gr-gi{text-align:center;font-weight:700;font-size:10.5px;color:var(--ink-soft)}
+  .gr-gi.r{color:var(--gold)}
+  .gr-tm{display:flex;align-items:center;gap:8px;min-width:0;padding:2px 4px 2px 2px}
+  .gr-tm img{width:22px;height:22px;object-fit:contain;flex:none}
+  .gr-tm .nm{font-family:'Bebas Neue';font-size:22px;letter-spacing:1.4px;color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gr.loser .nm,.gr.loser .gr-inn,.gr.loser .gr-r{color:var(--ink-soft)}
+  .gr-inn{text-align:center;font-weight:700;font-size:17px;color:#fff}
+  .gr-inn.cur{color:var(--gold)}
+  .gr-r{text-align:center;font-weight:800;font-size:18px;color:var(--gold)}
+
+  /* ── The unfolded panel ──────────────────────────────────── */
+  .gdetail{background:rgba(0,0,0,.22);border-top:1px solid var(--line);padding:4px 0 8px}
+  .dh{font-weight:800;font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft);
+    padding:12px 16px 6px}
+  .dcols{display:grid;grid-template-columns:1fr}
+  .dcol{min-width:0}
+  @media (min-width:900px){
+    .dcols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+    .dcols > .dcol + .dcol{border-left:1px solid var(--line)}
+  }
+
+  /* ── Linescore (full, with R H E) ────────────────────────── */
+  .lines{padding:4px 16px 10px;overflow-x:auto}
+  .lines table{border-collapse:collapse;width:100%;min-width:400px}
+  .lines th,.lines td{font-weight:800;font-size:13px;text-align:center;padding:4px 5px;
+    font-variant-numeric:tabular-nums;color:var(--ink-dim)}
+  .lines th{font-size:10px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+  .lines th:first-child,.lines td:first-child{text-align:left;padding-left:0}
+  .lines td:first-child{font-family:'Bebas Neue';font-weight:400;font-size:16px;letter-spacing:1.2px;color:#fff}
+  .lines .rhe{color:#fff;font-size:14.5px}
+  .lines th.rhe{color:var(--ink-dim)}
+  .lines .sep-l{border-left:1px solid var(--line)}
+  .lines td.now{color:var(--gold)}
+
+  /* ── Live situation ──────────────────────────────────────── */
+  .situ{display:flex;align-items:center;gap:14px;padding:10px 16px 6px;flex-wrap:wrap}
+  .diamond{flex-shrink:0}
+  .diamond rect{fill:rgba(243,239,224,.1);stroke:rgba(243,239,224,.35);stroke-width:1.5}
+  .diamond rect.on{fill:var(--gold);stroke:var(--gold)}
+  .count{font-family:'Bebas Neue';font-size:19px;letter-spacing:1.6px;color:var(--ink);flex-shrink:0}
+  .count i{font-style:normal;color:var(--ink-soft);font-size:13px;letter-spacing:1px}
+  .duel{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+  .duel-row{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .duel-row .who{font-weight:800;font-size:9.5px;letter-spacing:1.4px;color:var(--ink-soft);width:22px;flex-shrink:0}
+  .duel-row .nm{font-family:'Bebas Neue';font-size:17px;letter-spacing:.9px;color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:40px}
+  .duel-row .pc{font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--ink-dim);white-space:nowrap;flex-shrink:0}
+  .lastplay{font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.5;color:var(--ink-dim);
+    padding:4px 16px 8px}
+  .lastplay b{color:var(--ink);font-weight:600}
+
+  /* The strike zone, catcher's view, and the nine men behind the pitcher */
+  .zonewrap{display:flex;gap:16px;padding:6px 16px 10px;align-items:flex-start;flex-wrap:wrap}
+  .zonebox{flex-shrink:0}
+  .zone-title{font-weight:800;font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);
+    text-align:center;margin-bottom:4px}
+  .zone{display:block;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px}
+  .zone .zrect{fill:none;stroke:rgba(243,239,224,.4);stroke-width:1;stroke-dasharray:3 2}
+  .zone text{font-family:'Barlow Condensed';font-weight:800;font-size:8px}
+  .zone-legend{display:flex;gap:8px;justify-content:center;margin-top:4px;
+    font-weight:700;font-size:8.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
+  .zone-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+  .fielders{flex:1;min-width:150px}
+  .fielders .frow{display:flex;align-items:baseline;gap:7px;padding:2.5px 0;min-width:0}
+  .fielders .fpos{font-weight:800;font-size:9.5px;letter-spacing:1px;color:var(--gold);width:22px;flex-shrink:0}
+  .fielders .fnm{font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+
+  /* ── Scorecard, the notebook grid: batters down, innings across ─────────── */
+  .sc{padding:2px 16px 10px;overflow-x:auto}
+  .sc table{border-collapse:collapse}
+  .sc th,.sc td{font-weight:800;text-align:center;padding:1px 2px;vertical-align:top;
+    border:1px solid rgba(243,239,224,.09);min-width:44px}
+  .sc th{font-size:9px;letter-spacing:1px;color:var(--ink-soft);border-top:0;padding:3px 2px}
+  .sc th:first-child,.sc td:first-child{text-align:left;min-width:76px;max-width:104px;overflow:hidden;
+    text-overflow:ellipsis;border-left:0;padding-left:0;padding-right:6px;white-space:nowrap;
+    vertical-align:middle}
+  .sc th:last-child,.sc td:last-child{border-right:0}
+  .sc td:first-child{font-weight:600;font-size:12px;color:#fff}
+  .sc .subarrow{font-style:normal;color:var(--ink-soft)}
+  .sc-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 3px}
+  .pa{display:flex;flex-direction:column;align-items:center;gap:0;padding:1px 0}
+  .pa svg{display:block}
+  .pa .lab{font-weight:800;font-size:9.5px;line-height:1.1;white-space:nowrap;letter-spacing:.3px}
+  .pa .dia{fill:none;stroke:rgba(243,239,224,.16);stroke-width:1}
+  .pa .dia.scored{fill:var(--gold);stroke:var(--gold);opacity:.9}
+  .pa .run{stroke:#f3efe0;stroke-width:1.7;stroke-linecap:round}
+  .pa .slash{stroke:var(--gold);stroke-width:1.6}
+  .pa text{font-family:'Barlow Condensed';font-weight:800;font-size:7.5px;fill:#9fb4a6}
+  .pa text.outlab{fill:#ff8a97}
+
+  /* ── Player boxscore ─────────────────────────────────────── */
+  .box{padding:2px 16px 10px;overflow-x:auto}
+  .box-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 2px}
+  .box table{border-collapse:collapse;width:100%;min-width:400px}
+  .box table + table{margin-top:10px}
+  .box th,.box td{font-weight:700;font-size:12px;text-align:right;padding:3.5px 4px;
+    color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .box th{font-size:9px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+  .box th:first-child,.box td:first-child{text-align:left;padding-left:0;white-space:normal}
+  .box td:first-child{color:#fff;font-weight:600;font-size:13px}
+  .pos-tag{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1px;color:var(--ink-soft);margin-left:3px}
+  .subarrow{font-style:normal;color:var(--ink-soft)}
+
+  .pregame{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px 12px}
+  .pregame .when{font-family:'Bebas Neue';font-size:19px;letter-spacing:1.4px;color:var(--ink)}
+  .pregame .prob{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-dim);text-align:right;line-height:1.5}
+  .pregame .prob b{color:var(--ink);font-weight:600}
+  .dload{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);padding:10px 16px 12px}
+
+  .state{padding:60px 10px;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    color:var(--ink-soft)}
+  .note{font-family:'Inter',sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);margin-top:20px}
+
+  @media (max-width:768px){
+    .brand-txt{font-size:22px}.back-pill{font-size:10px;padding:6px 10px;letter-spacing:1px}
+    .top-pill{font-size:10px;padding:6px 11px;letter-spacing:1.2px}
+    .top{align-items:flex-start;flex-direction:column;gap:12px}
+    .delay-clock{margin-left:0;width:100%}
+  }
+  /* Down where even a phone feels wide, the row keeps only clubs, score and state */
+  @media (max-width:520px){
+    .grow-grid{min-width:0}
+    .gr{grid-template-columns:minmax(0,1fr) 34px}
+    .gr-gi,.gr-inn{display:none}
+    .gr-gi.r{display:block}
+    .gr-tm .nm{font-size:19px}
+    .box{padding:2px 12px 8px}
+    .box table{min-width:0}
+    .box th,.box td{font-size:11px;padding:3px}
+    .box td:first-child{font-size:12px}
+    .lines{padding:4px 12px 8px}
+    .sc,.situ,.zonewrap{padding-left:12px;padding-right:12px}
+    .dh,.lastplay{padding-left:12px;padding-right:12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <div class="brand">
+        <span class="brand-ico"><img src="./icon.png" alt="Baseball Lens logo"></span>
+        <span class="brand-txt">BASEBALL <b>LENS</b></span>
+      </div>
+      <div class="top-actions">
+        <a class="back-pill" href="index.html">&larr; Home</a>
+        <div class="top-pill">Dugout</div>
+      </div>
+    </div>
+    <p class="lede">Live boxscores, on <b>your</b> clock. The delay bar at the bottom holds every score,
+      count and base runner back that many seconds, so this board can sit next to a broadcast that runs
+      behind the stats feed without spoiling a pitch. Tap a game for the full picture: the scorecard,
+      the zone, the defense, the box.</p>
+    <div class="meta" id="meta">Loading…</div>
+  </header>
+
+  <div id="board" class="state">Loading games…</div>
+
+  <p class="note">Every panel is rendered from the stats feed's own history: with a 60-second delay the
+    board shows the game exactly as the feed described it 60 seconds ago, not a paused copy. Adjust in
+    15-second steps until the board and your broadcast call the same pitch.</p>
+</div>
+
+<div class="delaybar">
+  <span class="lbl">Delay</span>
+  <button class="chip" data-delay="0">Live</button>
+  <button class="chip" data-delay="30">30s</button>
+  <button class="chip" data-delay="60">60s</button>
+  <button class="chip" data-delay="75">75s</button>
+  <button class="chip" data-delay="90">90s</button>
+  <div class="stepper">
+    <button type="button" id="dMinus" aria-label="15 seconds less delay">&minus;</button>
+    <span class="val" id="dVal">0s</span>
+    <button type="button" id="dPlus" aria-label="15 seconds more delay">+</button>
+  </div>
+  <span class="delay-clock" id="dClock"></span>
+</div>
+
+<script>
+const API = 'https://statsapi.mlb.com/api/v1';
+const API11 = 'https://statsapi.mlb.com/api/v1.1';
+const TICK_MS = 15000;      // how often live rows ask the feed for their (delayed) present
+const STEP = 15, MAX_DELAY = 600;
+
+const logo = id => `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg`;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+
+// The feed's timecodes are UTC, second precision: YYYYMMDD_HHMMSS. Same format
+// everywhere, so "which snapshot is at or before my delayed now" is a plain
+// string comparison.
+const timecode = d => `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}_${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
+
+// Games belong to their US Eastern date — from Spain, a 2 a.m. game is still
+// "tonight's slate". Asking for the ET today keeps the board on the right day
+// through the whole Spanish evening and small hours.
+const etDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+
+const F_SCHED = 'dates,games,gamePk,gameDate,status,abstractGameState,detailedState,'
+  + 'teams,away,home,team,id,teamName,abbreviation,probablePitcher,fullName';
+// One flat list of names; the API keeps any field whose name appears here, at
+// any depth. A folded row only needs the scoreboard...
+const F_LITE = 'gamePk,gameData,status,abstractGameState,detailedState,liveData,linescore,'
+  + 'currentInning,currentInningOrdinal,inningState,isTopInning,scheduledInnings,innings,num,home,away,'
+  + 'runs,hits,errors,teams,balls,strikes,outs,offense,batter,first,second,third,defense,pitcher,'
+  + 'id,fullName,plays,currentPlay,result,description,about,isComplete';
+// ...an unfolded one adds the boxscore, every finished plate appearance (the
+// scorecard), the men on defense, and the pitch count. Same snapshot, more of it.
+const F_FULL = F_LITE + ','
+  + 'boxscore,players,person,batters,pitchers,battingOrder,position,abbreviation,stats,batting,pitching,'
+  + 'atBats,rbi,baseOnBalls,strikeOuts,inningsPitched,earnedRuns,seasonStats,avg,era,numberOfPitches,'
+  + 'catcher,shortstop,left,center,right,'
+  + 'allPlays,eventType,halfInning,inning,matchup,runners,credits,credit,code,'
+  // ...and each runner's journey, so the scorecard can draw the basepaths: where
+  // he ended up, whether he was out on the bases, and the outs count after each play
+  + 'movement,end,outBase,isOut,details,runner,count';
+// The pitches of the current at-bat, for the zone. Kept out of F_FULL because
+// the name playEvents would drag in every pitch of the game under allPlays.
+const F_ZONE = 'liveData,plays,currentPlay,playEvents,isPitch,pitchNumber,details,isBall,call,code,'
+  + 'pitchData,strikeZoneTop,strikeZoneBottom,coordinates,pX,pZ';
+
+// ── State ────────────────────────────────────────────────────────────────────
+// 75s unless the reader has already tuned it — a saved 0 ("live") is a choice, not an absence
+const savedDelay = parseInt(localStorage.getItem('bl-dugout-delay'), 10);
+let DELAY = Math.min(MAX_DELAY, Math.max(0, Number.isFinite(savedDelay) ? savedDelay : 75));
+let GAMES = [];             // schedule rows, in start order
+const CARDS = {};           // gamePk → card element
+const DONE = new Set();     // finals already painted at their last snapshot
+const FEEDS = new Map();    // `${pk}|${tc}|${tier}` → feed, so nudging the delay repaints from memory
+const LAST = {};            // gamePk → { feed, tier } the row was last painted from
+const OPEN = new Set();     // games unfolded to their full panel
+let ticking = false;
+
+// ── Delay control ────────────────────────────────────────────────────────────
+function setDelay(v, repaint = true) {
+  DELAY = Math.min(MAX_DELAY, Math.max(0, v));
+  localStorage.setItem('bl-dugout-delay', String(DELAY));
+  document.getElementById('dVal').textContent = DELAY ? `−${DELAY}s` : 'LIVE';
+  document.querySelectorAll('.chip').forEach(b =>
+    b.classList.toggle('on', parseInt(b.dataset.delay, 10) === DELAY));
+  DONE.clear();             // a shorter delay can wake a "finished" row back up
+  if (repaint) tick();
+}
+document.querySelectorAll('.chip').forEach(b =>
+  b.addEventListener('click', () => setDelay(parseInt(b.dataset.delay, 10))));
+document.getElementById('dMinus').addEventListener('click', () => setDelay(DELAY - STEP));
+document.getElementById('dPlus').addEventListener('click', () => setDelay(DELAY + STEP));
+
+// The little clock makes the delay tangible: this is the moment the board believes it is.
+setInterval(() => {
+  const d = new Date(Date.now() - DELAY * 1000);
+  document.getElementById('dClock').innerHTML = DELAY
+    ? `Board time <b>${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}</b> · ${DELAY}s behind`
+    : `Board time <b>${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}</b> · live`;
+}, 1000);
+
+// ── Schedule: which games exist today ────────────────────────────────────────
+async function loadSchedule() {
+  const day = etDate();
+  const d = await fj(`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team&fields=${F_SCHED}`);
+  GAMES = ((d.dates || [])[0]?.games || []);
+  document.getElementById('meta').textContent =
+    `${day} slate · ${GAMES.length} game${GAMES.length === 1 ? '' : 's'} · refreshes every ${TICK_MS/1000}s`;
+
+  const board = document.getElementById('board');
+  if (!GAMES.length) { board.className = 'state'; board.textContent = 'No games today'; return; }
+  if (!board.classList.contains('gamelist')) { board.className = 'gamelist'; board.innerHTML = ''; }
+  GAMES.forEach(g => {
+    if (CARDS[g.gamePk]) return;
+    const el = document.createElement('article');
+    el.className = 'gamecard';
+    el.dataset.pk = g.gamePk;
+    board.appendChild(el);
+    CARDS[g.gamePk] = el;
+    renderCard(g);
+  });
+}
+
+// One listener for the whole list; rows are repainted too often to carry their own.
+document.getElementById('board').addEventListener('click', e => {
+  const row = e.target.closest('.grow');
+  if (!row) return;                        // clicks inside the open panel change nothing
+  const pk = Number(row.parentElement.dataset.pk);
+  const g = GAMES.find(x => x.gamePk === pk);
+  if (!g) return;
+  if (OPEN.has(pk)) { OPEN.delete(pk); CARDS[pk].classList.remove('open'); renderCard(g); return; }
+  OPEN.add(pk); CARDS[pk].classList.add('open');
+  renderCard(g);                           // paint what we have now...
+  DONE.delete(pk);
+  updateGame(g);                           // ...and go get the full panel for it
+});
+
+// ── The delayed feed ─────────────────────────────────────────────────────────
+// Per live game: the list of snapshot timecodes (tiny), then the feed pinned to
+// the newest snapshot at or before now-minus-delay. A folded row asks for the
+// scoreboard; an open one also asks for the box, the plays and the pitches —
+// all pinned to the same timecode, so the whole panel agrees on what time it is.
+async function updateGame(g) {
+  const pk = g.gamePk;
+  if (DONE.has(pk)) return;
+  if (g.status.abstractGameState === 'Preview') { renderCard(g); return; }
+
+  let stamps = [];
+  try { stamps = await fj(`${API11}/game/${pk}/feed/live/timestamps`); } catch (e) { return; }
+  if (!Array.isArray(stamps) || !stamps.length) { renderCard(g); return; }
+
+  const target = timecode(new Date(Date.now() - DELAY * 1000));
+  let tc = null;
+  for (const s of stamps) { if (s <= target) tc = s; else break; }
+  if (!tc) { renderCard(g, true); return; }   // the delayed clock predates the feed's first snapshot
+
+  const tier = OPEN.has(pk) ? 'full' : 'lite';
+  const key = `${pk}|${tc}|${tier}`;
+  let feed = FEEDS.get(key);
+  if (!feed) {
+    try {
+      if (tier === 'full') {
+        const [main, zone] = await Promise.all([
+          fj(`${API11}/game/${pk}/feed/live?timecode=${tc}&fields=${F_FULL}`),
+          fj(`${API11}/game/${pk}/feed/live?timecode=${tc}&fields=${F_ZONE}`).catch(() => null),
+        ]);
+        feed = main;
+        feed._zonePlay = zone?.liveData?.plays?.currentPlay || null;
+      } else {
+        feed = await fj(`${API11}/game/${pk}/feed/live?timecode=${tc}&fields=${F_LITE}`);
+      }
+    } catch (e) { return; }
+    FEEDS.set(key, feed);
+    if (FEEDS.size > 240) FEEDS.delete(FEEDS.keys().next().value);  // oldest first: Map keeps insertion order
+  }
+  LAST[pk] = { feed, tier };
+  renderCard(g);
+
+  // A final painted at its very last snapshot will never change again.
+  if (g.status.abstractGameState === 'Final' && tc === stamps[stamps.length - 1]) DONE.add(pk);
+}
+
+// ── The folded row, in the Top Games grid ────────────────────────────────────
+function statusHTML(g, ls, st) {
+  if (!st || st.abstractGameState === 'Preview' || ls?.currentInning == null) {
+    const when = new Date(g.gameDate);
+    return `<div class="gr-status">${pad(when.getHours())}:${pad(when.getMinutes())} · ${esc((st || g.status).detailedState)}</div>`;
+  }
+  if (st.abstractGameState === 'Final') {
+    const extra = (ls.innings || []).length > (ls.scheduledInnings || 9) ? `/${(ls.innings || []).length}` : '';
+    return `<div class="gr-status fin">FINAL${extra}${st.detailedState !== 'Final' ? ' · ' + esc(st.detailedState) : ''}</div>`;
+  }
+  const state = (ls.inningState || '').toUpperCase();
+  const outs = (state === 'TOP' || state === 'BOTTOM') ? ` · ${ls.outs ?? 0} OUT` : '';
+  return `<div class="gr-status live">${state} ${esc(ls.currentInningOrdinal || ls.currentInning)}${outs}</div>`;
+}
+
+function teamRowHTML(g, ls, st, side) {
+  const t = g.teams[side].team;
+  const started = st && st.abstractGameState !== 'Preview' && ls?.currentInning != null;
+  const tot = started ? (ls.teams?.[side] ?? {}) : {};
+  const opp = started ? (ls.teams?.[side === 'away' ? 'home' : 'away'] ?? {}) : {};
+  const fin = started && st.abstractGameState === 'Final';
+  const lost = fin && tot.runs != null && opp.runs != null && tot.runs < opp.runs;
+  const live = started && st.abstractGameState === 'Live';
+  let cells = '';
+  for (let i = 1; i <= 9; i++) {
+    const r = started ? (ls.innings || [])[i - 1]?.[side]?.runs : null;
+    const cur = live && ls.currentInning === i && (ls.isTopInning ? side === 'away' : side === 'home');
+    cells += `<div class="gr-inn${cur ? ' cur' : ''}">${r ?? ''}</div>`;
+  }
+  return `<div class="gr${lost ? ' loser' : ''}">
+    <div class="gr-tm"><img src="${logo(t.id)}" alt=""><span class="nm">${esc(t.teamName)}</span></div>
+    ${cells}<div class="gr-r">${started && tot.runs != null ? tot.runs : ''}</div>
+  </div>`;
+}
+
+function rowHTML(g, feed) {
+  const st = feed?.gameData?.status, ls = feed?.liveData?.linescore;
+  const heads = Array.from({length:9}, (_, i) => `<div class="gr-gi">${i+1}</div>`).join('');
+  return `<div class="grow"><div class="grow-scroll"><div class="grow-grid">
+    <div class="gr gr-head">${statusHTML(g, ls, st)}${heads}<div class="gr-gi r">R</div></div>
+    ${teamRowHTML(g, ls, st, 'away')}
+    ${teamRowHTML(g, ls, st, 'home')}
+  </div></div></div>`;
+}
+
+// ── Panel parts ──────────────────────────────────────────────────────────────
+function diamondHTML(off) {
+  const on = b => off?.[b] ? 'on' : '';
+  return `<svg class="diamond" width="46" height="42" viewBox="0 0 46 42">
+    <rect class="${on('second')}" x="17.5" y="2" width="11" height="11" transform="rotate(45 23 7.5)"/>
+    <rect class="${on('third')}"  x="4.5"  y="15" width="11" height="11" transform="rotate(45 10 20.5)"/>
+    <rect class="${on('first')}"  x="30.5" y="15" width="11" height="11" transform="rotate(45 36 20.5)"/>
+  </svg>`;
+}
+
+function linesHTML(ls, g) {
+  const played = (ls.innings || []).length;
+  const n = Math.max(ls.scheduledInnings || 9, played);
+  const cur = ls.currentInning;
+  const cell = (side, i) => {
+    const v = (ls.innings || [])[i]?.[side]?.runs;
+    return `<td class="${i + 1 === cur ? 'now' : ''}">${v ?? ''}</td>`;
+  };
+  const row = side => {
+    const t = g.teams[side].team, tot = ls.teams?.[side] || {};
+    return `<tr><td>${esc(t.abbreviation || t.teamName)}</td>
+      ${Array.from({length:n}, (_, i) => cell(side, i)).join('')}
+      <td class="rhe sep-l">${tot.runs ?? 0}</td><td class="rhe">${tot.hits ?? 0}</td><td class="rhe">${tot.errors ?? 0}</td></tr>`;
+  };
+  return `<div class="lines"><table>
+    <thead><tr><th></th>${Array.from({length:n}, (_, i) => `<th>${i+1}</th>`).join('')}
+      <th class="rhe sep-l">R</th><th class="rhe">H</th><th class="rhe">E</th></tr></thead>
+    <tbody>${row('away')}${row('home')}</tbody>
+  </table></div>`;
+}
+
+// Pitch count for the man on the mound, read straight out of the same snapshot's box
+function pitchCount(feed, pid) {
+  for (const side of ['away', 'home']) {
+    const st = feed.liveData?.boxscore?.teams?.[side]?.players?.[`ID${pid}`]?.stats?.pitching;
+    if (st && st.numberOfPitches != null) return { p: st.numberOfPitches, s: st.strikes };
+  }
+  return null;
+}
+
+function situHTML(g, feed, ls) {
+  const batter = ls.offense?.batter, pitcher = ls.defense?.pitcher;
+  const pc = pitcher ? pitchCount(feed, pitcher.id) : null;
+  return `<div class="situ">
+    ${diamondHTML(ls.offense)}
+    <div class="count">${ls.balls ?? 0}<i>–</i>${ls.strikes ?? 0} <i>· ${ls.outs ?? 0} OUT</i></div>
+    <div class="duel">
+      <div class="duel-row"><span class="who">AB</span><span class="nm">${esc(batter?.fullName || '—')}</span></div>
+      <div class="duel-row"><span class="who">P</span><span class="nm">${esc(pitcher?.fullName || '—')}</span>
+        ${pc ? `<span class="pc">${pc.p} P${pc.s != null ? ` · ${pc.s} S` : ''}</span>` : ''}</div>
+    </div>
+  </div>`;
+}
+
+// ── Strike zone, catcher's view: the pitches of the at-bat on screen ─────────
+function zoneHTML(feed) {
+  const play = feed._zonePlay;
+  const pitches = (play?.playEvents || []).filter(ev => ev.isPitch && ev.pitchData?.coordinates?.pX != null);
+  const PPF = 26;                                   // pixels per foot
+  const W = 96, H = 128, cx = W / 2;
+  const py = z => H - 6 - (z - 0.5) * PPF;          // 0.5ft above the bottom edge
+  const zx = 0.7083 * PPF;                          // the plate is 17in wide
+  const szT = pitches.length ? pitches.reduce((a,p) => a + (p.pitchData.strikeZoneTop || 3.4), 0) / pitches.length : 3.4;
+  const szB = pitches.length ? pitches.reduce((a,p) => a + (p.pitchData.strikeZoneBottom || 1.6), 0) / pitches.length : 1.6;
+  const dot = ev => {
+    const c = ev.pitchData.coordinates;
+    const call = ev.details?.call?.code || '';
+    const inPlay = call === 'X' || call === 'D' || call === 'E';
+    const col = inPlay ? 'var(--gold)' : ev.details?.isBall ? 'var(--walk)' : 'var(--whiff)';
+    const x = Math.max(6, Math.min(W - 6, cx + c.pX * PPF));
+    const y = Math.max(6, Math.min(H - 6, py(c.pZ)));
+    return `<circle cx="${x}" cy="${y}" r="5.5" fill="${col}" opacity=".92"></circle>
+      <text x="${x}" y="${y + 2.8}" text-anchor="middle" fill="#0d1a12">${ev.pitchNumber || ''}</text>`;
+  };
+  return `<div class="zonebox">
+    <div class="zone-title">This at-bat</div>
+    <svg class="zone" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <rect class="zrect" x="${cx - zx}" y="${py(szT)}" width="${zx * 2}" height="${py(szB) - py(szT)}"/>
+      ${pitches.map(dot).join('')}
+    </svg>
+    <div class="zone-legend"><span><i style="background:var(--whiff)"></i>Strike</span>
+      <span><i style="background:var(--walk)"></i>Ball</span>
+      <span><i style="background:var(--gold)"></i>In play</span></div>
+  </div>`;
+}
+
+// The nine men behind the pitcher, straight from the linescore's defense
+const DEF_SLOTS = [['pitcher','P'],['catcher','C'],['first','1B'],['second','2B'],['third','3B'],
+  ['shortstop','SS'],['left','LF'],['center','CF'],['right','RF']];
+function fieldersHTML(ls) {
+  const rows = DEF_SLOTS.map(([k, lab]) => {
+    const p = ls.defense?.[k];
+    return p?.fullName ? `<div class="frow"><span class="fpos">${lab}</span><span class="fnm">${esc(p.fullName)}</span></div>` : '';
+  }).join('');
+  return rows ? `<div class="fielders">${rows}</div>` : '';
+}
+
+// ── The scorecard: every finished plate appearance in notebook shorthand ─────
+function playCredits(play) {
+  const out = [];
+  (play.runners || []).forEach(r => (r.credits || []).forEach(c => {
+    if (c.position?.code) out.push({ p: c.position.code, credit: c.credit || '' });
+  }));
+  return out;
+}
+
+function notation(play) {
+  const ev = play.result?.eventType || '', d = play.result?.description || '';
+  const cs = playCredits(play);
+  const chain = cs.filter(c => c.credit.includes('assist') || c.credit.includes('putout')).map(c => c.p);
+  const C = { hit:'var(--hit)', hr:'var(--gold)', walk:'var(--walk)', k:'var(--whiff)',
+    err:'var(--err)', out:'var(--ink-dim)' };
+  switch (ev) {
+    case 'strikeout':        return { t: /called out on strikes/.test(d) ? 'ꓘ' : 'K', c: C.k };
+    case 'strikeout_double_play': return { t: 'K-DP', c: C.k };
+    case 'walk':             return { t: 'BB', c: C.walk };
+    case 'intent_walk':      return { t: 'IBB', c: C.walk };
+    case 'hit_by_pitch':     return { t: 'HBP', c: C.walk };
+    case 'catcher_interf':   return { t: 'CI', c: C.walk };
+    case 'single':           return { t: '1B', c: C.hit };
+    case 'double':           return { t: '2B', c: C.hit };
+    case 'triple':           return { t: '3B', c: C.hit };
+    case 'home_run':         return { t: 'HR', c: C.hr };
+    case 'sac_fly':          return { t: 'SF' + (chain[chain.length-1] || ''), c: C.out };
+    case 'sac_bunt':         return { t: 'SAC', c: C.out };
+    case 'field_error':      { const e = cs.find(c => c.credit.includes('error'));
+                               return { t: 'E' + (e?.p || ''), c: C.err }; }
+    case 'grounded_into_double_play': return { t: 'DP' + (chain.length ? ' ' + chain.join('-') : ''), c: C.out };
+    case 'double_play':      return { t: 'DP', c: C.out };
+    case 'triple_play':
+    case 'grounded_into_triple_play': return { t: 'TP', c: C.out };
+    case 'force_out':        return { t: 'FO' + (chain.length ? ' ' + chain.join('-') : ''), c: C.out };
+    case 'fielders_choice':
+    case 'fielders_choice_out': return { t: 'FC', c: C.out };
+    case 'field_out': {
+      if (/grounds out|ground bunts|bunt grounds/.test(d))
+        return { t: chain.length > 1 ? chain.join('-') : (chain[0] ? chain[0] + 'U' : 'GO'), c: C.out };
+      const pos = chain[chain.length - 1] || '';
+      if (/flies out/.test(d))  return { t: 'F' + pos, c: C.out };
+      if (/lines out/.test(d))  return { t: 'L' + pos, c: C.out };
+      if (/pops out/.test(d))   return { t: 'P' + pos, c: C.out };
+      return { t: chain.join('-') || 'OUT', c: C.out };
+    }
+    default: return null;    // a steal, a pickoff, a wild pitch — runner traffic, not a PA
+  }
+}
+
+// Runner-only events sneak into allPlays; a scorecard cell is a plate appearance
+const NON_PA = /caught_stealing|stolen_base|pickoff|wild_pitch|passed_ball|balk|advance|defensive|ejection|game_advisory|injury|mound_visit|pitching_substitution|offensive_substitution|batter_timeout|no_pitch/;
+
+// Each cell is one plate appearance and the runner's whole life after it, the
+// way a notebook keeps it: basepaths drawn as far as he got, a filled diamond
+// for a run, a half path and a tick for a man cut down on the bases, and the
+// cause of every advance written at the corner it happened on.
+const BASE_N = { '1B': 1, '2B': 2, '3B': 3, 'home': 4, 'score': 4 };
+
+function advanceLabel(det, batSlot) {
+  const ev = det?.eventType || '';
+  if (/stolen_base/.test(ev)) return 'SB';
+  if (/wild_pitch/.test(ev)) return 'WP';
+  if (/passed_ball/.test(ev)) return 'PB';
+  if (/balk/.test(ev)) return 'BLK';
+  if (/defensive_indiff/.test(ev)) return 'DI';
+  if (/error|pickoff_error/.test(ev)) return 'E';
+  return batSlot ? String(batSlot) : '';
+}
+
+function outLabel(r) {
+  const ev = r.details?.eventType || '';
+  const chain = (r.credits || []).map(c => c.position?.code).filter(Boolean).join('-');
+  const tag = /caught_stealing/.test(ev) ? 'CS' : /pickoff/.test(ev) ? 'PK' : '';
+  return (tag && chain) ? `${tag} ${chain}` : tag || chain;
+}
+
+function scorecardData(feed, side) {
+  const bx = feed.liveData?.boxscore?.teams?.[side];
+  const plays = feed.liveData?.plays?.allPlays;
+  if (!bx || !Array.isArray(plays)) return null;
+  const P = bx.players || {};
+  const half = side === 'away' ? 'top' : 'bottom';
+  const slotOf = bid => { const bo = P[`ID${bid}`]?.battingOrder; return bo ? Math.floor(bo / 100) : 0; };
+
+  const cells = {};                    // batterId → [cell, cell, ...] in PA order
+  let live = new Map();                // runnerId → the cell still on the bases
+  let maxInning = 9, curInning = 0, prevOuts = 0;
+
+  plays.forEach(pl => {
+    if (pl.about?.halfInning !== half) return;
+    const inn = pl.about.inning || 0;
+    if (inn !== curInning) { curInning = inn; prevOuts = 0; live = new Map(); }
+    maxInning = Math.max(maxInning, inn);
+
+    const bid = pl.matchup?.batter?.id;
+    const ev = pl.result?.eventType || '';
+    let bcell = null;
+    if (pl.about?.isComplete && bid && !NON_PA.test(ev)) {
+      const n = notation(pl);
+      if (n) { bcell = { inning: inn, n, reached: 0, scored: false, seg: {}, out: null, slash: false };
+        (cells[bid] = cells[bid] || []).push(bcell); }
+    }
+    const batSlot = slotOf(bid);
+    let lastOutCell = null;
+
+    (pl.runners || []).forEach(r => {
+      const rid = r.details?.runner?.id;
+      if (!rid) return;
+      const cell = (bcell && rid === bid) ? bcell : live.get(rid);
+      if (!cell) return;
+      const mv = r.movement || {};
+      if (mv.isOut) {
+        live.delete(rid);
+        // The batter thrown out at first needs no path — his notation already says it
+        if (cell.reached > 0 || rid !== bid) {
+          cell.out = { base: BASE_N[mv.outBase] || cell.reached + 1, lab: outLabel(r) };
+          lastOutCell = cell;
+        }
+      } else if (mv.end && BASE_N[mv.end]) {
+        const b = BASE_N[mv.end];
+        if (b > cell.reached) {
+          if (rid !== bid) cell.seg[b] = advanceLabel(r.details, batSlot);
+          cell.reached = b;
+        }
+        if (b === 4) { cell.scored = true; live.delete(rid); }
+        else live.set(rid, cell);
+      }
+    });
+
+    // Third out of the half-inning: the notebook's diagonal stroke, on the cell that made it
+    const outsNow = pl.count?.outs;
+    if (outsNow === 3 && prevOuts < 3) { const c = lastOutCell || bcell; if (c) c.slash = true; }
+    if (outsNow != null) prevOuts = outsNow;
+  });
+
+  const order = (bx.batters || []).map(id => P[`ID${id}`]).filter(p => p && p.battingOrder);
+  if (!order.length) return null;
+  return { cells, order, maxInning };
+}
+
+// The little diamond: home at the bottom, first on the right, a notebook cell in SVG
+const PA_PTS = { 0: [20, 31], 1: [31, 20], 2: [20, 9], 3: [9, 20] };
+const PA_LBL = { 1: [34, 30, 'start'], 2: [34, 12, 'start'], 3: [6, 12, 'end'], 4: [6, 30, 'end'] };
+function paSVG(cell) {
+  const seg = (a, b, half) => {
+    const A = PA_PTS[a % 4], B = PA_PTS[b % 4];
+    const x2 = half ? (A[0] + B[0]) / 2 : B[0], y2 = half ? (A[1] + B[1]) / 2 : B[1];
+    return `<line class="run" x1="${A[0]}" y1="${A[1]}" x2="${x2}" y2="${y2}"/>`;
+  };
+  let s = `<polygon class="dia${cell.scored ? ' scored' : ''}" points="20,31 31,20 20,9 9,20"/>`;
+  const reached = cell.scored ? 4 : cell.reached;
+  for (let b = 1; b <= reached; b++) s += seg(b - 1, b);
+  if (cell.out) {
+    s += seg(cell.out.base - 1, cell.out.base, true);
+    const A = PA_PTS[(cell.out.base - 1) % 4], B = PA_PTS[cell.out.base % 4];
+    const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
+    const dx = (B[1] - A[1]) / 7, dy = (A[0] - B[0]) / 7;
+    s += `<line class="run" x1="${mx - dx}" y1="${my - dy}" x2="${mx + dx}" y2="${my + dy}"/>`;
+    const L = PA_LBL[cell.out.base];
+    if (cell.out.lab) s += `<text x="${L[0]}" y="${L[1]}" text-anchor="${L[2]}" class="outlab">${esc(cell.out.lab)}</text>`;
+  }
+  for (const [b, lab] of Object.entries(cell.seg)) {
+    if (!lab || (cell.out && +b === cell.out.base)) continue;
+    const L = PA_LBL[b];
+    s += `<text x="${L[0]}" y="${L[1]}" text-anchor="${L[2]}">${esc(lab)}</text>`;
+  }
+  if (cell.slash) s += `<line class="slash" x1="32" y1="33" x2="40" y2="41"/>`;
+  return `<svg viewBox="0 0 40 41" width="40" height="41">${s}</svg>`;
+}
+
+function scorecardHTML(g, feed, side) {
+  const data = scorecardData(feed, side);
+  if (!data) return '';
+  const head = Array.from({length: data.maxInning}, (_, i) => `<th>${i+1}</th>`).join('');
+  const rows = data.order.map(p => {
+    const bid = p.person?.id, sub = p.battingOrder % 100 !== 0;
+    const name = esc((p.person?.fullName || '').split(' ').slice(1).join(' ') || p.person?.fullName || '');
+    const tds = Array.from({length: data.maxInning}, (_, i) => {
+      const list = (data.cells[bid] || []).filter(c => c.inning === i + 1);
+      return `<td>${list.map(c => `<div class="pa">${paSVG(c)}<span class="lab" style="color:${c.n.c}">${c.n.t}</span></div>`).join('')}</td>`;
+    }).join('');
+    return `<tr><td>${sub ? '<i class="subarrow">↳</i> ' : ''}${name}</td>${tds}</tr>`;
+  }).join('');
+  return `<div class="sc-team">${esc(g.teams[side].team.teamName)}</div>
+    <table><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── Player boxscore ──────────────────────────────────────────────────────────
+function boxTeamHTML(g, feed, side) {
+  const bx = feed.liveData?.boxscore?.teams?.[side];
+  if (!bx) return '';
+  const P = bx.players || {};
+  const batRow = id => {
+    const p = P[`ID${id}`]; if (!p) return '';
+    const st = p.stats?.batting;
+    if (!st || st.atBats == null) return '';
+    const sub = p.battingOrder && p.battingOrder % 100 !== 0;
+    return `<tr><td>${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
+        <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
+      <td>${st.atBats}</td><td>${st.runs ?? 0}</td><td>${st.hits ?? 0}</td><td>${st.rbi ?? 0}</td>
+      <td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
+      <td>${esc(p.seasonStats?.batting?.avg ?? '')}</td></tr>`;
+  };
+  const armRow = id => {
+    const p = P[`ID${id}`]; if (!p) return '';
+    const st = p.stats?.pitching;
+    if (!st || st.inningsPitched == null) return '';
+    return `<tr><td>${esc(p.person?.fullName)}</td>
+      <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
+      <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
+      <td>${st.numberOfPitches ?? ''}</td>
+      <td>${esc(p.seasonStats?.pitching?.era ?? '')}</td></tr>`;
+  };
+  const bats = (bx.batters || []).map(batRow).join('');
+  const arms = (bx.pitchers || []).map(armRow).join('');
+  if (!bats && !arms) return '';
+  return `<div class="box">
+    <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
+    ${bats ? `<table>
+      <thead><tr><th></th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
+      <tbody>${bats}</tbody></table>` : ''}
+    ${arms ? `<table>
+      <thead><tr><th></th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
+      <tbody>${arms}</tbody></table>` : ''}
+  </div>`;
+}
+
+// ── Putting a card together ──────────────────────────────────────────────────
+function pregameHTML(g, feedPending) {
+  const when = new Date(g.gameDate);
+  const hh = `${pad(when.getHours())}:${pad(when.getMinutes())}`;
+  const pa = g.teams.away.probablePitcher?.fullName, ph = g.teams.home.probablePitcher?.fullName;
+  return `<div class="gdetail"><div class="pregame">
+    <div class="when">${feedPending ? 'WAITING ON DELAY' : `FIRST PITCH ${hh}`}</div>
+    <div class="prob"><b>${esc(pa || 'TBD')}</b> vs <b>${esc(ph || 'TBD')}</b></div>
+  </div></div>`;
+}
+
+function detailHTML(g, feed, tier, feedPending) {
+  const st = feed?.gameData?.status, ls = feed?.liveData?.linescore;
+  if (!st || st.abstractGameState === 'Preview' || ls?.currentInning == null)
+    return pregameHTML(g, feedPending);
+
+  const live = st.abstractGameState === 'Live';
+  const state = (ls.inningState || '').toUpperCase();
+  const between = state === 'MIDDLE' || state === 'END';
+  const play = feed.liveData?.plays?.currentPlay;
+  const desc = play?.about?.isComplete ? play?.result?.description : null;
+
+  if (tier !== 'full')
+    return `<div class="gdetail">${linesHTML(ls, g)}<div class="dload">Loading the full panel…</div></div>`;
+
+  const situation = live && !between
+    ? situHTML(g, feed, ls) + `<div class="zonewrap">${zoneHTML(feed)}${fieldersHTML(ls)}</div>`
+    : '';
+  const scorecard = scorecardHTML(g, feed, 'away') + scorecardHTML(g, feed, 'home');
+  return `<div class="gdetail">
+    ${linesHTML(ls, g)}
+    ${situation}
+    ${desc ? `<div class="lastplay"><b>Last play:</b> ${esc(desc)}</div>` : ''}
+    <div class="dcols">
+      <div class="dcol">
+        <div class="dh">Boxscore</div>
+        ${boxTeamHTML(g, feed, 'away')}${boxTeamHTML(g, feed, 'home')}
+      </div>
+      <div class="dcol">
+        <div class="dh">Scorecard</div>
+        <div class="sc">${scorecard || '<span class="dload">No plate appearances yet</span>'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCard(g, feedPending) {
+  const L = LAST[g.gamePk];
+  CARDS[g.gamePk].innerHTML = rowHTML(g, L?.feed)
+    + (OPEN.has(g.gamePk) ? detailHTML(g, L?.feed, L?.tier, feedPending) : '');
+}
+
+// ── The loop ─────────────────────────────────────────────────────────────────
+async function tick() {
+  if (ticking) return;      // a slow network must not stack requests
+  ticking = true;
+  try { await Promise.all(GAMES.map(g => updateGame(g))); }
+  finally { ticking = false; }
+}
+
+async function boot() {
+  setDelay(DELAY, false);
+  try { await loadSchedule(); } catch (e) {
+    const b = document.getElementById('board');
+    b.className = 'state'; b.textContent = 'Could not load the schedule'; return;
+  }
+  await tick();
+  setInterval(tick, TICK_MS);
+  // The slate itself changes rarely: a postponement, a game going live. Once a minute is plenty.
+  setInterval(() => loadSchedule().catch(() => {}), 60000);
+}
+boot();
+</script>
+</body>
+</html>
