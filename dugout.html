@@ -46,7 +46,15 @@
   .lede{font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.6;color:var(--ink-dim);max-width:70ch;margin-bottom:6px}
   .lede b{color:var(--ink);font-weight:600}
   .meta{font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
-    margin-bottom:18px}
+    margin-bottom:12px}
+
+  /* ── Day picker: today and the six before it ─────────────── */
+  .days{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+  .day{font-family:inherit;font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--ink-dim);background:rgba(243,239,224,.05);border:1.5px solid var(--line);border-radius:999px;
+    padding:6px 12px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+  .day:hover{background:rgba(243,239,224,.1);color:var(--ink)}
+  .day.on{color:#0d1a12;background:var(--gold);border-color:var(--gold)}
 
   /* ── Delay control — pinned to the bottom edge, where the thumb already is,
      so nudging the sync never means scrolling away from the game ──────────── */
@@ -131,9 +139,20 @@
   .diamond rect.on{fill:var(--gold);stroke:var(--gold)}
   .count{font-family:'Bebas Neue';font-size:19px;letter-spacing:1.6px;color:var(--ink);flex-shrink:0}
   .count i{font-style:normal;color:var(--ink-soft);font-size:13px;letter-spacing:1px}
-  .duel{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
-  .duel-row{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .duel{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+  .duel-row{display:flex;align-items:center;gap:8px;min-width:0}
   .duel-row .who{font-weight:800;font-size:9.5px;letter-spacing:1.4px;color:var(--ink-soft);width:22px;flex-shrink:0}
+  /* The FORM / OPS circles and faces, in the index pages' language */
+  .fcirc{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:17px;line-height:1;flex-shrink:0;border:2px solid rgba(255,255,255,.22);
+    box-shadow:inset 0 -4px 8px rgba(0,0,0,.22), 0 3px 8px rgba(0,0,0,.3)}
+  .fcirc.ops{font-size:12.5px}
+  .face{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.08)}
+  .face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .hand{font-weight:800;font-size:9px;letter-spacing:1px;padding:2px 5px;border-radius:4px;flex-shrink:0;
+    background:rgba(184,15,33,.22);color:#ff8a97}
+  .hand.L{background:rgba(21,101,216,.28);color:#8fc4ff}
+  .hand.S{background:rgba(232,194,58,.2);color:#e8c23a}
   .duel-row .nm{font-family:'Bebas Neue';font-size:17px;letter-spacing:.9px;color:#fff;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:40px}
   .duel-row .pc{font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--ink-dim);white-space:nowrap;flex-shrink:0}
@@ -194,11 +213,27 @@
   .pos-tag{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1px;color:var(--ink-soft);margin-left:3px}
   .subarrow{font-style:normal;color:var(--ink-soft)}
 
-  .pregame{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px 12px}
+  .pregame{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px 4px}
   .pregame .when{font-family:'Bebas Neue';font-size:19px;letter-spacing:1.4px;color:var(--ink)}
-  .pregame .prob{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-dim);text-align:right;line-height:1.5}
-  .pregame .prob b{color:var(--ink);font-weight:600}
   .dload{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);padding:10px 16px 12px}
+
+  /* Probable starters, with the same FORM circle the boards score them by */
+  .prob-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 16px 12px}
+  .prob-card{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;
+    background:rgba(0,0,0,.15);padding:9px 11px;min-width:0}
+  .prob-card .pc-id{flex:1;min-width:0}
+  .prob-card .pc-team{font-weight:800;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft)}
+  .prob-card .pc-nm{font-family:'Bebas Neue';font-size:18px;letter-spacing:.9px;color:#fff;margin-top:2px;
+    display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+  .prob-card .pc-st{font-weight:700;font-size:11px;color:var(--ink-dim);margin-top:3px;white-space:nowrap}
+  .prob-card .pc-st b{font-weight:800}
+
+  /* One tap to the two clubs' full comparison */
+  .mlink{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 12px;
+    font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none;
+    color:var(--ink-dim);border:1px solid var(--line);background:rgba(243,239,224,.05);
+    border-radius:999px;padding:6px 13px;transition:background .15s,color .15s}
+  .mlink:hover{background:rgba(243,239,224,.12);color:var(--ink)}
 
   .state{padding:60px 10px;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;
     color:var(--ink-soft)}
@@ -224,6 +259,7 @@
     .lines{padding:4px 12px 8px}
     .sc,.situ,.zonewrap{padding-left:12px;padding-right:12px}
     .dh,.lastplay{padding-left:12px;padding-right:12px}
+    .prob-grid{grid-template-columns:1fr;padding-left:12px;padding-right:12px}
   }
 </style>
 </head>
@@ -245,6 +281,7 @@
       behind the stats feed without spoiling a pitch. Tap a game for the full picture: the scorecard,
       the zone, the defense, the box.</p>
     <div class="meta" id="meta">Loading…</div>
+    <div class="days" id="days"></div>
   </header>
 
   <div id="board" class="state">Loading games…</div>
@@ -269,6 +306,7 @@
   <span class="delay-clock" id="dClock"></span>
 </div>
 
+<script src="js/apicache.js?v=20260903-scroll"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const API11 = 'https://statsapi.mlb.com/api/v1.1';
@@ -290,6 +328,28 @@ const timecode = d => `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.get
 // through the whole Spanish evening and small hours.
 const etDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 
+// ── The index pages' scoring language, copied verbatim so a number here can
+// never disagree with the same man's number on his own board ─────────────────
+const ERA_BEST = 1.50, ERA_WORST = 6.00, WHIP_BEST = 0.80, WHIP_WORST = 2.00;
+function forma(era, whip) {
+  const p = [];
+  if (era  != null && isFinite(era))  p.push(Math.max(0, Math.min(100, (ERA_WORST  - era)  / (ERA_WORST  - ERA_BEST)  * 100)));
+  if (whip != null && isFinite(whip)) p.push(Math.max(0, Math.min(100, (WHIP_WORST - whip) / (WHIP_WORST - WHIP_BEST) * 100)));
+  return p.length ? Math.round(p.reduce((a,b)=>a+b,0) / p.length) : null;
+}
+const TIERS = ['#16a34a','#b1c882','#ffc000','#ff8100','#ff2200'];
+const tierForm = f => f == null ? '#9ca3af' : f >= 75 ? TIERS[0] : f >= 60 ? TIERS[1] : f >= 40 ? TIERS[2] : f >= 25 ? TIERS[3] : TIERS[4];
+const tscale = (v, c) => (v == null || v <= 0) ? '#9ca3af'
+  : v >= c[0] ? TIERS[0] : v >= c[1] ? TIERS[1] : v >= c[2] ? TIERS[2] : v >= c[3] ? TIERS[3] : TIERS[4];
+const tierOps = o => tscale(o, [.900, .750, .600, .450]);
+const AVG_T = [.300, .255, .205, .160];
+const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));
+  return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1); };
+const onTier = c => (c === '#ff8100' || c === '#ff2200' || c === '#9ca3af') ? '#fff' : shade(c,.62);
+const face = id => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_180,q_auto:best/v1/people/${id}/headshot/silo/current`;
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+const fmt3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/, '');
+
 const F_SCHED = 'dates,games,gamePk,gameDate,status,abstractGameState,detailedState,'
   + 'teams,away,home,team,id,teamName,abbreviation,probablePitcher,fullName';
 // One flat list of names; the API keeps any field whose name appears here, at
@@ -302,7 +362,8 @@ const F_LITE = 'gamePk,gameData,status,abstractGameState,detailedState,liveData,
 // scorecard), the men on defense, and the pitch count. Same snapshot, more of it.
 const F_FULL = F_LITE + ','
   + 'boxscore,players,person,batters,pitchers,battingOrder,position,abbreviation,stats,batting,pitching,'
-  + 'atBats,rbi,baseOnBalls,strikeOuts,inningsPitched,earnedRuns,seasonStats,avg,era,numberOfPitches,'
+  + 'atBats,rbi,baseOnBalls,strikeOuts,inningsPitched,earnedRuns,seasonStats,avg,ops,era,whip,numberOfPitches,'
+  + 'batSide,pitchHand,'
   + 'catcher,shortstop,left,center,right,'
   + 'allPlays,eventType,halfInning,inning,matchup,runners,credits,credit,code,'
   // ...and each runner's journey, so the scorecard can draw the basepaths: where
@@ -314,9 +375,12 @@ const F_ZONE = 'liveData,plays,currentPlay,playEvents,isPitch,pitchNumber,detail
   + 'pitchData,strikeZoneTop,strikeZoneBottom,coordinates,pX,pZ';
 
 // ── State ────────────────────────────────────────────────────────────────────
-// 75s unless the reader has already tuned it — a saved 0 ("live") is a choice, not an absence
-const savedDelay = parseInt(localStorage.getItem('bl-dugout-delay'), 10);
-let DELAY = Math.min(MAX_DELAY, Math.max(0, Number.isFinite(savedDelay) ? savedDelay : 75));
+// 90s unless tuned this evening — sessionStorage survives a reload mid-game but
+// lets every fresh visit start from the default. A saved 0 ("live") is a choice.
+let savedDelay = NaN;
+try { savedDelay = parseInt(sessionStorage.getItem('bl-dugout-delay'), 10); } catch (e) {}
+let DELAY = Math.min(MAX_DELAY, Math.max(0, Number.isFinite(savedDelay) ? savedDelay : 90));
+let DAY = etDate();         // the slate on screen; today unless the picker says otherwise
 let GAMES = [];             // schedule rows, in start order
 const CARDS = {};           // gamePk → card element
 const DONE = new Set();     // finals already painted at their last snapshot
@@ -328,7 +392,7 @@ let ticking = false;
 // ── Delay control ────────────────────────────────────────────────────────────
 function setDelay(v, repaint = true) {
   DELAY = Math.min(MAX_DELAY, Math.max(0, v));
-  localStorage.setItem('bl-dugout-delay', String(DELAY));
+  try { sessionStorage.setItem('bl-dugout-delay', String(DELAY)); } catch (e) {}
   document.getElementById('dVal').textContent = DELAY ? `−${DELAY}s` : 'LIVE';
   document.querySelectorAll('.chip').forEach(b =>
     b.classList.toggle('on', parseInt(b.dataset.delay, 10) === DELAY));
@@ -348,13 +412,39 @@ setInterval(() => {
     : `Board time <b>${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}</b> · live`;
 }, 1000);
 
-// ── Schedule: which games exist today ────────────────────────────────────────
+// ── Day picker: today and the six before it ──────────────────────────────────
+const etDayAgo = i => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' })
+  .format(new Date(Date.now() - i * 86400000));
+function buildDays() {
+  document.getElementById('days').innerHTML = Array.from({length: 7}, (_, i) => {
+    const d = etDayAgo(i);
+    const dt = new Date(Date.now() - i * 86400000);
+    const et = o => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...o }).format(dt);
+    const lab = i === 0 ? 'Today' : `${et({ weekday: 'short' })} ${et({ day: 'numeric' })}`;
+    return `<button class="day${d === DAY ? ' on' : ''}" data-day="${d}">${lab}</button>`;
+  }).join('');
+}
+document.getElementById('days').addEventListener('click', e => {
+  const b = e.target.closest('.day');
+  if (!b || b.dataset.day === DAY) return;
+  DAY = b.dataset.day;
+  buildDays();
+  GAMES = [];
+  Object.keys(CARDS).forEach(k => delete CARDS[k]);
+  const board = document.getElementById('board');
+  board.className = 'state'; board.textContent = 'Loading games…';
+  loadSchedule().then(tick).catch(() => { board.textContent = 'Could not load the schedule'; });
+});
+
+// ── Schedule: which games exist on the slate ─────────────────────────────────
 async function loadSchedule() {
-  const day = etDate();
+  const day = DAY;
   const d = await fj(`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team&fields=${F_SCHED}`);
+  if (day !== DAY) return;   // the reader has already moved to another day
   GAMES = ((d.dates || [])[0]?.games || []);
-  document.getElementById('meta').textContent =
-    `${day} slate · ${GAMES.length} game${GAMES.length === 1 ? '' : 's'} · refreshes every ${TICK_MS/1000}s`;
+  document.getElementById('meta').textContent = day === etDate()
+    ? `${day} slate · ${GAMES.length} game${GAMES.length === 1 ? '' : 's'} · refreshes every ${TICK_MS/1000}s`
+    : `${day} slate · ${GAMES.length} game${GAMES.length === 1 ? '' : 's'} · finished games, served from cache`;
 
   const board = document.getElementById('board');
   if (!GAMES.length) { board.className = 'state'; board.textContent = 'No games today'; return; }
@@ -392,6 +482,22 @@ document.getElementById('board').addEventListener('click', e => {
 async function updateGame(g) {
   const pk = g.gamePk;
   if (DONE.has(pk)) return;
+
+  // A past day's games are history: no delay to respect, no snapshots to pick.
+  // One full fetch each, cached forever — a finished boxscore never changes.
+  if (DAY !== etDate()) {
+    let feed = FEEDS.get(`${pk}|final|full`);
+    if (!feed) {
+      try { feed = await cachedJSON(`${API11}/game/${pk}/feed/live?fields=${F_FULL}`, { ttl: Infinity }); }
+      catch (e) { return; }
+      FEEDS.set(`${pk}|final|full`, feed);
+    }
+    LAST[pk] = { feed, tier: 'full' };
+    if (CARDS[pk]) renderCard(g);
+    DONE.add(pk);
+    return;
+  }
+
   if (g.status.abstractGameState === 'Preview') { renderCard(g); return; }
 
   let stamps = [];
@@ -514,15 +620,41 @@ function pitchCount(feed, pid) {
   return null;
 }
 
+const boxPlayer = (feed, pid) => {
+  for (const s of ['away', 'home']) {
+    const p = feed.liveData?.boxscore?.teams?.[s]?.players?.[`ID${pid}`];
+    if (p) return p;
+  }
+  return null;
+};
+
 function situHTML(g, feed, ls) {
   const batter = ls.offense?.batter, pitcher = ls.defense?.pitcher;
   const pc = pitcher ? pitchCount(feed, pitcher.id) : null;
+  // Season OPS and FORM from the same snapshot's box — the circles the boards use
+  const bP = batter ? boxPlayer(feed, batter.id) : null;
+  const pP = pitcher ? boxPlayer(feed, pitcher.id) : null;
+  const gp = pid => feed.gameData?.players?.[`ID${pid}`];
+  const bOps = num(bP?.seasonStats?.batting?.ops);
+  const pForm = forma(num(pP?.seasonStats?.pitching?.era), num(pP?.seasonStats?.pitching?.whip));
+  const bC = tierOps(bOps), pC = tierForm(pForm);
+  const bSide = batter && gp(batter.id)?.batSide?.code, pSide = pitcher && gp(pitcher.id)?.pitchHand?.code;
+  const faceHTML = pid => pid ? `<span class="face"><img src="${face(pid)}" alt="" loading="lazy"
+    onerror="this.style.visibility='hidden'"></span>` : '';
   return `<div class="situ">
     ${diamondHTML(ls.offense)}
     <div class="count">${ls.balls ?? 0}<i>–</i>${ls.strikes ?? 0} <i>· ${ls.outs ?? 0} OUT</i></div>
     <div class="duel">
-      <div class="duel-row"><span class="who">AB</span><span class="nm">${esc(batter?.fullName || '—')}</span></div>
-      <div class="duel-row"><span class="who">P</span><span class="nm">${esc(pitcher?.fullName || '—')}</span>
+      <div class="duel-row"><span class="who">AB</span>
+        <span class="fcirc ops" style="background:${bC};color:${onTier(bC)}">${fmt3(bOps)}</span>
+        ${faceHTML(batter?.id)}
+        <span class="nm">${esc(batter?.fullName || '—')}</span>
+        ${bSide ? `<span class="hand ${bSide}">${bSide === 'S' ? 'SWITCH' : bSide + 'HB'}</span>` : ''}</div>
+      <div class="duel-row"><span class="who">P</span>
+        <span class="fcirc" style="background:${pC};color:${onTier(pC)}">${pForm ?? '—'}</span>
+        ${faceHTML(pitcher?.id)}
+        <span class="nm">${esc(pitcher?.fullName || '—')}</span>
+        ${pSide ? `<span class="hand ${pSide}">${pSide}HP</span>` : ''}
         ${pc ? `<span class="pc">${pc.p} P${pc.s != null ? ` · ${pc.s} S` : ''}</span>` : ''}</div>
     </div>
   </div>`;
@@ -773,7 +905,7 @@ function boxTeamHTML(g, feed, side) {
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${st.atBats}</td><td>${st.runs ?? 0}</td><td>${st.hits ?? 0}</td><td>${st.rbi ?? 0}</td>
       <td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
-      <td>${esc(p.seasonStats?.batting?.avg ?? '')}</td></tr>`;
+      <td style="color:${tscale(num(p.seasonStats?.batting?.avg), AVG_T)};font-weight:800">${esc(p.seasonStats?.batting?.avg ?? '')}</td></tr>`;
   };
   const armRow = id => {
     const p = P[`ID${id}`]; if (!p) return '';
@@ -783,7 +915,7 @@ function boxTeamHTML(g, feed, side) {
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
       <td>${st.numberOfPitches ?? ''}</td>
-      <td>${esc(p.seasonStats?.pitching?.era ?? '')}</td></tr>`;
+      <td style="color:${tierForm(forma(num(p.seasonStats?.pitching?.era), null))};font-weight:800">${esc(p.seasonStats?.pitching?.era ?? '')}</td></tr>`;
   };
   const bats = (bx.batters || []).map(batRow).join('');
   const arms = (bx.pitchers || []).map(armRow).join('');
@@ -800,14 +932,64 @@ function boxTeamHTML(g, feed, side) {
 }
 
 // ── Putting a card together ──────────────────────────────────────────────────
+const mlinkHTML = g =>
+  `<a class="mlink" href="matchup.html?a=${g.teams.home.team.id}&b=${g.teams.away.team.id}">
+    Compare rotations, pens &amp; lineups &rarr;</a>`;
+
+// Season lines for the probable starters, fetched once per game and cached by
+// the shared 15-minute cache. The FORM circle is the same one the boards score by.
+const PROBS = {};
+async function loadProbables(g) {
+  const pk = g.gamePk;
+  if (PROBS[pk]) return;
+  PROBS[pk] = 'loading';
+  const ids = [g.teams.away.probablePitcher?.id, g.teams.home.probablePitcher?.id].filter(Boolean);
+  if (!ids.length) { PROBS[pk] = {}; return; }
+  const season = (g.gameDate || '').slice(0, 4) || new Date().getFullYear();
+  try {
+    const d = await cachedJSON(`${API}/people?personIds=${ids.join(',')}&hydrate=stats(group=[pitching],type=season,season=${season})`
+      + `&fields=people,id,fullName,pitchHand,code,stats,splits,stat,era,whip,wins,losses,inningsPitched,strikeOuts`);
+    const by = {};
+    (d.people || []).forEach(p => {
+      const st = p.stats?.[0]?.splits?.[0]?.stat || {};
+      by[p.id] = { hand: p.pitchHand?.code || '', era: num(st.era), whip: num(st.whip),
+        w: st.wins ?? 0, l: st.losses ?? 0, ip: st.inningsPitched ?? '0', k: st.strikeOuts ?? 0 };
+    });
+    PROBS[pk] = by;
+  } catch (e) { PROBS[pk] = {}; }
+  if (OPEN.has(pk) && CARDS[pk]) renderCard(g);
+}
+
+function probCardHTML(g, side) {
+  const pp = g.teams[side].probablePitcher;
+  const team = esc(g.teams[side].team.teamName);
+  if (!pp) return `<div class="prob-card"><div class="pc-id"><div class="pc-team">${team}</div>
+    <div class="pc-nm">TBD</div></div></div>`;
+  const p = (PROBS[g.gamePk] && PROBS[g.gamePk] !== 'loading') ? PROBS[g.gamePk][pp.id] : null;
+  const f = p ? forma(p.era, p.whip) : null, c = tierForm(f);
+  return `<div class="prob-card">
+    <span class="fcirc" style="background:${c};color:${onTier(c)}">${f ?? '—'}</span>
+    <span class="face"><img src="${face(pp.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></span>
+    <div class="pc-id">
+      <div class="pc-team">${team}</div>
+      <div class="pc-nm">${esc(pp.fullName)}${p?.hand ? `<span class="hand ${p.hand}">${p.hand}HP</span>` : ''}</div>
+      ${p ? `<div class="pc-st">
+        <b style="color:${tierForm(forma(p.era, null))}">${p.era != null ? p.era.toFixed(2) : '—'}</b> ERA ·
+        <b style="color:${tierForm(forma(null, p.whip))}">${p.whip != null ? p.whip.toFixed(2) : '—'}</b> WHIP ·
+        ${p.w}-${p.l} · ${p.ip} IP · ${p.k} K</div>` : ''}
+    </div>
+  </div>`;
+}
+
 function pregameHTML(g, feedPending) {
   const when = new Date(g.gameDate);
   const hh = `${pad(when.getHours())}:${pad(when.getMinutes())}`;
-  const pa = g.teams.away.probablePitcher?.fullName, ph = g.teams.home.probablePitcher?.fullName;
+  if (PROBS[g.gamePk] == null) loadProbables(g);
   return `<div class="gdetail"><div class="pregame">
     <div class="when">${feedPending ? 'WAITING ON DELAY' : `FIRST PITCH ${hh}`}</div>
-    <div class="prob"><b>${esc(pa || 'TBD')}</b> vs <b>${esc(ph || 'TBD')}</b></div>
-  </div></div>`;
+  </div>
+  <div class="prob-grid">${probCardHTML(g, 'away')}${probCardHTML(g, 'home')}</div>
+  ${mlinkHTML(g)}</div>`;
 }
 
 function detailHTML(g, feed, tier, feedPending) {
@@ -842,6 +1024,7 @@ function detailHTML(g, feed, tier, feedPending) {
         <div class="sc">${scorecard || '<span class="dload">No plate appearances yet</span>'}</div>
       </div>
     </div>
+    ${mlinkHTML(g)}
   </div>`;
 }
 
@@ -861,14 +1044,16 @@ async function tick() {
 
 async function boot() {
   setDelay(DELAY, false);
+  buildDays();
   try { await loadSchedule(); } catch (e) {
     const b = document.getElementById('board');
     b.className = 'state'; b.textContent = 'Could not load the schedule'; return;
   }
   await tick();
   setInterval(tick, TICK_MS);
-  // The slate itself changes rarely: a postponement, a game going live. Once a minute is plenty.
-  setInterval(() => loadSchedule().catch(() => {}), 60000);
+  // The slate itself changes rarely: a postponement, a game going live. Once a
+  // minute is plenty — and only today's slate ever changes.
+  setInterval(() => { if (DAY === etDate()) loadSchedule().catch(() => {}); }, 60000);
 }
 boot();
 </script>
