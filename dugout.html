@@ -174,6 +174,13 @@
   .zone-legend{display:flex;gap:8px;justify-content:center;margin-top:4px;
     font-weight:700;font-size:8.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
   .zone-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+  .pitchlog{flex-shrink:0;min-width:96px}
+  .plrow{display:flex;align-items:center;gap:6px;padding:2px 0;font-variant-numeric:tabular-nums}
+  .plrow .pln{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-style:normal;font-weight:800;font-size:9.5px;color:#0d1a12;flex-shrink:0}
+  .plrow b{font-weight:800;font-size:13px;color:var(--ink)}
+  .plrow span{font-weight:700;font-size:9px;letter-spacing:.6px;color:var(--ink-soft)}
+  .plrow em{font-style:normal;font-weight:800;font-size:10px;letter-spacing:1px;color:var(--gold);margin-left:2px}
   .fielders{flex:1;min-width:150px}
   .fielders .frow{display:flex;align-items:baseline;gap:7px;padding:2.5px 0;min-width:0}
   .fielders .fpos{font-weight:800;font-size:9.5px;letter-spacing:1px;color:var(--gold);width:22px;flex-shrink:0}
@@ -192,6 +199,8 @@
   .sc th:last-child,.sc td:last-child{border-right:0}
   .sc td:first-child{font-weight:600;font-size:12px;color:#fff}
   .sc .subarrow{font-style:normal;color:var(--ink-soft)}
+  .sc .ord{font-family:'Bebas Neue';font-style:normal;font-size:14px;letter-spacing:0;color:var(--ink-soft);
+    display:inline-block;width:14px;text-align:center;margin-right:3px}
   .sc-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 3px}
   .pa{display:flex;flex-direction:column;align-items:center;gap:0;padding:1px 0}
   .pa svg{display:block}
@@ -389,7 +398,7 @@ const F_FULL = F_LITE + ','
 // The pitches of the current at-bat, for the zone. Kept out of F_FULL because
 // the name playEvents would drag in every pitch of the game under allPlays.
 const F_ZONE = 'liveData,plays,currentPlay,playEvents,isPitch,pitchNumber,details,isBall,call,code,'
-  + 'pitchData,strikeZoneTop,strikeZoneBottom,coordinates,pX,pZ';
+  + 'pitchData,strikeZoneTop,strikeZoneBottom,coordinates,pX,pZ,startSpeed,type';
 
 // ── State ────────────────────────────────────────────────────────────────────
 // 90s unless tuned this evening — sessionStorage survives a reload mid-game but
@@ -687,35 +696,62 @@ function situHTML(g, feed, ls) {
 }
 
 // ── Strike zone, catcher's view: the pitches of the at-bat on screen ─────────
-function zoneHTML(feed) {
+const pitchColor = ev => {
+  const call = ev.details?.call?.code || '';
+  return (call === 'X' || call === 'D' || call === 'E') ? 'var(--gold)'
+    : ev.details?.isBall ? 'var(--walk)' : 'var(--whiff)';
+};
+
+function zoneHTML(feed, ls) {
   const play = feed._zonePlay;
   const pitches = (play?.playEvents || []).filter(ev => ev.isPitch && ev.pitchData?.coordinates?.pX != null);
   const PPF = 26;                                   // pixels per foot
-  const W = 96, H = 128, cx = W / 2;
+  const W = 112, H = 128, cx = W / 2;
   const py = z => H - 6 - (z - 0.5) * PPF;          // 0.5ft above the bottom edge
   const zx = 0.7083 * PPF;                          // the plate is 17in wide
   const szT = pitches.length ? pitches.reduce((a,p) => a + (p.pitchData.strikeZoneTop || 3.4), 0) / pitches.length : 3.4;
   const szB = pitches.length ? pitches.reduce((a,p) => a + (p.pitchData.strikeZoneBottom || 1.6), 0) / pitches.length : 1.6;
   const dot = ev => {
     const c = ev.pitchData.coordinates;
-    const call = ev.details?.call?.code || '';
-    const inPlay = call === 'X' || call === 'D' || call === 'E';
-    const col = inPlay ? 'var(--gold)' : ev.details?.isBall ? 'var(--walk)' : 'var(--whiff)';
     const x = Math.max(6, Math.min(W - 6, cx + c.pX * PPF));
     const y = Math.max(6, Math.min(H - 6, py(c.pZ)));
-    return `<circle cx="${x}" cy="${y}" r="5.5" fill="${col}" opacity=".92"></circle>
+    return `<circle cx="${x}" cy="${y}" r="5.5" fill="${pitchColor(ev)}" opacity=".92"></circle>
       <text x="${x}" y="${y + 2.8}" text-anchor="middle" fill="#0d1a12">${ev.pitchNumber || ''}</text>`;
   };
+  // From behind the plate a right-handed batter stands on the catcher's left.
+  // A switch hitter takes the side opposite the pitcher's arm.
+  let bSide = feed.gameData?.players?.[`ID${ls.offense?.batter?.id}`]?.batSide?.code || '';
+  const lab = bSide;
+  if (bSide === 'S') bSide = (feed.gameData?.players?.[`ID${ls.defense?.pitcher?.id}`]?.pitchHand?.code === 'L') ? 'R' : 'L';
+  const bx = bSide === 'R' ? 12 : W - 12;
+  const batter = bSide ? `<g opacity=".5">
+      <circle cx="${bx}" cy="${py(szT) - 6}" r="4" fill="#9fb4a6"/>
+      <rect x="${bx - 3.5}" y="${py(szT) + 1}" width="7" height="${Math.max(10, py(szB) - py(szT) - 2)}" rx="3.5" fill="#9fb4a6"/>
+      <text x="${bx}" y="${H - 10}" text-anchor="middle" fill="#9fb4a6" style="font-size:9px">${lab}</text>
+    </g>` : '';
   return `<div class="zonebox">
     <div class="zone-title">This at-bat</div>
     <svg class="zone" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <rect class="zrect" x="${cx - zx}" y="${py(szT)}" width="${zx * 2}" height="${py(szB) - py(szT)}"/>
+      ${batter}
       ${pitches.map(dot).join('')}
     </svg>
     <div class="zone-legend"><span><i style="background:var(--whiff)"></i>Strike</span>
       <span><i style="background:var(--walk)"></i>Ball</span>
       <span><i style="background:var(--gold)"></i>In play</span></div>
   </div>`;
+}
+
+// Every pitch of the at-bat, with the radar reading and the pitch type
+function pitchLogHTML(feed) {
+  const pitches = (feed._zonePlay?.playEvents || []).filter(ev => ev.isPitch);
+  if (!pitches.length) return '';
+  const rows = pitches.map(ev => `<div class="plrow">
+      <i class="pln" style="background:${pitchColor(ev)}">${ev.pitchNumber || ''}</i>
+      <b>${ev.pitchData?.startSpeed != null ? ev.pitchData.startSpeed.toFixed(1) : '—'}</b><span>mph</span>
+      <em>${esc(ev.details?.type?.code || '')}</em>
+    </div>`).join('');
+  return `<div class="pitchlog"><div class="zone-title">Pitches</div>${rows}</div>`;
 }
 
 // The nine men behind the pitcher, straight from the linescore's defense
@@ -914,6 +950,7 @@ function scorecardHTML(g, feed, side) {
   const head = Array.from({length: data.maxInning}, (_, i) => `<th>${i+1}</th>`).join('');
   const rows = data.order.map(p => {
     const bid = p.person?.id, sub = p.battingOrder % 100 !== 0;
+    const slot = Math.floor(p.battingOrder / 100);
     const name = esc((p.person?.fullName || '').split(' ').slice(1).join(' ') || p.person?.fullName || '');
     const tds = Array.from({length: data.maxInning}, (_, i) => {
       const list = (data.cells[bid] || []).filter(c => c.inning === i + 1);
@@ -921,7 +958,7 @@ function scorecardHTML(g, feed, side) {
         c.dots && (c.dots.b || c.dots.s) ? `<span class="pdots">${'<i class="db"></i>'.repeat(c.dots.b)}${'<i class="ds"></i>'.repeat(c.dots.s)}</span>` : ''
       }</div>`).join('')}</td>`;
     }).join('');
-    return `<tr><td>${sub ? '<i class="subarrow">↳</i> ' : ''}${name}</td>${tds}</tr>`;
+    return `<tr><td><i class="ord">${sub ? '↳' : slot}</i>${name}</td>${tds}</tr>`;
   }).join('');
   // The notebook's inning totals, straight from the linescore of the same snapshot
   const ls = feed.liveData?.linescore;
@@ -1053,7 +1090,7 @@ function detailHTML(g, feed, tier, feedPending) {
     return `<div class="gdetail">${linesHTML(ls, g)}<div class="dload">Loading the full panel…</div></div>`;
 
   const situation = live && !between
-    ? situHTML(g, feed, ls) + `<div class="zonewrap">${zoneHTML(feed)}${fieldersHTML(ls)}</div>`
+    ? situHTML(g, feed, ls) + `<div class="zonewrap">${zoneHTML(feed, ls)}${pitchLogHTML(feed)}${fieldersHTML(ls)}</div>`
     : '';
   const scorecard = scorecardHTML(g, feed, 'away') + scorecardHTML(g, feed, 'home');
   return `<div class="gdetail">
