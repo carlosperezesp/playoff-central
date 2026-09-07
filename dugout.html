@@ -153,6 +153,9 @@
     background:rgba(184,15,33,.22);color:#ff8a97}
   .hand.L{background:rgba(21,101,216,.28);color:#8fc4ff}
   .hand.S{background:rgba(232,194,58,.2);color:#e8c23a}
+  .role{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1.2px;padding:2px 5px;border-radius:4px;
+    flex-shrink:0;background:rgba(232,194,58,.18);color:#e8c23a}
+  .role.set{background:rgba(159,180,166,.18);color:#c3d4c9}
   .duel-row .nm{font-family:'Bebas Neue';font-size:17px;letter-spacing:.9px;color:#fff;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:40px}
   .duel-row .pc{font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--ink-dim);white-space:nowrap;flex-shrink:0}
@@ -199,6 +202,19 @@
   .pa .slash{stroke:var(--gold);stroke-width:1.6}
   .pa text{font-family:'Barlow Condensed';font-weight:800;font-size:7.5px;fill:#9fb4a6}
   .pa text.outlab{fill:#ff8a97}
+  .pa .pdots{display:flex;gap:2px;margin-top:2px}
+  .pa .pdots i{width:4px;height:4px;border-radius:50%;display:block}
+  .pa .pdots .db{background:var(--walk)}
+  .pa .pdots .ds{background:var(--whiff)}
+  .sc tr.tot td{font-size:11px;font-weight:800;padding:3px 2px;vertical-align:middle}
+  .sc tr.totr td{color:var(--gold);border-top:2px solid var(--line)}
+  .sc tr.totr td:first-child{color:var(--gold)}
+  .sc tr.toth td,.sc tr.toth td:first-child{color:var(--ink-dim)}
+
+  /* Boxscore team totals, the notebook's GAME TOTALS line */
+  .box tr.totrow td{color:#fff;border-top:1px solid var(--line);padding-top:5px}
+  .box tr.totrow td:first-child{font-weight:800;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--ink-dim)}
 
   /* ── Player boxscore ─────────────────────────────────────── */
   .box{padding:2px 16px 10px;overflow-x:auto}
@@ -363,6 +379,7 @@ const F_LITE = 'gamePk,gameData,status,abstractGameState,detailedState,liveData,
 const F_FULL = F_LITE + ','
   + 'boxscore,players,person,batters,pitchers,battingOrder,position,abbreviation,stats,batting,pitching,'
   + 'atBats,rbi,baseOnBalls,strikeOuts,inningsPitched,earnedRuns,seasonStats,avg,ops,era,whip,numberOfPitches,'
+  + 'saves,saveOpportunities,holds,gamesFinished,'
   + 'batSide,pitchHand,'
   + 'catcher,shortstop,left,center,right,'
   + 'allPlays,eventType,halfInning,inning,matchup,runners,credits,credit,code,'
@@ -620,6 +637,15 @@ function pitchCount(feed, pid) {
   return null;
 }
 
+// Same thresholds the Bullpen board uses to call a man's job
+function penRole(p) {
+  const ss = p?.seasonStats?.pitching || {};
+  if ((ss.saves ?? 0) >= 5 || ((ss.saveOpportunities ?? 0) >= 5 && (ss.gamesFinished ?? 0) >= 10))
+    return '<i class="role">CLOSER</i>';
+  if ((ss.holds ?? 0) >= 8) return '<i class="role set">SETUP</i>';
+  return '';
+}
+
 const boxPlayer = (feed, pid) => {
   for (const s of ['away', 'home']) {
     const p = feed.liveData?.boxscore?.teams?.[s]?.players?.[`ID${pid}`];
@@ -654,7 +680,7 @@ function situHTML(g, feed, ls) {
         <span class="fcirc" style="background:${pC};color:${onTier(pC)}">${pForm ?? '—'}</span>
         ${faceHTML(pitcher?.id)}
         <span class="nm">${esc(pitcher?.fullName || '—')}</span>
-        ${pSide ? `<span class="hand ${pSide}">${pSide}HP</span>` : ''}
+        ${pSide ? `<span class="hand ${pSide}">${pSide}HP</span>` : ''}${penRole(pP)}
         ${pc ? `<span class="pc">${pc.p} P${pc.s != null ? ` · ${pc.s} S` : ''}</span>` : ''}</div>
     </div>
   </div>`;
@@ -803,8 +829,16 @@ function scorecardData(feed, side) {
     let bcell = null;
     if (pl.about?.isComplete && bid && !NON_PA.test(ev)) {
       const n = notation(pl);
-      if (n) { bcell = { inning: inn, n, reached: 0, scored: false, seg: {}, out: null, slash: false };
-        (cells[bid] = cells[bid] || []).push(bcell); }
+      if (n) {
+        bcell = { inning: inn, n, reached: 0, scored: false, seg: {}, out: null, slash: false };
+        // The pitches before the last one, the way a scorer dots them in:
+        // a walk's fourth ball and a strikeout's third strike live in the notation
+        if (pl.count?.balls != null) bcell.dots = {
+          b: Math.max(0, Math.min(3, pl.count.balls - (/walk/.test(ev) ? 1 : 0))),
+          s: Math.max(0, Math.min(2, pl.count.strikes - (/strikeout/.test(ev) ? 1 : 0))),
+        };
+        (cells[bid] = cells[bid] || []).push(bcell);
+      }
     }
     const batSlot = slotOf(bid);
     let lastOutCell = null;
@@ -883,12 +917,20 @@ function scorecardHTML(g, feed, side) {
     const name = esc((p.person?.fullName || '').split(' ').slice(1).join(' ') || p.person?.fullName || '');
     const tds = Array.from({length: data.maxInning}, (_, i) => {
       const list = (data.cells[bid] || []).filter(c => c.inning === i + 1);
-      return `<td>${list.map(c => `<div class="pa">${paSVG(c)}<span class="lab" style="color:${c.n.c}">${c.n.t}</span></div>`).join('')}</td>`;
+      return `<td>${list.map(c => `<div class="pa">${paSVG(c)}<span class="lab" style="color:${c.n.c}">${c.n.t}</span>${
+        c.dots && (c.dots.b || c.dots.s) ? `<span class="pdots">${'<i class="db"></i>'.repeat(c.dots.b)}${'<i class="ds"></i>'.repeat(c.dots.s)}</span>` : ''
+      }</div>`).join('')}</td>`;
     }).join('');
     return `<tr><td>${sub ? '<i class="subarrow">↳</i> ' : ''}${name}</td>${tds}</tr>`;
   }).join('');
+  // The notebook's inning totals, straight from the linescore of the same snapshot
+  const ls = feed.liveData?.linescore;
+  const totRow = (lab, key, cls) => `<tr class="tot ${cls}"><td>${lab}</td>${
+    Array.from({length: data.maxInning}, (_, i) =>
+      `<td>${ls?.innings?.[i]?.[side]?.[key] ?? ''}</td>`).join('')}</tr>`;
   return `<div class="sc-team">${esc(g.teams[side].team.teamName)}</div>
-    <table><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+    <table><thead><tr><th></th>${head}</tr></thead><tbody>${rows}
+    ${totRow('R', 'runs', 'totr')}${totRow('H', 'hits', 'toth')}</tbody></table>`;
 }
 
 // ── Player boxscore ──────────────────────────────────────────────────────────
@@ -896,10 +938,13 @@ function boxTeamHTML(g, feed, side) {
   const bx = feed.liveData?.boxscore?.teams?.[side];
   if (!bx) return '';
   const P = bx.players || {};
+  const sums = { ab: 0, r: 0, h: 0, rbi: 0, bb: 0, k: 0 };
   const batRow = id => {
     const p = P[`ID${id}`]; if (!p) return '';
     const st = p.stats?.batting;
     if (!st || st.atBats == null) return '';
+    sums.ab += st.atBats; sums.r += st.runs ?? 0; sums.h += st.hits ?? 0;
+    sums.rbi += st.rbi ?? 0; sums.bb += st.baseOnBalls ?? 0; sums.k += st.strikeOuts ?? 0;
     const sub = p.battingOrder && p.battingOrder % 100 !== 0;
     return `<tr><td>${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
@@ -911,7 +956,7 @@ function boxTeamHTML(g, feed, side) {
     const p = P[`ID${id}`]; if (!p) return '';
     const st = p.stats?.pitching;
     if (!st || st.inningsPitched == null) return '';
-    return `<tr><td>${esc(p.person?.fullName)}</td>
+    return `<tr><td>${esc(p.person?.fullName)} ${penRole(p)}</td>
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
       <td>${st.numberOfPitches ?? ''}</td>
@@ -924,7 +969,8 @@ function boxTeamHTML(g, feed, side) {
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
     ${bats ? `<table>
       <thead><tr><th></th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
-      <tbody>${bats}</tbody></table>` : ''}
+      <tbody>${bats}<tr class="totrow"><td>Totals</td><td>${sums.ab}</td><td>${sums.r}</td><td>${sums.h}</td>
+        <td>${sums.rbi}</td><td>${sums.bb}</td><td>${sums.k}</td><td></td></tr></tbody></table>` : ''}
     ${arms ? `<table>
       <thead><tr><th></th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
