@@ -1039,7 +1039,13 @@ function drawDivChart(divId) {
   // Desktop pairs the chart height with the standings card; mobile keeps its CSS height.
   const chartCard = canvas.closest('.div-chart-card');
   if (chartCard) chartCard.style.height = desktop ? `${card.offsetHeight}px` : '';
-  if (!canvas.offsetHeight) return;
+  // Layout may not have caught up with a just-revealed card — give it one
+  // frame and try again rather than leaving the chart blank.
+  if (!canvas.offsetHeight) {
+    if (!canvas._retried) { canvas._retried = true; requestAnimationFrame(() => drawDivChart(divId)); }
+    return;
+  }
+  canvas._retried = false;
   canvas.style.cursor = 'crosshair';
   canvas.onmousemove = (e) => onDivHover(e, divId);
   canvas.onmouseleave = () => onDivLeave(divId);
@@ -1120,7 +1126,13 @@ function showDivTooltip(idx, divId, visibleDates, cx, cy) {
 
 // Desktop: draw every division's chart side-by-side.
 function drawAllDivisionCharts() {
-  if (window.innerWidth <= 900) return; // mobile draws lazily on click
+  if (window.innerWidth <= 900) {
+    // Mobile draws lazily on tap — but if a division was opened while the
+    // tracker was still loading, its blank chart is waiting for this moment.
+    const openCv = document.querySelector('.division-row.open [id^="divcanvas-"]');
+    if (openCv) drawDivChart(openCv.id.replace('divcanvas-', ''));
+    return;
+  }
   document.querySelectorAll('[id^="divcanvas-"]').forEach(cv => {
     drawDivChart(cv.id.replace('divcanvas-', ''));
   });
@@ -1140,6 +1152,9 @@ function toggleDivision(divId) {
     row.classList.add('open');
     document.getElementById(`divhdr-${divId}`)?.classList.add('selected');
     drawDivChart(divId);
+    // Tapped before the tracker finished loading? Fetch (or join the fetch in
+    // flight) and paint this chart the moment the data lands.
+    if (!trackerLoaded) loadTrackerData().then(() => drawAllDivisionCharts()).catch(() => {});
   }
 }
 
@@ -1604,7 +1619,14 @@ async function initTracker() {
   }
 }
 
-async function loadTrackerData() {
+function loadTrackerData() {
+  // Several places can ask for the tracker at once (standings render, a tapped
+  // division, the rankings tab) — one fetch in flight serves them all.
+  if (window._trackerLoading) return window._trackerLoading;
+  return window._trackerLoading = _loadTrackerData().finally(() => { window._trackerLoading = null; });
+}
+
+async function _loadTrackerData() {
   const start = new Date(`${CURRENT_YEAR}-03-25`);
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
