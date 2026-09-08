@@ -11,7 +11,7 @@
 <link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css?v=20260903-scroll">
-<link rel="stylesheet" href="css/gamepanel.css?v=20260908-gp">
+<link rel="stylesheet" href="css/gamepanel.css?v=20260908-gp3">
 <style>
   :root{
     --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
@@ -99,6 +99,12 @@
   /* The unfolded panel's frame; its insides come from gamepanel.css */
   .gdetail{background:rgba(0,0,0,.22);border-top:1px solid var(--line);padding:4px 0 8px}
 
+  /* Section headers: live, upcoming, finished */
+  .ghead{padding:9px 12px 5px;font-weight:800;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--ink-soft);background:rgba(0,0,0,.14);border-bottom:1px solid var(--line)}
+  .ghead[data-r="0"]{color:#7fe07f}
+  .gr-status .cnt{font-style:normal;color:var(--ink)}
+
   .pregame{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px 4px}
   .pregame .when{font-family:'Bebas Neue';font-size:19px;letter-spacing:1.4px;color:var(--ink)}
 
@@ -178,7 +184,7 @@
 </div>
 
 <script src="js/apicache.js?v=20260903-scroll"></script>
-<script src="js/gamepanel.js?v=20260908-gp"></script>
+<script src="js/gamepanel.js?v=20260908-gp3"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const TICK_MS = 15000;      // how often live rows ask the feed for their (delayed) present
@@ -282,6 +288,34 @@ async function loadSchedule() {
     CARDS[g.gamePk] = el;
     renderCard(g);
   });
+  layoutBoard();
+}
+
+// Live first, then the evening ahead, then the books already closed — each
+// under its own little header. appendChild moves existing nodes, so regrouping
+// as games flip state costs nothing.
+const stateRank = g => g.status.abstractGameState === 'Live' ? 0
+  : g.status.abstractGameState === 'Preview' ? 1 : 2;
+function layoutBoard() {
+  const board = document.getElementById('board');
+  if (!board.classList.contains('gamelist')) return;
+  const sorted = [...GAMES].sort((a, b) => stateRank(a) - stateRank(b)
+    || String(a.gameDate).localeCompare(String(b.gameDate)));
+  let last = -1;
+  sorted.forEach(g => {
+    const r = stateRank(g);
+    if (r !== last) {
+      last = r;
+      let h = board.querySelector(`.ghead[data-r="${r}"]`);
+      if (!h) { h = document.createElement('div'); h.className = 'ghead'; h.dataset.r = r;
+        h.textContent = ['● Live now', 'Upcoming', 'Finished'][r]; }
+      board.appendChild(h);
+    }
+    board.appendChild(CARDS[g.gamePk]);
+  });
+  board.querySelectorAll('.ghead').forEach(h => {
+    if (!GAMES.some(g => stateRank(g) === +h.dataset.r)) h.remove();
+  });
 }
 
 // One listener for the whole list; rows are repainted too often to carry their own.
@@ -337,8 +371,10 @@ function statusHTML(g, ls, st) {
     return `<div class="gr-status fin">FINAL${extra}${st.detailedState !== 'Final' ? ' · ' + esc(st.detailedState) : ''}</div>`;
   }
   const state = (ls.inningState || '').toUpperCase();
-  const outs = (state === 'TOP' || state === 'BOTTOM') ? ` · ${ls.outs ?? 0} OUT` : '';
-  return `<div class="gr-status live">${state} ${esc(ls.currentInningOrdinal || ls.currentInning)}${outs}</div>`;
+  const mid = (state === 'TOP' || state === 'BOTTOM')
+    ? ` · ${ls.outs ?? 0} OUT${GP.miniBases(ls.offense)}<i class="cnt">${ls.balls ?? 0}–${ls.strikes ?? 0}</i>`
+    : '';
+  return `<div class="gr-status live">${state} ${esc(ls.currentInningOrdinal || ls.currentInning)}${mid}</div>`;
 }
 
 function teamRowHTML(g, ls, st, side) {
@@ -433,7 +469,7 @@ function renderCard(g, feedPending) {
   const L = LAST[g.gamePk];
   let detail = '';
   if (OPEN.has(g.gamePk)) {
-    const inner = GP.detailHTML(g, L?.feed, L?.tier);
+    const inner = GP.detailHTML(g, L?.feed, L?.tier, { lines: false });
     detail = inner ? `<div class="gdetail gp">${inner}</div>` : pregameHTML(g, feedPending);
   }
   CARDS[g.gamePk].innerHTML = rowHTML(g, L?.feed) + detail;

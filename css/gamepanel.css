@@ -16,6 +16,12 @@
 @media (min-width:900px){
   .gp .dcols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
   .gp .dcols > .dcol + .dcol{border-left:1px solid var(--line)}
+  /* Below three-column width, the live situation spans the row above box + scorecard */
+  .gp .dcol-situ{grid-column:1/-1;border-left:0 !important}
+}
+@media (min-width:1250px){
+  .gp .dcols.three{grid-template-columns:minmax(0,3fr) minmax(0,4fr) minmax(0,5fr)}
+  .gp .dcols.three .dcol-situ{grid-column:auto}
 }
 
 /* ── Linescore (full, with R H E) ────────────────────────── */
@@ -45,6 +51,9 @@
   font-weight:800;font-size:17px;line-height:1;flex-shrink:0;border:2px solid rgba(255,255,255,.22);
   box-shadow:inset 0 -4px 8px rgba(0,0,0,.22), 0 3px 8px rgba(0,0,0,.3)}
 .gp .fcirc.ops{font-size:12.5px}
+.gp .fcirc.mini{width:26px;height:26px;font-size:11px;border-width:1.5px;display:inline-flex;
+  vertical-align:middle;margin-right:6px;box-shadow:inset 0 -3px 5px rgba(0,0,0,.2)}
+.gp .fcirc.mini.ops{font-size:8.5px;letter-spacing:-.2px}
 .gp .face{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.08)}
 .gp .face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
 .gp .hand{font-weight:800;font-size:9px;letter-spacing:1px;padding:2px 5px;border-radius:4px;flex-shrink:0;
@@ -85,15 +94,17 @@
 .gp .fielders .fnm{font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
 
-/* ── Scorecard, the notebook grid: batters down, innings across ─────────── */
+/* ── Scorecard, the notebook grid: batters down, innings across.
+   The name column stays put while the innings scroll underneath it. ──────── */
+.gp{--gp-bg:#101d14}
 .gp .sc{padding:2px 16px 10px;overflow-x:auto}
-.gp .sc table{border-collapse:collapse}
+.gp .sc table{border-collapse:separate;border-spacing:0}
 .gp .sc th,.gp .sc td{font-weight:800;text-align:center;padding:1px 2px;vertical-align:top;
-  border:1px solid rgba(243,239,224,.09);min-width:44px}
-.gp .sc th{font-size:9px;letter-spacing:1px;color:var(--ink-soft);border-top:0;padding:3px 2px}
-.gp .sc th:first-child,.gp .sc td:first-child{text-align:left;min-width:76px;max-width:104px;overflow:hidden;
-  text-overflow:ellipsis;border-left:0;padding-left:0;padding-right:6px;white-space:nowrap;
-  vertical-align:middle}
+  border-bottom:1px solid rgba(243,239,224,.09);border-right:1px solid rgba(243,239,224,.09);min-width:50px}
+.gp .sc th{font-size:9.5px;letter-spacing:1px;color:var(--ink-soft);padding:3px 2px}
+.gp .sc th:first-child,.gp .sc td:first-child{text-align:left;min-width:82px;max-width:112px;overflow:hidden;
+  text-overflow:ellipsis;padding-left:0;padding-right:6px;white-space:nowrap;
+  vertical-align:middle;position:sticky;left:0;z-index:1;background:var(--gp-bg)}
 .gp .sc th:last-child,.gp .sc td:last-child{border-right:0}
 .gp .sc td:first-child{font-weight:600;font-size:12px;color:#fff}
 .gp .sc .subarrow{font-style:normal;color:var(--ink-soft)}
@@ -101,8 +112,8 @@
   display:inline-block;width:14px;text-align:center;margin-right:3px}
 .gp .sc-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 3px}
 .gp .pa{display:flex;flex-direction:column;align-items:center;gap:0;padding:1px 0}
-.gp .pa svg{display:block}
-.gp .pa .lab{font-weight:800;font-size:9.5px;line-height:1.1;white-space:nowrap;letter-spacing:.3px}
+.gp .pa svg{display:block;width:46px;height:47px}
+.gp .pa .lab{font-weight:800;font-size:10.5px;line-height:1.1;white-space:nowrap;letter-spacing:.3px}
 .gp .pa .dia{fill:none;stroke:rgba(243,239,224,.16);stroke-width:1}
 .gp .pa .dia.scored{fill:var(--gold);stroke:var(--gold);opacity:.9}
 .gp .pa .run{stroke:#f3efe0;stroke-width:1.7;stroke-linecap:round}
@@ -123,11 +134,11 @@
 .gp .box-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 2px}
 .gp .box table{border-collapse:collapse;width:100%;min-width:400px}
 .gp .box table + table{margin-top:10px}
-.gp .box th,.gp .box td{font-weight:700;font-size:12px;text-align:right;padding:3.5px 4px;
+.gp .box th,.gp .box td{font-weight:700;font-size:13px;text-align:right;padding:4px;
   color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
-.gp .box th{font-size:9px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.gp .box th{font-size:9.5px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
 .gp .box th:first-child,.gp .box td:first-child{text-align:left;padding-left:0;white-space:normal}
-.gp .box td:first-child{color:#fff;font-weight:600;font-size:13px}
+.gp .box td:first-child{color:#fff;font-weight:600;font-size:14px}
 .gp .pos-tag{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1px;color:var(--ink-soft);margin-left:3px}
 .gp .subarrow{font-style:normal;color:var(--ink-soft)}
 .gp .box tr.totrow td{color:#fff;border-top:1px solid var(--line);padding-top:5px}
@@ -135,6 +146,20 @@
   color:var(--ink-dim)}
 
 .gp .dload{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);padding:10px 16px 12px}
+
+/* ── Scoring plays: every swing that moved the score ─────────────────────── */
+.gp .splays{padding:0 16px 10px}
+.gp .splay{display:flex;align-items:baseline;gap:9px;padding:3.5px 0;min-width:0}
+.gp .splay + .splay{border-top:1px solid rgba(243,239,224,.07)}
+.gp .sp-inn{font-family:'Bebas Neue';font-size:14px;letter-spacing:1px;color:var(--gold);
+  width:26px;flex-shrink:0}
+.gp .sp-txt{font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.5;color:var(--ink-dim);flex:1;min-width:0}
+.gp .sp-score{font-weight:800;font-size:11px;letter-spacing:.6px;color:var(--ink);white-space:nowrap;flex-shrink:0}
+.gp.gp-flush .splays{padding-left:0;padding-right:0}
+
+/* The row-sized base indicator (used by the scoreboard rows on both boards) */
+.mb{vertical-align:-4px;margin:0 3px}
+.wb-cnt{font-style:normal;color:#f3efe0}
 
 /* One tap to the two clubs' full comparison */
 .gp .mlink{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 12px;
@@ -147,12 +172,17 @@
 @media (max-width:520px){
   .gp .box{padding:2px 12px 8px}
   .gp .box table{min-width:0}
-  .gp .box th,.gp .box td{font-size:11px;padding:3px}
-  .gp .box td:first-child{font-size:12px}
+  .gp .box th,.gp .box td{font-size:12px;padding:3px}
+  .gp .box td:first-child{font-size:13px}
+  .gp .fcirc.mini{width:22px;height:22px;font-size:10px;margin-right:4px}
+  .gp .fcirc.mini.ops{font-size:7.5px}
   .gp .lines{padding:4px 12px 8px}
   .gp .sc,.gp .situ,.gp .zonewrap{padding-left:12px;padding-right:12px}
   .gp .dh,.gp .lastplay{padding-left:12px;padding-right:12px}
 }
+
+/* Top Games' detail paints a lighter green — the sticky name column must match it */
+.wb-detail .gp{--gp-bg:#33503c}
 
 /* Inside a container that already pads (Top Games' detail), drop the panel's own gutters */
 .gp.gp-flush .lines,.gp.gp-flush .situ,.gp.gp-flush .zonewrap,.gp.gp-flush .lastplay,

@@ -62,7 +62,7 @@ const F_FULL = F_LITE + ','
   + 'saves,saveOpportunities,holds,gamesFinished,'
   + 'batSide,pitchHand,'
   + 'catcher,shortstop,left,center,right,'
-  + 'allPlays,eventType,halfInning,inning,matchup,runners,credits,credit,code,'
+  + 'allPlays,scoringPlays,awayScore,homeScore,eventType,halfInning,inning,matchup,runners,credits,credit,code,'
   // ...and each runner's journey, so the scorecard can draw the basepaths: where
   // he ended up, whether he was out on the bases, and the outs count after each play
   + 'movement,end,outBase,isOut,details,runner,count';
@@ -117,6 +117,16 @@ function fetchFinal(pk) {
 }
 
 // ── Panel parts ──────────────────────────────────────────────────────────────
+// Bases at a glance, small enough to live inside a scoreboard row
+function miniBases(off) {
+  const f = b => off?.[b] ? '#e8c23a' : 'rgba(243,239,224,.18)';
+  return `<svg class="mb" width="22" height="19" viewBox="0 0 22 19">
+    <rect x="8.2" y="1" width="5.6" height="5.6" transform="rotate(45 11 3.8)" fill="${f('second')}"/>
+    <rect x="1.7" y="8" width="5.6" height="5.6" transform="rotate(45 4.5 10.8)" fill="${f('third')}"/>
+    <rect x="14.7" y="8" width="5.6" height="5.6" transform="rotate(45 17.5 10.8)" fill="${f('first')}"/>
+  </svg>`;
+}
+
 function diamondHTML(off) {
   const on = b => off?.[b] ? 'on' : '';
   return `<svg class="diamond" width="46" height="42" viewBox="0 0 46 42">
@@ -493,7 +503,10 @@ function boxTeamHTML(g, feed, side) {
     sums.ab += st.atBats; sums.r += st.runs ?? 0; sums.h += st.hits ?? 0;
     sums.rbi += st.rbi ?? 0; sums.bb += st.baseOnBalls ?? 0; sums.k += st.strikeOuts ?? 0;
     const sub = p.battingOrder && p.battingOrder % 100 !== 0;
-    return `<tr><td>${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
+    // The season next to the night: the same OPS circle his own board scores him by
+    const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
+    return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${
+      sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${st.atBats}</td><td>${st.runs ?? 0}</td><td>${st.hits ?? 0}</td><td>${st.rbi ?? 0}</td>
       <td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
@@ -503,7 +516,9 @@ function boxTeamHTML(g, feed, side) {
     const p = P[`ID${id}`]; if (!p) return '';
     const st = p.stats?.pitching;
     if (!st || st.inningsPitched == null) return '';
-    return `<tr><td>${esc(p.person?.fullName)} ${penRole(p)}</td>
+    const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
+    return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${
+      esc(p.person?.fullName)} ${penRole(p)}</td>
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
       <td>${st.numberOfPitches ?? ''}</td>
@@ -524,6 +539,25 @@ function boxTeamHTML(g, feed, side) {
   </div>`;
 }
 
+// Every play that moved the score, with the score it left behind
+function scoringHTML(g, feed) {
+  const plays = feed.liveData?.plays;
+  const idx = plays?.scoringPlays;
+  if (!Array.isArray(idx) || !idx.length || !Array.isArray(plays.allPlays)) return '';
+  const aAb = esc(g.teams.away.team.abbreviation || ''), hAb = esc(g.teams.home.team.abbreviation || '');
+  const rows = idx.map(i => {
+    const pl = plays.allPlays[i];
+    if (!pl?.result?.description) return '';
+    const half = pl.about?.halfInning === 'top' ? 'T' : 'B';
+    return `<div class="splay">
+      <span class="sp-inn">${half}${pl.about?.inning ?? ''}</span>
+      <span class="sp-txt">${esc(pl.result.description)}</span>
+      <span class="sp-score">${aAb} ${pl.result.awayScore ?? ''}–${pl.result.homeScore ?? ''} ${hAb}</span>
+    </div>`;
+  }).join('');
+  return rows ? `<div class="dh">Scoring plays</div><div class="splays">${rows}</div>` : '';
+}
+
 const mlinkHTML = g =>
   `<a class="mlink" href="matchup.html?a=${g.teams.home.team.id}&b=${g.teams.away.team.id}">
     Compare rotations, pens &amp; lineups &rarr;</a>`;
@@ -542,17 +576,25 @@ function detailHTML(g, feed, tier, opts = {}) {
   const play = feed.liveData?.plays?.currentPlay;
   const desc = play?.about?.isComplete ? play?.result?.description : null;
 
+  const lines = opts.lines === false ? '' : linesHTML(ls, g);
   if (tier !== 'full')
-    return `${linesHTML(ls, g)}<div class="dload">Loading the full panel…</div>`;
+    return `${lines}<div class="dload">Loading the full panel…</div>`;
 
   const situation = live && !between
     ? situHTML(g, feed, ls) + `<div class="zonewrap">${zoneHTML(feed, ls)}${pitchLogHTML(feed)}${fieldersHTML(ls)}</div>`
     : '';
+  const scoring = scoringHTML(g, feed);
+  const lastplay = live && desc ? `<div class="lastplay"><b>Last play:</b> ${esc(desc)}</div>` : '';
   const scorecard = scorecardHTML(g, feed, 'away') + scorecardHTML(g, feed, 'home');
-  return `${linesHTML(ls, g)}
-    ${situation}
-    ${desc ? `<div class="lastplay"><b>Last play:</b> ${esc(desc)}</div>` : ''}
-    <div class="dcols">
+  // Live: situation, box and scorecard ride three columns where the screen has
+  // room. Finished: scoring plays up top, then box beside scorecard.
+  const situCol = situation
+    ? `<div class="dcol dcol-situ"><div class="dh">Situation</div>${situation}${lastplay}${scoring}</div>`
+    : '';
+  return `${lines}
+    ${situation ? '' : scoring}
+    <div class="dcols${situation ? ' three' : ''}">
+      ${situCol}
       <div class="dcol">
         <div class="dh">Boxscore</div>
         ${boxTeamHTML(g, feed, 'away')}${boxTeamHTML(g, feed, 'home')}
@@ -565,6 +607,6 @@ function detailHTML(g, feed, tier, opts = {}) {
     ${opts.mlink === false ? '' : mlinkHTML(g)}`;
 }
 
-window.GP = { detailHTML, fetchDelayed, fetchFinal,
+window.GP = { detailHTML, fetchDelayed, fetchFinal, miniBases,
   forma, tierForm, tierOps, onTier, face, num, fmt3, esc, F_LITE, F_FULL };
 })();

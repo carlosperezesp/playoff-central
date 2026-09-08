@@ -5281,6 +5281,9 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     try{const sched=await fj(`${API}/schedule?sportId=1&date=${dateFor(day)}&hydrate=probablePitcher,linescore,team`);
       games=(sched.dates&&sched.dates[0]&&sched.dates[0].games)||[];
     }catch(e){if($('wb-games'))$('wb-games').innerHTML='<div class="wb-empty">Could not load.</div>';return;}
+    // Live first, then the evening ahead, then the finals — by the real clock
+    const rk=g=>g.status.abstractGameState==='Live'?0:g.status.abstractGameState==='Preview'?1:2;
+    games.sort((a,b)=>rk(a)-rk(b)||String(a.gameDate).localeCompare(String(b.gameDate)));
     const ids=new Set();
     games.forEach(g=>{['away','home'].forEach(s=>{const pp=g.teams[s].probablePitcher;if(pp&&pp.id)ids.add(pp.id);});});
     const people={};
@@ -5327,7 +5330,8 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   }
 
   function statusText(g){const st=g.status,state=st.abstractGameState,ls=g.linescore||{};
-    if(state==='Live')return `${ls.isTopInning?'TOP':'BOT'} ${ls.currentInningOrdinal||ls.currentInning}`;
+    if(state==='Live')return `${ls.isTopInning?'TOP':'BOT'} ${ls.currentInningOrdinal||ls.currentInning}`
+      +` · ${ls.outs??0} OUT${typeof GP!=='undefined'?GP.miniBases(ls.offense):''}<i class="wb-cnt">${ls.balls??0}–${ls.strikes??0}</i>`;
     if(state==='Final')return (st.detailedState||'FINAL').toUpperCase();
     return new Date(g.gameDate).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
 
@@ -5439,7 +5443,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
         feed=r.feed;
       }
       const el=$('wbgp-'+pk); if(!el)return;
-      el.innerHTML=GP.detailHTML(g,feed,'full',{mlink:false})||'';
+      el.innerHTML=GP.detailHTML(g,feed,'full',{mlink:false,lines:false})||'';
     }catch(e){ const el=$('wbgp-'+pk); if(el)el.innerHTML='<div class="wb-ptw-loading">Board unavailable.</div>'; }
   }
 
