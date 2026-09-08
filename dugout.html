@@ -442,7 +442,9 @@ setInterval(() => {
 const etDayAgo = i => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' })
   .format(new Date(Date.now() - i * 86400000));
 function buildDays() {
-  document.getElementById('days').innerHTML = Array.from({length: 7}, (_, i) => {
+  // Oldest on the left, today on the right — time reads the way a calendar does
+  document.getElementById('days').innerHTML = Array.from({length: 7}, (_, k) => {
+    const i = 6 - k;
     const d = etDayAgo(i);
     const dt = new Date(Date.now() - i * 86400000);
     const et = o => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...o }).format(dt);
