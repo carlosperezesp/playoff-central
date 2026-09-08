@@ -478,7 +478,8 @@ function scorecardHTML(g, feed, side) {
     const tds = Array.from({length: data.maxInning}, (_, i) => {
       const list = (data.cells[bid] || []).filter(c => c.inning === i + 1);
       // The notation sits ON the diamond, the way a pencil would write it
-      return `<td>${list.map(c => `<div class="pa${c.scored ? ' scored' : ''}">${paSVG(c)}<span class="lab" style="color:${c.n.c}">${c.n.t}</span>${
+      return `<td>${list.map(c => `<div class="pa${c.scored ? ' scored' : ''}">${paSVG(c)}<span class="lab${
+        c.n.t.length > 6 ? ' xl' : c.n.t.length > 3 ? ' long' : ''}" style="color:${c.n.c}">${c.n.t}</span>${
         c.dots && (c.dots.b || c.dots.s) ? `<span class="pdots">${'<i class="db"></i>'.repeat(c.dots.b)}${'<i class="ds"></i>'.repeat(c.dots.s)}</span>` : ''
       }</div>`).join('')}</td>`;
     }).join('');
@@ -509,7 +510,7 @@ function boxTeamHTML(g, feed, side) {
     const sub = p.battingOrder && p.battingOrder % 100 !== 0;
     // The season next to the night: the same OPS circle his own board scores him by
     const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
-    return `<tr><td>${circle('OPS', 'mini ops', oc, fmt3(ops))}${
+    return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${
       sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${st.atBats}</td><td>${st.runs ?? 0}</td><td>${st.hits ?? 0}</td><td>${st.rbi ?? 0}</td>
@@ -521,7 +522,7 @@ function boxTeamHTML(g, feed, side) {
     const st = p.stats?.pitching;
     if (!st || st.inningsPitched == null) return '';
     const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
-    return `<tr><td>${circle('FORM', 'mini', fc, f ?? '—')}${
+    return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${
       esc(p.person?.fullName)} ${penRole(p)}</td>
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
@@ -534,11 +535,11 @@ function boxTeamHTML(g, feed, side) {
   return `<div class="box">
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
     ${bats ? `<table>
-      <thead><tr><th></th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
+      <thead><tr><th class="lab-th">OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
       <tbody>${bats}<tr class="totrow"><td>Totals</td><td>${sums.ab}</td><td>${sums.r}</td><td>${sums.h}</td>
         <td>${sums.rbi}</td><td>${sums.bb}</td><td>${sums.k}</td><td></td></tr></tbody></table>` : ''}
     ${arms ? `<table>
-      <thead><tr><th></th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
+      <thead><tr><th class="lab-th">FORM</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
   </div>`;
 }
@@ -600,8 +601,17 @@ document.addEventListener('click', e => {
   if (act === 'exit')    { rpStop(); const old = REPLAY.pk; REPLAY.pk = null; if (typeof GP.onRender === 'function') GP.onRender(old); }
   if (act === 'restart') { REPLAY.idx = -1; rpNotify(); }
   if (act === 'step')    { rpStop(); rpStep(); }
+  if (act === 'back')    { rpStop(); if (REPLAY.idx > -1) REPLAY.idx--; rpNotify(); }
   if (act === 'toggle')  { REPLAY.playing ? (rpStop(), rpNotify()) : rpPlay(); }
 }, true);
+
+// What the replay believes the game looks like right now — pages use it to
+// mask their own scoreboard rows so the final can't leak past the cursor.
+function replayInfo(pk) {
+  if (REPLAY.pk !== pk || !PANELFEEDS[pk]) return null;
+  const st8 = replayState(PANELFEEDS[pk].feed, REPLAY.idx);
+  return { ls: st8.ls, idx: REPLAY.idx, n: PANELFEEDS[pk].feed.liveData?.plays?.allPlays?.length || 0 };
+}
 
 // The game as it stood after play N: linescore and box lines re-accumulated
 // from the plays themselves. ER and pitch counts only exist in the real box,
@@ -664,7 +674,10 @@ function replayState(feed, upto) {
     scheduledInnings: realLs.scheduledInnings || 9,
     innings, teams: tot,
     currentInning: last?.about?.inning ?? null,
+    currentInningOrdinal: last?.about?.inning ?? null,
     inningState: last ? (last.about.halfInning === 'top' ? 'Top' : 'Bottom') : '',
+    isTopInning: last?.about?.halfInning === 'top',
+    outs: last?.count?.outs ?? null,
   };
   return { ls, bat, arms, armOrder, last };
 }
@@ -681,7 +694,7 @@ function replayBoxHTML(g, feed, side, st8) {
     const b = st8.bat[id];
     const sub = p.battingOrder % 100 !== 0;
     const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
-    return `<tr><td>${circle('OPS', 'mini ops', oc, fmt3(ops))}${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
+    return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${b?.ab ?? 0}</td><td>${b?.r ?? 0}</td><td>${b?.h ?? 0}</td><td>${b?.rbi ?? 0}</td>
       <td>${b?.bb ?? 0}</td><td>${b?.k ?? 0}</td></tr>`;
@@ -690,14 +703,14 @@ function replayBoxHTML(g, feed, side, st8) {
     const p = P[`ID${pid}`], a = st8.arms[pid];
     if (!p || !a) return '';
     const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
-    return `<tr><td>${circle('FORM', 'mini', fc, f ?? '—')}${esc(p.person?.fullName)}</td>
+    return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${esc(p.person?.fullName)}</td>
       <td>${ipOf(a.outs)}</td><td>${a.h}</td><td>${a.r}</td><td>${a.bb}</td><td>${a.k}</td></tr>`;
   }).join('');
   return `<div class="box">
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
-    ${bats ? `<table><thead><tr><th></th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
+    ${bats ? `<table><thead><tr><th class="lab-th">OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
       <tbody>${bats}</tbody></table>` : ''}
-    ${arms ? `<table><thead><tr><th></th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
+    ${arms ? `<table><thead><tr><th class="lab-th">FORM</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
   </div>`;
 }
@@ -716,6 +729,7 @@ function replayHTML(g, feed) {
     <div class="rpbar">
       <button data-gpr="exit" title="Back to the final">✕</button>
       <button data-gpr="restart" title="From the top">⟲</button>
+      <button data-gpr="back" title="Previous play">⏮</button>
       <button data-gpr="toggle" class="rp-main">${REPLAY.playing ? '⏸' : '▶'}</button>
       <button data-gpr="step" title="Next play">⏭</button>
       <span class="rp-pos">${half} · play ${Math.max(0, i + 1)}/${n}
@@ -790,7 +804,7 @@ function detailHTML(g, feed, tier, opts = {}) {
     ${opts.mlink === false ? '' : mlinkHTML(g)}`;
 }
 
-window.GP = { detailHTML, fetchDelayed, fetchFinal, miniBases,
+window.GP = { detailHTML, fetchDelayed, fetchFinal, miniBases, replayInfo,
   forma, tierForm, tierOps, onTier, face, num, fmt3, esc, F_LITE, F_FULL,
   onRender: null };   // pages set this: called with a gamePk when the replay needs a repaint
 })();

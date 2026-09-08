@@ -11,7 +11,7 @@
 <link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css?v=20260903-scroll">
-<link rel="stylesheet" href="css/gamepanel.css?v=20260908-gp5">
+<link rel="stylesheet" href="css/gamepanel.css?v=20260908-gp6">
 <style>
   :root{
     --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
@@ -217,7 +217,7 @@
 </div>
 
 <script src="js/apicache.js?v=20260903-scroll"></script>
-<script src="js/gamepanel.js?v=20260908-gp5"></script>
+<script src="js/gamepanel.js?v=20260908-gp6"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const TICK_MS = 15000;      // how often live rows ask the feed for their (delayed) present
@@ -467,7 +467,7 @@ async function updateGame(g) {
 }
 
 // ── The folded row, in the Top Games grid ────────────────────────────────────
-function statusHTML(g, ls, st) {
+function statusHTML(g, ls, st, rp) {
   if (!st || st.abstractGameState === 'Preview' || ls?.currentInning == null) {
     const when = new Date(g.gameDate);
     return `<div class="gr-status">${pad(when.getHours())}:${pad(when.getMinutes())} · ${esc((st || g.status).detailedState)}</div>`;
@@ -477,10 +477,11 @@ function statusHTML(g, ls, st) {
     return `<div class="gr-status fin">FINAL${extra}${st.detailedState !== 'Final' ? ' · ' + esc(st.detailedState) : ''}</div>`;
   }
   const state = (ls.inningState || '').toUpperCase();
-  const mid = (state === 'TOP' || state === 'BOTTOM')
-    ? ` · ${ls.outs ?? 0} OUT${GP.miniBases(ls.offense)}<i class="cnt">${ls.balls ?? 0}–${ls.strikes ?? 0}</i>`
+  const outsTxt = ls.outs != null ? ` · ${ls.outs} OUT` : '';
+  const mid = (state === 'TOP' || state === 'BOTTOM') && ls.balls != null
+    ? `${GP.miniBases(ls.offense)}<i class="cnt">${ls.balls}–${ls.strikes ?? 0}</i>`
     : '';
-  return `<div class="gr-status live">${state} ${esc(ls.currentInningOrdinal || ls.currentInning)}${mid}</div>`;
+  return `<div class="gr-status live">${rp ? '⟲ REPLAY ' : ''}${state} ${esc(ls.currentInningOrdinal || ls.currentInning)}${outsTxt}${mid}</div>`;
 }
 
 function teamRowHTML(g, ls, st, side) {
@@ -504,10 +505,14 @@ function teamRowHTML(g, ls, st, side) {
 }
 
 function rowHTML(g, feed) {
-  const st = feed?.gameData?.status, ls = feed?.liveData?.linescore;
+  // While a replay runs, the row wears the replay's clock too — the final
+  // score must not leak from one pixel above the cursor.
+  const rp = GP.replayInfo(g.gamePk);
+  const st = rp ? { abstractGameState: 'Live', detailedState: 'Replay' } : feed?.gameData?.status;
+  const ls = rp ? rp.ls : feed?.liveData?.linescore;
   const heads = Array.from({length:9}, (_, i) => `<div class="gr-gi">${i+1}</div>`).join('');
   return `<div class="grow"><div class="grow-scroll"><div class="grow-grid">
-    <div class="gr gr-head">${statusHTML(g, ls, st)}${heads}<div class="gr-gi r">R</div></div>
+    <div class="gr gr-head">${statusHTML(g, ls, st, rp)}${heads}<div class="gr-gi r">R</div></div>
     ${teamRowHTML(g, ls, st, 'away')}
     ${teamRowHTML(g, ls, st, 'home')}
   </div></div></div>`;
