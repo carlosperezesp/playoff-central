@@ -1,0 +1,180 @@
+/* The game panel's look, shared by dugout.html and the Top Games tab.
+   Everything is scoped under .gp — the element a page wraps around
+   GP.detailHTML()'s output — including the color tokens, so the panel reads
+   the same on any of the site's dark greens. */
+.gp{
+  --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
+  --line:rgba(243,239,224,.13); --gold:#e8c23a;
+  --hit:#4ade80; --walk:#8fc4ff; --whiff:#ff8a97; --err:#ff8100;
+  font-family:'Barlow Condensed',system-ui,sans-serif; color:var(--ink);
+}
+
+.gp .dh{font-weight:800;font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft);
+  padding:12px 16px 6px}
+.gp .dcols{display:grid;grid-template-columns:1fr}
+.gp .dcol{min-width:0}
+@media (min-width:900px){
+  .gp .dcols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+  .gp .dcols > .dcol + .dcol{border-left:1px solid var(--line)}
+}
+
+/* ── Linescore (full, with R H E) ────────────────────────── */
+.gp .lines{padding:4px 16px 10px;overflow-x:auto}
+.gp .lines table{border-collapse:collapse;width:100%;min-width:400px}
+.gp .lines th,.gp .lines td{font-weight:800;font-size:13px;text-align:center;padding:4px 5px;
+  font-variant-numeric:tabular-nums;color:var(--ink-dim)}
+.gp .lines th{font-size:10px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.gp .lines th:first-child,.gp .lines td:first-child{text-align:left;padding-left:0}
+.gp .lines td:first-child{font-family:'Bebas Neue';font-weight:400;font-size:16px;letter-spacing:1.2px;color:#fff}
+.gp .lines .rhe{color:#fff;font-size:14.5px}
+.gp .lines th.rhe{color:var(--ink-dim)}
+.gp .lines .sep-l{border-left:1px solid var(--line)}
+.gp .lines td.now{color:var(--gold)}
+
+/* ── Live situation ──────────────────────────────────────── */
+.gp .situ{display:flex;align-items:center;gap:14px;padding:10px 16px 6px;flex-wrap:wrap}
+.gp .diamond{flex-shrink:0}
+.gp .diamond rect{fill:rgba(243,239,224,.1);stroke:rgba(243,239,224,.35);stroke-width:1.5}
+.gp .diamond rect.on{fill:var(--gold);stroke:var(--gold)}
+.gp .count{font-family:'Bebas Neue';font-size:19px;letter-spacing:1.6px;color:var(--ink);flex-shrink:0}
+.gp .count i{font-style:normal;color:var(--ink-soft);font-size:13px;letter-spacing:1px}
+.gp .duel{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.gp .duel-row{display:flex;align-items:center;gap:8px;min-width:0}
+.gp .duel-row .who{font-weight:800;font-size:9.5px;letter-spacing:1.4px;color:var(--ink-soft);width:22px;flex-shrink:0}
+.gp .fcirc{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;line-height:1;flex-shrink:0;border:2px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 -4px 8px rgba(0,0,0,.22), 0 3px 8px rgba(0,0,0,.3)}
+.gp .fcirc.ops{font-size:12.5px}
+.gp .face{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.08)}
+.gp .face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.gp .hand{font-weight:800;font-size:9px;letter-spacing:1px;padding:2px 5px;border-radius:4px;flex-shrink:0;
+  background:rgba(184,15,33,.22);color:#ff8a97}
+.gp .hand.L{background:rgba(21,101,216,.28);color:#8fc4ff}
+.gp .hand.S{background:rgba(232,194,58,.2);color:#e8c23a}
+.gp .role{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1.2px;padding:2px 5px;border-radius:4px;
+  flex-shrink:0;background:rgba(232,194,58,.18);color:#e8c23a}
+.gp .role.set{background:rgba(159,180,166,.18);color:#c3d4c9}
+.gp .duel-row .nm{font-family:'Bebas Neue';font-size:17px;letter-spacing:.9px;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:40px}
+.gp .duel-row .pc{font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--ink-dim);white-space:nowrap;flex-shrink:0}
+.gp .lastplay{font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.5;color:var(--ink-dim);
+  padding:4px 16px 8px}
+.gp .lastplay b{color:var(--ink);font-weight:600}
+
+/* The strike zone, catcher's view, and the nine men behind the pitcher */
+.gp .zonewrap{display:flex;gap:16px;padding:6px 16px 10px;align-items:flex-start;flex-wrap:wrap}
+.gp .zonebox{flex-shrink:0}
+.gp .zone-title{font-weight:800;font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);
+  text-align:center;margin-bottom:4px}
+.gp .zone{display:block;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px}
+.gp .zone .zrect{fill:none;stroke:rgba(243,239,224,.4);stroke-width:1;stroke-dasharray:3 2}
+.gp .zone text{font-family:'Barlow Condensed';font-weight:800;font-size:8px}
+.gp .zone-legend{display:flex;gap:8px;justify-content:center;margin-top:4px;
+  font-weight:700;font-size:8.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
+.gp .zone-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+.gp .pitchlog{flex-shrink:0;min-width:96px}
+.gp .plrow{display:flex;align-items:center;gap:6px;padding:2px 0;font-variant-numeric:tabular-nums}
+.gp .plrow .pln{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-weight:800;font-size:9.5px;color:#0d1a12;flex-shrink:0}
+.gp .plrow b{font-weight:800;font-size:13px;color:var(--ink)}
+.gp .plrow span{font-weight:700;font-size:9px;letter-spacing:.6px;color:var(--ink-soft)}
+.gp .plrow em{font-style:normal;font-weight:800;font-size:10px;letter-spacing:1px;color:var(--gold);margin-left:2px}
+.gp .fielders{flex:1;min-width:150px}
+.gp .fielders .frow{display:flex;align-items:baseline;gap:7px;padding:2.5px 0;min-width:0}
+.gp .fielders .fpos{font-weight:800;font-size:9.5px;letter-spacing:1px;color:var(--gold);width:22px;flex-shrink:0}
+.gp .fielders .fnm{font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+
+/* ── Scorecard, the notebook grid: batters down, innings across ─────────── */
+.gp .sc{padding:2px 16px 10px;overflow-x:auto}
+.gp .sc table{border-collapse:collapse}
+.gp .sc th,.gp .sc td{font-weight:800;text-align:center;padding:1px 2px;vertical-align:top;
+  border:1px solid rgba(243,239,224,.09);min-width:44px}
+.gp .sc th{font-size:9px;letter-spacing:1px;color:var(--ink-soft);border-top:0;padding:3px 2px}
+.gp .sc th:first-child,.gp .sc td:first-child{text-align:left;min-width:76px;max-width:104px;overflow:hidden;
+  text-overflow:ellipsis;border-left:0;padding-left:0;padding-right:6px;white-space:nowrap;
+  vertical-align:middle}
+.gp .sc th:last-child,.gp .sc td:last-child{border-right:0}
+.gp .sc td:first-child{font-weight:600;font-size:12px;color:#fff}
+.gp .sc .subarrow{font-style:normal;color:var(--ink-soft)}
+.gp .sc .ord{font-family:'Bebas Neue';font-style:normal;font-size:14px;letter-spacing:0;color:var(--ink-soft);
+  display:inline-block;width:14px;text-align:center;margin-right:3px}
+.gp .sc-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 3px}
+.gp .pa{display:flex;flex-direction:column;align-items:center;gap:0;padding:1px 0}
+.gp .pa svg{display:block}
+.gp .pa .lab{font-weight:800;font-size:9.5px;line-height:1.1;white-space:nowrap;letter-spacing:.3px}
+.gp .pa .dia{fill:none;stroke:rgba(243,239,224,.16);stroke-width:1}
+.gp .pa .dia.scored{fill:var(--gold);stroke:var(--gold);opacity:.9}
+.gp .pa .run{stroke:#f3efe0;stroke-width:1.7;stroke-linecap:round}
+.gp .pa .slash{stroke:var(--gold);stroke-width:1.6}
+.gp .pa text{font-family:'Barlow Condensed';font-weight:800;font-size:7.5px;fill:#9fb4a6}
+.gp .pa text.outlab{fill:#ff8a97}
+.gp .pa .pdots{display:flex;gap:2px;margin-top:2px}
+.gp .pa .pdots i{width:4px;height:4px;border-radius:50%;display:block}
+.gp .pa .pdots .db{background:var(--walk)}
+.gp .pa .pdots .ds{background:var(--whiff)}
+.gp .sc tr.tot td{font-size:11px;font-weight:800;padding:3px 2px;vertical-align:middle}
+.gp .sc tr.totr td{color:var(--gold);border-top:2px solid var(--line)}
+.gp .sc tr.totr td:first-child{color:var(--gold)}
+.gp .sc tr.toth td,.gp .sc tr.toth td:first-child{color:var(--ink-dim)}
+
+/* ── Player boxscore ─────────────────────────────────────── */
+.gp .box{padding:2px 16px 10px;overflow-x:auto}
+.gp .box-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 2px}
+.gp .box table{border-collapse:collapse;width:100%;min-width:400px}
+.gp .box table + table{margin-top:10px}
+.gp .box th,.gp .box td{font-weight:700;font-size:12px;text-align:right;padding:3.5px 4px;
+  color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.gp .box th{font-size:9px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.gp .box th:first-child,.gp .box td:first-child{text-align:left;padding-left:0;white-space:normal}
+.gp .box td:first-child{color:#fff;font-weight:600;font-size:13px}
+.gp .pos-tag{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1px;color:var(--ink-soft);margin-left:3px}
+.gp .subarrow{font-style:normal;color:var(--ink-soft)}
+.gp .box tr.totrow td{color:#fff;border-top:1px solid var(--line);padding-top:5px}
+.gp .box tr.totrow td:first-child{font-weight:800;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--ink-dim)}
+
+.gp .dload{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);padding:10px 16px 12px}
+
+/* One tap to the two clubs' full comparison */
+.gp .mlink{display:inline-flex;align-items:center;gap:6px;margin:4px 16px 12px;
+  font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none;
+  color:var(--ink-dim);border:1px solid var(--line);background:rgba(243,239,224,.05);
+  border-radius:999px;padding:6px 13px;transition:background .15s,color .15s}
+.gp .mlink:hover{background:rgba(243,239,224,.12);color:var(--ink)}
+
+/* Down where even a phone feels wide — a side panel, a split screen */
+@media (max-width:520px){
+  .gp .box{padding:2px 12px 8px}
+  .gp .box table{min-width:0}
+  .gp .box th,.gp .box td{font-size:11px;padding:3px}
+  .gp .box td:first-child{font-size:12px}
+  .gp .lines{padding:4px 12px 8px}
+  .gp .sc,.gp .situ,.gp .zonewrap{padding-left:12px;padding-right:12px}
+  .gp .dh,.gp .lastplay{padding-left:12px;padding-right:12px}
+}
+
+/* Inside a container that already pads (Top Games' detail), drop the panel's own gutters */
+.gp.gp-flush .lines,.gp.gp-flush .situ,.gp.gp-flush .zonewrap,.gp.gp-flush .lastplay,
+.gp.gp-flush .sc,.gp.gp-flush .box,.gp.gp-flush .dh,.gp.gp-flush .dload{padding-left:0;padding-right:0}
+.gp.gp-flush .mlink{margin-left:0;margin-right:0}
+
+/* ── The delay bar's controls (chips + stepper), shared styling ──────────── */
+.gp-delay{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  font-family:'Barlow Condensed',system-ui,sans-serif}
+.gp-delay .lbl{font-weight:800;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(243,239,224,.32)}
+.gp-delay .chip{font-family:inherit;font-weight:800;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;
+  color:rgba(243,239,224,.55);background:rgba(243,239,224,.05);border:1.5px solid rgba(243,239,224,.13);
+  border-radius:999px;padding:7px 13px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.gp-delay .chip:hover{background:rgba(243,239,224,.1);color:#f3efe0}
+.gp-delay .chip.on{color:#0d1a12;background:#e8c23a;border-color:#e8c23a}
+.gp-delay .stepper{display:flex;align-items:center;gap:0;border:1.5px solid rgba(243,239,224,.13);
+  border-radius:999px;overflow:hidden}
+.gp-delay .stepper button{font-family:inherit;font-weight:800;font-size:15px;color:#f3efe0;
+  background:rgba(243,239,224,.05);border:0;padding:6px 13px;cursor:pointer}
+.gp-delay .stepper button:hover{background:rgba(243,239,224,.12)}
+.gp-delay .stepper .val{font-family:'Bebas Neue';font-size:19px;letter-spacing:1px;color:#e8c23a;
+  padding:4px 12px;min-width:72px;text-align:center;font-variant-numeric:tabular-nums}
+/* Its slot in the Top Games header */
+.wb-delay{padding:12px 8px 10px}

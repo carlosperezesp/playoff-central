@@ -5219,6 +5219,10 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   const API='https://statsapi.mlb.com/api/v1';
   let curDay='hoy', pollTimer=null, lastGames=[], clockStarted=false, mvpRaceTried=false;
   let topPks=new Set(), topRetry=false;
+  // Broadcast delay (seconds): holds rows and open panels back so the board can
+  // sit next to a slow TV feed. 0 = live. Kept per tab; every visit starts live.
+  let tgDelay=0;
+  try{tgDelay=Math.min(600,Math.max(0,parseInt(sessionStorage.getItem('bl-tg-delay'),10)||0));}catch(e){}
   const expanded=new Set(), ptwCache={}, starsCache={};
   const $=id=>document.getElementById(id);
   const fj=u=>fetch(u).then(r=>r.json());
@@ -5285,6 +5289,19 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
       (d.people||[]).forEach(p=>{let st={};(p.stats||[]).forEach(b=>{if(b.group&&b.group.displayName==='pitching'&&b.type&&b.type.displayName==='season')st=(b.splits&&b.splits[0]&&b.splits[0].stat)||{};});
         people[p.id]={num:p.primaryNumber||'',name:p.fullName,era:st.era?+st.era:null,whip:st.whip?+st.whip:null,ip:st.inningsPitched||'—',so:st.strikeOuts||0,w:st.wins||0,l:st.losses||0};});
     }catch(e){}}
+    // Whether to keep polling is decided by the real clock, not the delayed one
+    const rawLive=games.some(g=>g.status.abstractGameState==='Live');
+    // With a delay set, today's rows must not outrun the open panels: overlay
+    // each started game's linescore and status with the delayed snapshot's.
+    if(tgDelay>0 && day==='hoy' && typeof GP!=='undefined'){
+      await Promise.all(games.filter(g=>g.status.abstractGameState!=='Preview').map(async g=>{
+        try{
+          const r=await GP.fetchDelayed(g.gamePk,{delay:tgDelay,tier:'lite'});
+          if(r.pregame){g.status={...g.status,abstractGameState:'Preview',detailedState:'Pre-Game'};g.linescore=undefined;}
+          else if(r.feed){g.linescore=r.feed.liveData?.linescore||g.linescore;g.status=r.feed.gameData?.status||g.status;}
+        }catch(e){}
+      }));
+    }
     lastGames=games;
     computeTop(games,people);
     if($('wb-games')) render(games,people);
@@ -5294,7 +5311,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
       ensureMvpLists().then(()=>{if($('wb-games')){computeTop(games,people);render(games,people);}}).catch(()=>{});
     }
     clearTimeout(pollTimer);
-    if($('wb-games') && games.some(g=>g.status.abstractGameState==='Live')) pollTimer=setTimeout(()=>loadDay(curDay,true),30000);
+    if($('wb-games') && rawLive) pollTimer=setTimeout(()=>loadDay(curDay,true),30000);
   }
 
   function plate(num){return num?`<div class="wb-plate">${num}</div>`:`<div class="wb-plate-p">?</div>`;}
@@ -5333,7 +5350,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     el.innerHTML=games.map(g=>{
       const live=g.status.abstractGameState==='Live', open=expanded.has(g.gamePk);
       const ih=Array.from({length:9},(_,i)=>`<div class="wb-gi">${i+1}</div>`).join('')+`<div class="wb-gi wb-r">R</div>`;
-      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div>`:`<div class="wb-dh">${g.status.abstractGameState==='Preview'?'Probable starters':'Starting pitchers'}</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
+      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div><div class="gp gp-flush" id="wbgp-${g.gamePk}"></div>`:g.status.abstractGameState==='Live'?`<div class="gp gp-flush" id="wbgp-${g.gamePk}"><div class="wb-ptw-loading">Loading live board…</div></div>`:`<div class="wb-dh">Probable starters</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
     }).join('');
     expanded.forEach(pk=>{const g=games.find(x=>x.gamePk===pk);if(g)fillDetail(g);});
   }
@@ -5413,7 +5430,42 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     `<a class="wb-matchup-link" href="matchup.html?a=${g.teams.away.team.id}&b=${g.teams.home.team.id}&from=topgames"
         onclick="event.stopPropagation()">Compare rotations, pens &amp; lineups &rarr;</a>`;
 
-  function fillDetail(g){ if(g.status.abstractGameState==='Final') fillStars(g); else fillPTW(g); }
+  // The shared game panel (js/gamepanel.js): linescore, live situation, zone,
+  // scorecard and box — pinned to the delayed snapshot when a delay is set.
+  async function fillGamePanel(g){
+    const pk=g.gamePk, box=$('wbgp-'+pk);
+    if(!box||typeof GP==='undefined')return;
+    try{
+      let feed;
+      if(g.status.abstractGameState==='Final' && curDay==='ayer'){ feed=await GP.fetchFinal(pk); }
+      else{
+        const r=await GP.fetchDelayed(pk,{delay:tgDelay,tier:'full'});
+        if(r.pregame){const el=$('wbgp-'+pk);if(el)el.innerHTML='';return;}
+        feed=r.feed;
+      }
+      const el=$('wbgp-'+pk); if(!el)return;
+      el.innerHTML=GP.detailHTML(g,feed,'full',{mlink:false})||'';
+    }catch(e){ const el=$('wbgp-'+pk); if(el)el.innerHTML='<div class="wb-ptw-loading">Board unavailable.</div>'; }
+  }
+
+  function fillDetail(g){
+    const st=g.status.abstractGameState;
+    if(st==='Final'){ fillStars(g); fillGamePanel(g); }
+    else if(st==='Live'){ fillGamePanel(g); }
+    else fillPTW(g);
+  }
+
+  function syncDelayUI(){
+    const bar=$('tg-delay'); if(!bar)return;
+    bar.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',+b.dataset.d===tgDelay));
+    const v=$('tg-dval'); if(v)v.textContent=tgDelay?('−'+tgDelay+'s'):'LIVE';
+  }
+  function setDelay(v){
+    tgDelay=Math.min(600,Math.max(0,v));
+    try{sessionStorage.setItem('bl-tg-delay',String(tgDelay));}catch(e){}
+    syncDelayUI();
+    loadDay(curDay,true);
+  }
 
   function toggle(pk){
     const wasOpen=expanded.has(pk);
@@ -5424,7 +5476,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     if(!wasOpen){const g=lastGames.find(x=>x.gamePk===pk);if(g)fillDetail(g);}
   }
 
-  window.WB={ load:loadDay, day:loadDay, toggle, startClock };
+  window.WB={ load:loadDay, day:loadDay, toggle, startClock, setDelay, syncDelay:syncDelayUI, getDelay:()=>tgDelay };
 })();
 
 async function loadTopGames(){
@@ -5441,8 +5493,28 @@ async function loadTopGames(){
         <button class="wb-day wb-active" data-day="hoy" onclick="WB.day('hoy')"><span class="wb-d">TODAY</span><span class="wb-dt">${fmtD(todayD)}</span></button>
         <button class="wb-day" data-day="manana" onclick="WB.day('manana')"><span class="wb-d">TOMORROW</span><span class="wb-dt">${fmtD(tD)}</span></button>
       </div>
+      <div class="gp-delay wb-delay" id="tg-delay" title="Hold the board back to match your broadcast">
+        <span class="lbl">Broadcast delay</span>
+        <button class="chip" data-d="0">Live</button>
+        <button class="chip" data-d="30">30s</button>
+        <button class="chip" data-d="60">60s</button>
+        <button class="chip" data-d="90">90s</button>
+        <div class="stepper">
+          <button type="button" data-step="-15" aria-label="15 seconds less delay">&minus;</button>
+          <span class="val" id="tg-dval">LIVE</span>
+          <button type="button" data-step="15" aria-label="15 seconds more delay">+</button>
+        </div>
+      </div>
       <div class="wb-board"><div class="wb-scroll"><div class="wb-grid"><div id="wb-games"><div class="wb-loading">LOADING…</div></div></div></div></div>
     </div>`;
+  const tgBar = document.getElementById('tg-delay');
+  if (tgBar) tgBar.addEventListener('click', e => {
+    const c = e.target.closest('.chip');
+    if (c) { WB.setDelay(+c.dataset.d); return; }
+    const s = e.target.closest('[data-step]');
+    if (s) WB.setDelay(WB.getDelay() + +s.dataset.step);
+  });
+  WB.syncDelay();
   WB.startClock();
   const targetDate = window._topGamesTarget?.date;
   const yKey = yD.toISOString().split('T')[0], tKey = tD.toISOString().split('T')[0];
