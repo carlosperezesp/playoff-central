@@ -51,9 +51,14 @@
   font-weight:800;font-size:17px;line-height:1;flex-shrink:0;border:2px solid rgba(255,255,255,.22);
   box-shadow:inset 0 -4px 8px rgba(0,0,0,.22), 0 3px 8px rgba(0,0,0,.3)}
 .gp .fcirc.ops{font-size:12.5px}
-.gp .fcirc.mini{width:26px;height:26px;font-size:11px;border-width:1.5px;display:inline-flex;
-  vertical-align:middle;margin-right:6px;box-shadow:inset 0 -3px 5px rgba(0,0,0,.2)}
-.gp .fcirc.mini.ops{font-size:8.5px;letter-spacing:-.2px}
+.gp .fcirc.mini{width:28px;height:28px;font-size:12px;border-width:1.5px;
+  box-shadow:inset 0 -3px 5px rgba(0,0,0,.2)}
+.gp .fcirc.mini.ops{font-size:9px;letter-spacing:-.2px}
+/* The circle wears its stat's name, so nobody has to guess what the number is */
+.gp .cw{display:inline-flex;flex-direction:column;align-items:center;gap:1px;
+  vertical-align:middle;margin-right:6px}
+.gp .cl{font-style:normal;font-weight:800;font-size:6.5px;letter-spacing:1.2px;color:var(--ink-soft);
+  text-transform:uppercase;line-height:1}
 .gp .face{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.08)}
 .gp .face img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
 .gp .hand{font-weight:800;font-size:9px;letter-spacing:1px;padding:2px 5px;border-radius:4px;flex-shrink:0;
@@ -110,10 +115,15 @@
 .gp .sc .subarrow{font-style:normal;color:var(--ink-soft)}
 .gp .sc .ord{font-family:'Bebas Neue';font-style:normal;font-size:14px;letter-spacing:0;color:var(--ink-soft);
   display:inline-block;width:14px;text-align:center;margin-right:3px}
+.gp .sc .ord.sub{color:#fff;font-size:15px;font-family:'Barlow Condensed';font-weight:800}
 .gp .sc-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 3px}
-.gp .pa{display:flex;flex-direction:column;align-items:center;gap:0;padding:1px 0}
+.gp .pa{display:flex;flex-direction:column;align-items:center;gap:0;padding:1px 0;position:relative}
 .gp .pa svg{display:block;width:46px;height:47px}
-.gp .pa .lab{font-weight:800;font-size:10.5px;line-height:1.1;white-space:nowrap;letter-spacing:.3px}
+/* Written over the diamond, pencil-style — the empty middle is its natural home */
+.gp .pa .lab{position:absolute;top:23px;left:50%;transform:translate(-50%,-50%);
+  font-weight:800;font-size:12.5px;line-height:1.1;white-space:nowrap;letter-spacing:.3px;
+  text-shadow:0 1px 3px rgba(0,0,0,.75)}
+.gp .pa.scored .lab{color:#0d1a12 !important;text-shadow:none}
 .gp .pa .dia{fill:none;stroke:rgba(243,239,224,.16);stroke-width:1}
 .gp .pa .dia.scored{fill:var(--gold);stroke:var(--gold);opacity:.9}
 .gp .pa .run{stroke:#f3efe0;stroke-width:1.7;stroke-linecap:round}
@@ -139,8 +149,8 @@
 .gp .box th{font-size:9.5px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
 .gp .box th:first-child,.gp .box td:first-child{text-align:left;padding-left:0;white-space:normal}
 .gp .box td:first-child{color:#fff;font-weight:600;font-size:14px}
-.gp .pos-tag{font-style:normal;font-weight:800;font-size:9px;letter-spacing:1px;color:var(--ink-soft);margin-left:3px}
-.gp .subarrow{font-style:normal;color:var(--ink-soft)}
+.gp .pos-tag{font-style:normal;font-weight:800;font-size:10px;letter-spacing:1px;color:#fff;margin-left:3px}
+.gp .subarrow{font-style:normal;color:#fff;font-size:15px}
 .gp .box tr.totrow td{color:#fff;border-top:1px solid var(--line);padding-top:5px}
 .gp .box tr.totrow td:first-child{font-weight:800;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
   color:var(--ink-dim)}
@@ -174,8 +184,9 @@
   .gp .box table{min-width:0}
   .gp .box th,.gp .box td{font-size:12px;padding:3px}
   .gp .box td:first-child{font-size:13px}
-  .gp .fcirc.mini{width:22px;height:22px;font-size:10px;margin-right:4px}
-  .gp .fcirc.mini.ops{font-size:7.5px}
+  .gp .fcirc.mini{width:24px;height:24px;font-size:10.5px}
+  .gp .fcirc.mini.ops{font-size:8px}
+  .gp .cw{margin-right:4px}
   .gp .lines{padding:4px 12px 8px}
   .gp .sc,.gp .situ,.gp .zonewrap{padding-left:12px;padding-right:12px}
   .gp .dh,.gp .lastplay{padding-left:12px;padding-right:12px}

@@ -47,6 +47,9 @@ const onTier = c => (c === '#ff8100' || c === '#ff2200' || c === '#9ca3af') ? '#
 const face = id => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_180,q_auto:best/v1/people/${id}/headshot/silo/current`;
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
 const fmt3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/, '');
+// A tier circle with its stat named above it, so no one has to guess what the number is
+const circle = (label, cls, bg, txt) =>
+  `<span class="cw"><i class="cl">${label}</i><span class="fcirc ${cls}" style="background:${bg};color:${onTier(bg)}">${txt}</span></span>`;
 
 // ── Field lists: one flat list of names; the API keeps any field whose name
 // appears here, at any depth. A folded row only needs the scoreboard... ──────
@@ -201,12 +204,12 @@ function situHTML(g, feed, ls) {
     <div class="count">${ls.balls ?? 0}<i>–</i>${ls.strikes ?? 0} <i>· ${ls.outs ?? 0} OUT</i></div>
     <div class="duel">
       <div class="duel-row"><span class="who">AB</span>
-        <span class="fcirc ops" style="background:${bC};color:${onTier(bC)}">${fmt3(bOps)}</span>
+        ${circle('OPS', 'ops', bC, fmt3(bOps))}
         ${faceHTML(batter?.id)}
         <span class="nm">${esc(batter?.fullName || '—')}</span>
         ${bSide ? `<span class="hand ${bSide}">${bSide === 'S' ? 'SWITCH' : bSide + 'HB'}</span>` : ''}</div>
       <div class="duel-row"><span class="who">P</span>
-        <span class="fcirc" style="background:${pC};color:${onTier(pC)}">${pForm ?? '—'}</span>
+        ${circle('FORM', '', pC, pForm ?? '—')}
         ${faceHTML(pitcher?.id)}
         <span class="nm">${esc(pitcher?.fullName || '—')}</span>
         ${pSide ? `<span class="hand ${pSide}">${pSide}HP</span>` : ''}${penRole(pP)}
@@ -474,11 +477,12 @@ function scorecardHTML(g, feed, side) {
     const name = esc((p.person?.fullName || '').split(' ').slice(1).join(' ') || p.person?.fullName || '');
     const tds = Array.from({length: data.maxInning}, (_, i) => {
       const list = (data.cells[bid] || []).filter(c => c.inning === i + 1);
-      return `<td>${list.map(c => `<div class="pa">${paSVG(c)}<span class="lab" style="color:${c.n.c}">${c.n.t}</span>${
+      // The notation sits ON the diamond, the way a pencil would write it
+      return `<td>${list.map(c => `<div class="pa${c.scored ? ' scored' : ''}">${paSVG(c)}<span class="lab" style="color:${c.n.c}">${c.n.t}</span>${
         c.dots && (c.dots.b || c.dots.s) ? `<span class="pdots">${'<i class="db"></i>'.repeat(c.dots.b)}${'<i class="ds"></i>'.repeat(c.dots.s)}</span>` : ''
       }</div>`).join('')}</td>`;
     }).join('');
-    return `<tr><td><i class="ord">${sub ? '↳' : slot}</i>${name}</td>${tds}</tr>`;
+    return `<tr><td><i class="ord${sub ? ' sub' : ''}">${sub ? '↳' : slot}</i>${name}</td>${tds}</tr>`;
   }).join('');
   // The notebook's inning totals, straight from the linescore of the same snapshot
   const ls = feed.liveData?.linescore;
@@ -505,7 +509,7 @@ function boxTeamHTML(g, feed, side) {
     const sub = p.battingOrder && p.battingOrder % 100 !== 0;
     // The season next to the night: the same OPS circle his own board scores him by
     const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
-    return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${
+    return `<tr><td>${circle('OPS', 'mini ops', oc, fmt3(ops))}${
       sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${st.atBats}</td><td>${st.runs ?? 0}</td><td>${st.hits ?? 0}</td><td>${st.rbi ?? 0}</td>
@@ -517,7 +521,7 @@ function boxTeamHTML(g, feed, side) {
     const st = p.stats?.pitching;
     if (!st || st.inningsPitched == null) return '';
     const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
-    return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${
+    return `<tr><td>${circle('FORM', 'mini', fc, f ?? '—')}${
       esc(p.person?.fullName)} ${penRole(p)}</td>
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>

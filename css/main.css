@@ -1742,8 +1742,8 @@
   .wb-tm img{width:22px;height:22px;object-fit:contain;flex:none}
   .wb-tm .wb-nm{font-family:'Bebas Neue';font-size:23px;letter-spacing:1.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wb-wl{font-family:'Barlow Condensed';font-weight:800;font-size:12px;line-height:1;padding:2px 6px;border-radius:3px;flex:none;letter-spacing:.5px;transform:translateY(-2px)}
-  .wb-wl.wb-w{background:#fff;color:#0e3386}
-  .wb-wl.wb-l{background:#0e3386;color:#fff}
+  .wb-wl.wb-w{background:#16a34a;color:#fff}
+  .wb-wl.wb-l{background:#b80f21;color:#fff}
   .wb-inn{text-align:center;font-weight:700;font-size:18px;color:#fff}
   .wb-inn.wb-cur{color:var(--gold)}
   .wb-rcol{text-align:center;font-weight:800;font-size:19px;color:var(--gold)}
