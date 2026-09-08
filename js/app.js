@@ -5314,13 +5314,8 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     if($('wb-games') && rawLive) pollTimer=setTimeout(()=>loadDay(curDay,true),30000);
   }
 
-  function plate(num){return num?`<div class="wb-plate">${num}</div>`:`<div class="wb-plate-p">?</div>`;}
-
   function teamRow(g,side,people){
     const t=g.teams[side], team=t.team, ls=g.linescore||{}, state=g.status.abstractGameState, live=state==='Live';
-    const starterId=t.probablePitcher&&t.probablePitcher.id, sp=starterId&&people[starterId];
-    let spNum=sp&&sp.num;
-    if(live && ls.defense && ls.defense.pitcher){const defending=ls.isTopInning?'home':'away';if(side===defending && ls.defense.pitcher.id!==starterId) spNum=null;}
     const innings=ls.innings||[]; let cells='';
     for(let i=1;i<=9;i++){const inn=innings[i-1], r=inn&&inn[side]&&inn[side].runs;const isCur=live&&ls.currentInning===i&&(ls.isTopInning?side==='away':side==='home');cells+=`<div class="wb-inn${isCur?' wb-cur':''}">${r!=null?r:''}</div>`;}
     const started=state!=='Preview', tot=(ls.teams&&ls.teams[side])||{};
@@ -5328,7 +5323,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     const isFinal=state==='Final', won=isFinal&&tot.runs!=null&&opp.runs!=null&&tot.runs>opp.runs, lost=isFinal&&tot.runs!=null&&opp.runs!=null&&tot.runs<opp.runs;
     const flag=won?'<span class="wb-wl wb-w">W</span>':lost?'<span class="wb-wl wb-l">L</span>':'';
     const runs=started&&tot.runs!=null?tot.runs:'';
-    return `<div class="wb-row wb-trow wb-${side}${lost?' wb-loser':''}">${plate(spNum)}<div class="wb-tm"><img src="${logo(team.id)}" onerror="this.style.display='none'"><span class="wb-nm">${(team.teamName||team.name||'').toUpperCase()}</span>${flag}</div>${cells}<div class="wb-rcol">${runs}</div></div>`;
+    return `<div class="wb-row wb-trow wb-${side}${lost?' wb-loser':''}"><div class="wb-tm"><img src="${logo(team.id)}" onerror="this.style.display='none'"><span class="wb-nm">${(team.teamName||team.name||'').toUpperCase()}</span>${flag}</div>${cells}<div class="wb-rcol">${runs}</div></div>`;
   }
 
   function statusText(g){const st=g.status,state=st.abstractGameState,ls=g.linescore||{};
@@ -5350,7 +5345,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     el.innerHTML=games.map(g=>{
       const live=g.status.abstractGameState==='Live', open=expanded.has(g.gamePk);
       const ih=Array.from({length:9},(_,i)=>`<div class="wb-gi">${i+1}</div>`).join('')+`<div class="wb-gi wb-r">R</div>`;
-      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gh">SP</div><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div><div class="gp gp-flush" id="wbgp-${g.gamePk}"></div>`:g.status.abstractGameState==='Live'?`<div class="gp gp-flush" id="wbgp-${g.gamePk}"><div class="wb-ptw-loading">Loading live board…</div></div>`:`<div class="wb-dh">Probable starters</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
+      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div><div class="gp gp-flush" id="wbgp-${g.gamePk}"></div>`:g.status.abstractGameState==='Live'?`<div class="gp gp-flush" id="wbgp-${g.gamePk}"><div class="wb-ptw-loading">Loading live board…</div></div>`:`<div class="wb-dh">Probable starters</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
     }).join('');
     expanded.forEach(pk=>{const g=games.find(x=>x.gamePk===pk);if(g)fillDetail(g);});
   }
