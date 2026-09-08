@@ -11,7 +11,7 @@
 <link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css?v=20260903-scroll">
-<link rel="stylesheet" href="css/gamepanel.css?v=20260908-gp4">
+<link rel="stylesheet" href="css/gamepanel.css?v=20260908-gp5">
 <style>
   :root{
     --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
@@ -55,6 +55,31 @@
     padding:6px 12px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
   .day:hover{background:rgba(243,239,224,.1);color:var(--ink)}
   .day.on{color:#0d1a12;background:var(--gold);border-color:var(--gold)}
+
+  /* ── The season calendar: any slate, April to October ────── */
+  .cal{border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.18);
+    padding:12px;margin-bottom:18px;max-width:430px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+  .cal-head b{font-family:'Bebas Neue';font-weight:400;font-size:19px;letter-spacing:2px;color:#fff}
+  .cal-head button{font-family:inherit;font-weight:800;font-size:16px;color:var(--ink);
+    background:rgba(243,239,224,.06);border:1.5px solid var(--line);border-radius:999px;
+    width:30px;height:30px;cursor:pointer}
+  .cal-head button:hover{background:rgba(243,239,224,.14)}
+  .cal-head button:disabled{opacity:.25;cursor:default}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cal-dow{font-weight:800;font-size:9px;letter-spacing:1px;color:var(--ink-soft);text-align:center;
+    padding-bottom:3px}
+  .calday{position:relative;font-family:inherit;font-weight:800;font-size:12.5px;color:var(--ink);
+    background:rgba(243,239,224,.05);border:1px solid var(--line);border-radius:8px;
+    padding:6px 0 14px;cursor:pointer;transition:background .12s}
+  .calday:hover{background:rgba(243,239,224,.13)}
+  .calday.off{opacity:.25;cursor:default;background:none;pointer-events:none}
+  .calday.today{border-color:rgba(232,194,58,.6)}
+  .calday.on{background:var(--gold);color:#0d1a12;border-color:var(--gold)}
+  .calday .n{position:absolute;left:0;right:0;bottom:2px;font-weight:700;font-size:8px;
+    color:var(--ink-soft);letter-spacing:.5px}
+  .calday.on .n{color:#0d1a12}
+  .cal-blank{pointer-events:none}
 
   /* ── Delay control — pinned to the bottom edge, where the thumb already is,
      so nudging the sync never means scrolling away from the game.
@@ -159,6 +184,14 @@
       the zone, the defense, the box.</p>
     <div class="meta" id="meta">Loading…</div>
     <div class="days" id="days"></div>
+    <div class="cal" id="cal" hidden>
+      <div class="cal-head">
+        <button type="button" id="calPrev" aria-label="Previous month">&lsaquo;</button>
+        <b id="calTitle"></b>
+        <button type="button" id="calNext" aria-label="Next month">&rsaquo;</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
   </header>
 
   <div id="board" class="state">Loading games…</div>
@@ -184,7 +217,7 @@
 </div>
 
 <script src="js/apicache.js?v=20260903-scroll"></script>
-<script src="js/gamepanel.js?v=20260908-gp4"></script>
+<script src="js/gamepanel.js?v=20260908-gp5"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const TICK_MS = 15000;      // how often live rows ask the feed for their (delayed) present
@@ -252,18 +285,85 @@ function buildDays() {
     const et = o => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...o }).format(dt);
     const lab = i === 0 ? 'Today' : `${et({ weekday: 'short' })} ${et({ day: 'numeric' })}`;
     return `<button class="day${d === DAY ? ' on' : ''}" data-day="${d}">${lab}</button>`;
-  }).join('');
+  }).join('') + `<button class="day" id="calBtn">📅 Season</button>`;
 }
-document.getElementById('days').addEventListener('click', e => {
-  const b = e.target.closest('.day');
-  if (!b || b.dataset.day === DAY) return;
-  DAY = b.dataset.day;
+
+function selectDay(d) {
+  if (!d || d === DAY) return;
+  DAY = d;
   buildDays();
+  renderCal();
   GAMES = [];
   Object.keys(CARDS).forEach(k => delete CARDS[k]);
   const board = document.getElementById('board');
   board.className = 'state'; board.textContent = 'Loading games…';
   loadSchedule().then(tick).catch(() => { board.textContent = 'Could not load the schedule'; });
+}
+document.getElementById('days').addEventListener('click', e => {
+  const b = e.target.closest('.day');
+  if (!b) return;
+  if (b.id === 'calBtn') {
+    const cal = document.getElementById('cal');
+    cal.hidden = !cal.hidden;
+    if (!cal.hidden) renderCal();
+    return;
+  }
+  selectDay(b.dataset.day);
+});
+
+// ── The season calendar: one small schedule fetch per month, on demand ───────
+// March through November of the current season; a month already played never
+// changes, so it goes into the shared cache forever.
+const SEASON_YEAR = etDate().slice(0, 4);
+let CAL_YM = etDate().slice(0, 7);
+const ymClamp = ym => ym < `${SEASON_YEAR}-03` ? `${SEASON_YEAR}-03`
+  : ym > `${SEASON_YEAR}-11` ? `${SEASON_YEAR}-11` : ym;
+const ymShift = (ym, d) => {
+  const [y, m] = ym.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1 + d, 1));
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}`;
+};
+const MONTH_COUNTS = {};    // 'YYYY-MM' → { 'YYYY-MM-DD': games }
+async function monthCounts(ym) {
+  if (MONTH_COUNTS[ym]) return MONTH_COUNTS[ym];
+  const [y, m] = ym.split('-').map(Number);
+  const endDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const opts = ym < etDate().slice(0, 7) ? { ttl: Infinity } : {};
+  const d = await cachedJSON(`${API}/schedule?sportId=1&startDate=${ym}-01&endDate=${ym}-${pad(endDay)}&fields=dates,date,totalGames`, opts);
+  const map = {};
+  (d.dates || []).forEach(x => map[x.date] = x.totalGames || 0);
+  return MONTH_COUNTS[ym] = map;
+}
+async function renderCal() {
+  const cal = document.getElementById('cal');
+  if (cal.hidden) return;
+  const ym = CAL_YM;
+  const [y, m] = ym.split('-').map(Number);
+  document.getElementById('calTitle').textContent =
+    new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  document.getElementById('calPrev').disabled = ym <= `${SEASON_YEAR}-03`;
+  document.getElementById('calNext').disabled = ym >= `${SEASON_YEAR}-11`;
+  let counts = {};
+  try { counts = await monthCounts(ym); } catch (e) {}
+  if (CAL_YM !== ym) return;              // the reader already paged on
+  const endDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;   // Monday first
+  const today = etDate();
+  let cells = ['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => `<div class="cal-dow">${d}</div>`).join('')
+    + '<div class="cal-blank"></div>'.repeat(lead);
+  for (let d = 1; d <= endDay; d++) {
+    const date = `${ym}-${pad(d)}`;
+    const n = counts[date] || 0;
+    cells += `<button class="calday${n ? '' : ' off'}${date === DAY ? ' on' : ''}${date === today ? ' today' : ''}"
+      data-day="${date}">${d}${n ? `<span class="n">${n}</span>` : ''}</button>`;
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+}
+document.getElementById('calPrev').addEventListener('click', () => { CAL_YM = ymClamp(ymShift(CAL_YM, -1)); renderCal(); });
+document.getElementById('calNext').addEventListener('click', () => { CAL_YM = ymClamp(ymShift(CAL_YM, 1)); renderCal(); });
+document.getElementById('calGrid').addEventListener('click', e => {
+  const b = e.target.closest('.calday');
+  if (b) selectDay(b.dataset.day);
 });
 
 // ── Schedule: which games exist on the slate ─────────────────────────────────
@@ -272,9 +372,12 @@ async function loadSchedule() {
   const d = await fj(`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team&fields=${F_SCHED}`);
   if (day !== DAY) return;   // the reader has already moved to another day
   GAMES = ((d.dates || [])[0]?.games || []);
+  const nGames = `${GAMES.length} game${GAMES.length === 1 ? '' : 's'}`;
   document.getElementById('meta').textContent = day === etDate()
-    ? `${day} slate · ${GAMES.length} game${GAMES.length === 1 ? '' : 's'} · refreshes every ${TICK_MS/1000}s`
-    : `${day} slate · ${GAMES.length} game${GAMES.length === 1 ? '' : 's'} · finished games, served from cache`;
+    ? `${day} slate · ${nGames} · refreshes every ${TICK_MS/1000}s`
+    : day > etDate()
+    ? `${day} slate · ${nGames} · scheduled`
+    : `${day} slate · ${nGames} · finished games, served from cache`;
 
   const board = document.getElementById('board');
   if (!GAMES.length) { board.className = 'state'; board.textContent = 'No games today'; return; }
@@ -336,6 +439,9 @@ document.getElementById('board').addEventListener('click', e => {
 async function updateGame(g) {
   const pk = g.gamePk;
   if (DONE.has(pk)) return;
+
+  // A future slate is all previews — nothing to fetch yet, nothing to cache.
+  if (DAY > etDate()) { renderCard(g); return; }
 
   // A past day's games are history: no delay to respect, one fetch, cached forever.
   if (DAY !== etDate()) {
@@ -465,6 +571,9 @@ function pregameHTML(g, feedPending) {
   <a class="mlink" href="matchup.html?a=${g.teams.home.team.id}&b=${g.teams.away.team.id}">
     Compare rotations, pens &amp; lineups &rarr;</a></div>`;
 }
+
+// The replay engine repaints through here whenever its cursor moves
+GP.onRender = pk => { const g = GAMES.find(x => x.gamePk === pk); if (g && CARDS[pk]) renderCard(g); };
 
 function renderCard(g, feedPending) {
   const L = LAST[g.gamePk];

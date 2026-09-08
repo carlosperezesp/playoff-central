@@ -5453,6 +5453,8 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     else if(st==='Live'){ fillGamePanel(g); }
     else fillPTW(g);
   }
+  // The replay engine repaints through here whenever its cursor moves
+  if(typeof GP!=='undefined') GP.onRender=pk=>{const g=lastGames.find(x=>x.gamePk===pk);if(g)fillGamePanel(g);};
 
   function syncDelayUI(){
     const bar=$('tg-delay'); if(!bar)return;

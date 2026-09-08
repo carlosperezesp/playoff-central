@@ -566,6 +566,176 @@ const mlinkHTML = g =>
   `<a class="mlink" href="matchup.html?a=${g.teams.home.team.id}&b=${g.teams.away.team.id}">
     Compare rotations, pens &amp; lineups &rarr;</a>`;
 
+// ── Replay: a finished game relived play by play ─────────────────────────────
+// One fetch (the final feed, already in hand) and everything else is local:
+// the scorecard, linescore and box are rebuilt from the plays up to a cursor,
+// and autoplay walks the cursor forward. No network, no timecode stepping.
+const REPLAY = { pk: null, idx: -1, playing: false, timer: null };
+const PANELFEEDS = {};      // gamePk → { g, feed } of the last final panel painted
+
+function rpStop() { if (REPLAY.timer) { clearInterval(REPLAY.timer); REPLAY.timer = null; } REPLAY.playing = false; }
+function rpNotify() { if (typeof GP.onRender === 'function' && REPLAY.pk != null) GP.onRender(REPLAY.pk); }
+function rpLen() { return PANELFEEDS[REPLAY.pk]?.feed?.liveData?.plays?.allPlays?.length || 0; }
+function rpStep() {
+  if (REPLAY.idx < rpLen() - 1) REPLAY.idx++;
+  if (REPLAY.idx >= rpLen() - 1) rpStop();
+  rpNotify();
+}
+function rpPlay() {
+  if (REPLAY.idx >= rpLen() - 1) REPLAY.idx = -1;   // play again from the top
+  REPLAY.playing = true;
+  REPLAY.timer = setInterval(rpStep, 1600);
+  rpNotify();
+}
+
+// One capture-phase listener for every replay button on the page; capture, so
+// a tap on ⏭ never doubles as "fold this game away".
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-gpr]');
+  if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  const act = b.dataset.gpr, pk = Number(b.dataset.pk || REPLAY.pk);
+  if (act === 'start') { rpStop(); REPLAY.pk = pk; REPLAY.idx = -1; rpPlay(); return; }
+  if (REPLAY.pk == null) return;
+  if (act === 'exit')    { rpStop(); const old = REPLAY.pk; REPLAY.pk = null; if (typeof GP.onRender === 'function') GP.onRender(old); }
+  if (act === 'restart') { REPLAY.idx = -1; rpNotify(); }
+  if (act === 'step')    { rpStop(); rpStep(); }
+  if (act === 'toggle')  { REPLAY.playing ? (rpStop(), rpNotify()) : rpPlay(); }
+}, true);
+
+// The game as it stood after play N: linescore and box lines re-accumulated
+// from the plays themselves. ER and pitch counts only exist in the real box,
+// so the replay pitching line keeps to what the plays can prove.
+function replayState(feed, upto) {
+  const plays = feed.liveData?.plays?.allPlays || [];
+  const bat = {}, arms = {}, armOrder = { away: [], home: [] };
+  const innings = [], tot = { away: { runs: 0, hits: 0, errors: 0 }, home: { runs: 0, hits: 0, errors: 0 } };
+  let curHalf = '', outsPrev = 0, last = null;
+
+  for (let i = 0; i <= upto && i < plays.length; i++) {
+    const pl = plays[i];
+    if (!pl.about) continue;
+    last = pl;
+    const half = pl.about.halfInning, inn = pl.about.inning || 1;
+    const side = half === 'top' ? 'away' : 'home', defSide = side === 'away' ? 'home' : 'away';
+    const key = inn + half;
+    if (key !== curHalf) { curHalf = key; outsPrev = 0; }
+    const cell = (innings[inn - 1] = innings[inn - 1] || { away: {}, home: {} })[side];
+    cell.runs = cell.runs || 0; cell.hits = cell.hits || 0;
+
+    const ev = pl.result?.eventType || '';
+    const bid = pl.matchup?.batter?.id, pid = pl.matchup?.pitcher?.id;
+    if (pid) {
+      const a = arms[pid] = arms[pid] || { outs: 0, h: 0, r: 0, bb: 0, k: 0 };
+      const order = armOrder[defSide];
+      if (!order.includes(pid)) order.push(pid);
+      const outsNow = pl.count?.outs;
+      if (outsNow != null) { a.outs += Math.max(0, outsNow - outsPrev); outsPrev = outsNow; }
+      if (/^(single|double|triple|home_run)$/.test(ev)) a.h++;
+      if (ev === 'walk' || ev === 'intent_walk') a.bb++;
+      if (/^strikeout/.test(ev)) a.k++;
+    }
+    const isPA = pl.about.isComplete && bid && !NON_PA.test(ev) && notation(pl);
+    if (isPA) {
+      const b = bat[bid] = bat[bid] || { ab: 0, r: 0, h: 0, rbi: 0, bb: 0, k: 0 };
+      const free = ev === 'walk' || ev === 'intent_walk' || ev === 'hit_by_pitch' || ev === 'catcher_interf';
+      if (!free && !/^sac_/.test(ev)) b.ab++;
+      if (/^(single|double|triple|home_run)$/.test(ev)) { b.h++; cell.hits++; tot[side].hits++; }
+      if (ev === 'walk' || ev === 'intent_walk') b.bb++;
+      if (/^strikeout/.test(ev)) b.k++;
+      if (ev === 'field_error') tot[defSide].errors++;
+    }
+    const scored = new Set();
+    (pl.runners || []).forEach(r => {
+      const rid = r.details?.runner?.id, mv = r.movement || {};
+      if (!rid || scored.has(rid)) return;
+      if (mv.end && BASE_N[mv.end] === 4 && !mv.isOut) {
+        scored.add(rid);
+        cell.runs++; tot[side].runs++;
+        (bat[rid] = bat[rid] || { ab: 0, r: 0, h: 0, rbi: 0, bb: 0, k: 0 }).r++;
+        if (pid) arms[pid].r++;
+        if (r.details?.rbi && bid) (bat[bid] = bat[bid] || { ab: 0, r: 0, h: 0, rbi: 0, bb: 0, k: 0 }).rbi++;
+      }
+    });
+  }
+
+  const realLs = feed.liveData?.linescore || {};
+  const ls = {
+    scheduledInnings: realLs.scheduledInnings || 9,
+    innings, teams: tot,
+    currentInning: last?.about?.inning ?? null,
+    inningState: last ? (last.about.halfInning === 'top' ? 'Top' : 'Bottom') : '',
+  };
+  return { ls, bat, arms, armOrder, last };
+}
+
+const ipOf = outs => `${Math.floor(outs / 3)}${outs % 3 ? '.' + outs % 3 : '.0'}`;
+
+function replayBoxHTML(g, feed, side, st8) {
+  const bx = feed.liveData?.boxscore?.teams?.[side];
+  if (!bx) return '';
+  const P = bx.players || {};
+  const bats = (bx.batters || []).map(id => {
+    const p = P[`ID${id}`];
+    if (!p || !p.battingOrder) return '';
+    const b = st8.bat[id];
+    const sub = p.battingOrder % 100 !== 0;
+    const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
+    return `<tr><td>${circle('OPS', 'mini ops', oc, fmt3(ops))}${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
+        <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
+      <td>${b?.ab ?? 0}</td><td>${b?.r ?? 0}</td><td>${b?.h ?? 0}</td><td>${b?.rbi ?? 0}</td>
+      <td>${b?.bb ?? 0}</td><td>${b?.k ?? 0}</td></tr>`;
+  }).join('');
+  const arms = st8.armOrder[side].map(pid => {
+    const p = P[`ID${pid}`], a = st8.arms[pid];
+    if (!p || !a) return '';
+    const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
+    return `<tr><td>${circle('FORM', 'mini', fc, f ?? '—')}${esc(p.person?.fullName)}</td>
+      <td>${ipOf(a.outs)}</td><td>${a.h}</td><td>${a.r}</td><td>${a.bb}</td><td>${a.k}</td></tr>`;
+  }).join('');
+  return `<div class="box">
+    <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
+    ${bats ? `<table><thead><tr><th></th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
+      <tbody>${bats}</tbody></table>` : ''}
+    ${arms ? `<table><thead><tr><th></th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
+      <tbody>${arms}</tbody></table>` : ''}
+  </div>`;
+}
+
+function replayHTML(g, feed) {
+  const plays = feed.liveData?.plays?.allPlays || [];
+  const n = plays.length, i = REPLAY.idx;
+  const st8 = replayState(feed, i);
+  const cur = i >= 0 ? plays[i] : null;
+  const half = cur ? (cur.about.halfInning === 'top' ? 'T' : 'B') + cur.about.inning : '—';
+  const aAb = esc(g.teams.away.team.abbreviation || ''), hAb = esc(g.teams.home.team.abbreviation || '');
+  const fakeFeed = { liveData: { boxscore: feed.liveData.boxscore,
+    plays: { allPlays: plays.slice(0, i + 1) }, linescore: st8.ls } };
+  const scorecard = scorecardHTML(g, fakeFeed, 'away') + scorecardHTML(g, fakeFeed, 'home');
+  return `
+    <div class="rpbar">
+      <button data-gpr="exit" title="Back to the final">✕</button>
+      <button data-gpr="restart" title="From the top">⟲</button>
+      <button data-gpr="toggle" class="rp-main">${REPLAY.playing ? '⏸' : '▶'}</button>
+      <button data-gpr="step" title="Next play">⏭</button>
+      <span class="rp-pos">${half} · play ${Math.max(0, i + 1)}/${n}
+        · ${aAb} ${st8.ls.teams.away.runs}–${st8.ls.teams.home.runs} ${hAb}</span>
+    </div>
+    ${cur?.result?.description ? `<div class="rp-now">${esc(cur.result.description)}</div>`
+      : `<div class="rp-now rp-dim">First pitch coming up…</div>`}
+    ${linesHTML(st8.ls, g)}
+    <div class="dcols">
+      <div class="dcol">
+        <div class="dh">Boxscore</div>
+        ${replayBoxHTML(g, feed, 'away', st8)}${replayBoxHTML(g, feed, 'home', st8)}
+      </div>
+      <div class="dcol">
+        <div class="dh">Scorecard</div>
+        <div class="sc">${scorecard || '<span class="dload">Waiting on the first pitch</span>'}</div>
+      </div>
+    </div>`;
+}
+
 // ── The panel ────────────────────────────────────────────────────────────────
 // Everything below the fold for a game that has started. Returns null while the
 // (possibly delayed) snapshot still says pre-game — the page shows its own
@@ -584,6 +754,14 @@ function detailHTML(g, feed, tier, opts = {}) {
   if (tier !== 'full')
     return `${lines}<div class="dload">Loading the full panel…</div>`;
 
+  // A finished game can be relived: remember its feed and offer the button —
+  // or, when the replay is running, hand the whole panel over to it.
+  const fin = st.abstractGameState === 'Final';
+  if (fin) PANELFEEDS[g.gamePk] = { g, feed };
+  if (fin && REPLAY.pk === g.gamePk) return replayHTML(g, feed);
+  const rpBtn = fin && (feed.liveData?.plays?.allPlays?.length || 0) > 0
+    ? `<button class="rpstart" data-gpr="start" data-pk="${g.gamePk}">▶ Replay this game</button>` : '';
+
   const situation = live && !between
     ? situHTML(g, feed, ls) + `<div class="zonewrap">${zoneHTML(feed, ls)}${pitchLogHTML(feed)}${fieldersHTML(ls)}</div>`
     : '';
@@ -596,6 +774,7 @@ function detailHTML(g, feed, tier, opts = {}) {
     ? `<div class="dcol dcol-situ"><div class="dh">Situation</div>${situation}${lastplay}${scoring}</div>`
     : '';
   return `${lines}
+    ${rpBtn}
     ${situation ? '' : scoring}
     <div class="dcols${situation ? ' three' : ''}">
       ${situCol}
@@ -612,5 +791,6 @@ function detailHTML(g, feed, tier, opts = {}) {
 }
 
 window.GP = { detailHTML, fetchDelayed, fetchFinal, miniBases,
-  forma, tierForm, tierOps, onTier, face, num, fmt3, esc, F_LITE, F_FULL };
+  forma, tierForm, tierOps, onTier, face, num, fmt3, esc, F_LITE, F_FULL,
+  onRender: null };   // pages set this: called with a gamePk when the replay needs a repaint
 })();

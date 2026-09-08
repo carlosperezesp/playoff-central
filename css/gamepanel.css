@@ -157,6 +157,28 @@
 
 .gp .dload{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);padding:10px 16px 12px}
 
+/* ── Replay: a finished game relived play by play ────────────────────────── */
+.gp .rpstart{font-family:inherit;font-weight:800;font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;
+  color:#0d1a12;background:var(--gold);border:0;border-radius:999px;padding:8px 16px;cursor:pointer;
+  margin:8px 16px 4px;transition:filter .15s}
+.gp .rpstart:hover{filter:brightness(1.08)}
+.gp.gp-flush .rpstart{margin-left:0;margin-right:0}
+.gp .rpbar{display:flex;align-items:center;gap:7px;padding:10px 16px 6px;flex-wrap:wrap}
+.gp.gp-flush .rpbar{padding-left:0;padding-right:0}
+.gp .rpbar button{font-family:inherit;font-weight:800;font-size:14px;color:var(--ink);
+  background:rgba(243,239,224,.07);border:1.5px solid var(--line);border-radius:999px;
+  width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s}
+.gp .rpbar button:hover{background:rgba(243,239,224,.16)}
+.gp .rpbar .rp-main{background:var(--gold);border-color:var(--gold);color:#0d1a12;width:40px;height:40px;
+  font-size:16px}
+.gp .rp-pos{font-weight:800;font-size:12px;letter-spacing:1px;color:var(--ink-dim);
+  font-variant-numeric:tabular-nums}
+.gp .rp-now{font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.55;color:var(--ink);
+  padding:2px 16px 8px;min-height:2.4em}
+.gp .rp-now.rp-dim{color:var(--ink-soft)}
+.gp.gp-flush .rp-now{padding-left:0;padding-right:0}
+
 /* ── Scoring plays: every swing that moved the score ─────────────────────── */
 .gp .splays{padding:0 16px 10px}
 .gp .splay{display:flex;align-items:baseline;gap:9px;padding:3.5px 0;min-width:0}
