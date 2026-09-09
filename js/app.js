@@ -1243,7 +1243,7 @@ function renderWildCardTables() {
         <td class="r">${t.wins}</td>
         <td class="r">${t.losses}</td>
         <td class="r">${pct}</td>
-        <td class="r" style="font-weight:${wcgbStr.startsWith('+')?'700':'400'};color:${wcgbStr.startsWith('+')?'var(--win)':'var(--muted)'}">${wcgbStr}</td>
+        <td class="r" style="color:${isDivW?'var(--win)':isWC?'var(--accent-blue)':'var(--muted)'}">${wcgbStr}</td>
         <td class="r wc-col-l10"><span style="font-family:'Barlow Condensed';font-weight:700;color:${l10color}">${l10w}-${l10l}</span></td>
         <td>${badge}</td>
       </tr>
