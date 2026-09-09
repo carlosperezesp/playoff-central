@@ -904,17 +904,17 @@ async function renderStandings() {
       const mn = tr.magicNumber;
       const mnNum = parseInt(mn);
       let mnHtml = '<span style="color:var(--border)">—</span>';
-      if (mn === 'E') {
+      // The clinch check goes first — a magic number of 0 used to fall into the
+      // "small number" badge before it could ever say CLINCH.
+      if (tr.divisionChamp || tr.clinchIndicator === 'y' || tr.clinchIndicator === 'z' || (!isNaN(mnNum) && mnNum === 0)) {
+        mnHtml = `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--win);font-weight:700">✓ CLINCH</span>`;
+      } else if (mn === 'E') {
         mnHtml = `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--loss);font-weight:700">ELIM</span>`;
       } else if (!isNaN(mnNum) && mnNum <= 50) {
         mnHtml = `<span style="display:inline-block;background:rgba(21,101,216,.1);color:var(--accent);border:1px solid rgba(21,101,216,.25);font-family:'Barlow Condensed';font-size:11px;font-weight:700;padding:1px 6px;min-width:22px;text-align:center">${mnNum}</span>`;
-      } else if (!isNaN(mnNum) && mnNum === 0) {
-        mnHtml = `<span style="font-family:'Barlow Condensed';font-size:11px;color:var(--win);font-weight:700">CLINCH</span>`;
       }
 
-      let badge = '';
-      if (isDivLeader) badge = `<span class="badge-div">DIV</span>`;
-      else if (isWC) badge = `<span class="badge-wc">WC</span>`;
+      const badge = clinchBadge(tr, isDivLeader, isWC);
 
       rows += `<tr class="${rowCls} standings-team-row" id="strow-${divId}-${tid}" onclick="toggleStandingsTeamRow('${divId}','${tid}')">
         <td>
@@ -1010,6 +1010,22 @@ async function renderStandings() {
 
 // ── DIVISION TOGGLE ───────────────────────────────────────────────────────
 let activeDivisionId = null; // null = show all
+
+// The badge a team has EARNED, not just where it sits today. The API speaks
+// the newspaper letters: x = postseason berth, w = wild card, y = division,
+// z = best record in the league. A solid badge with a check is mathematics,
+// an outlined one is just the current picture.
+function clinchBadge(rec, isDivLeader, isWC) {
+  const ind = rec.clinchIndicator || '';
+  const divClinched = ind === 'y' || ind === 'z' || rec.divisionChamp;
+  const wcClinched = ind === 'w';
+  const berth = rec.clinched || ind === 'x';
+  if (divClinched) return '<span class="badge-div clinch">DIV ✓</span>';
+  if (wcClinched)  return '<span class="badge-wc clinch">WC ✓</span>';
+  if (isDivLeader) return `<span class="badge-div">DIV${berth ? ' ✓' : ''}</span>`;
+  if (isWC)        return `<span class="badge-wc">WC${berth ? ' ✓' : ''}</span>`;
+  return '';
+}
 
 function toggleStandingsTeamRow(divId, teamId) {
   const row = document.getElementById(`strow-${divId}-${teamId}`);
@@ -1226,9 +1242,7 @@ function renderWildCardTables() {
       const l10 = t.records?.splitRecords?.find(s=>s.type==='lastTen');
       const l10w = l10?.wins ?? 0, l10l = l10?.losses ?? 0;
       const l10color = l10w > l10l ? 'var(--win)' : l10w < l10l ? 'var(--loss)' : 'var(--text)';
-      const badge = isDivW
-        ? `<span class="badge-div">DIV</span>`
-        : isWC ? `<span class="badge-wc">WC</span>` : '';
+      const badge = clinchBadge(t, isDivW, isWC);
       // Dashed cutline after 6th team
       const cutlineStyle = i === cutoffIdx ? 'border-top: 2px dashed var(--border);' : '';
       return `<tr class="${rowCls} wc-team-row" id="wcrow-${leagueKey}-${t.team.id}" style="${cutlineStyle}" onclick="toggleWildcardTeamRow('${leagueKey}','${t.team.id}')">
@@ -2301,7 +2315,7 @@ function renderProjectedBracket() {
       const l10 = t.records?.splitRecords?.find(s=>s.type==='lastTen');
       const l10w = l10?.wins ?? 0, l10l = l10?.losses ?? 0;
       const l10color = l10w > l10l ? 'var(--win)' : l10w < l10l ? 'var(--loss)' : 'var(--text)';
-      const badge = isDivW ? '<span class="badge-div">DIV</span>' : isWC ? '<span class="badge-wc">WC</span>' : '';
+      const badge = clinchBadge(t, isDivW, isWC);
       rows += `<tr class="${rc}">
         <td style="width:28px;font-family:'Barlow Condensed';font-weight:700;color:var(--muted);font-size:13px">${i+1}</td>
         <td><div class="team-cell" style="gap:7px">

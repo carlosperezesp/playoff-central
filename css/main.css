@@ -367,6 +367,9 @@
   .games-rem { font-family: 'Barlow Condensed'; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface2); padding: 1px 6px; border: 1px solid var(--border); }
   .badge-div { background: rgba(22,163,74,.1); color: var(--win); border: 1px solid rgba(22,163,74,.3); font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1px; font-weight: 700; padding: 2px 7px; }
   .badge-wc { background: rgba(21,101,216,.08); color: var(--accent-blue); border: 1px solid rgba(21,101,216,.25); font-family: 'Barlow Condensed'; font-size: 11px; letter-spacing: 1px; font-weight: 700; padding: 2px 7px; }
+  /* Clinched: the badge fills in — mathematics, not just today's picture */
+  .badge-div.clinch { background: var(--win); color: #fff; border-color: var(--win); }
+  .badge-wc.clinch { background: #1565d8; color: #fff; border-color: #1565d8; }
   .gb-val { font-family: 'Barlow Condensed'; font-weight: 600; }
   .gb-leader { color: var(--win); font-weight: 700; }
 
