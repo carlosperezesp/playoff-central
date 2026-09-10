@@ -432,7 +432,12 @@ function scorecardData(feed, side) {
     if (outsNow != null) prevOuts = outsNow;
   });
 
-  const order = (bx.batters || []).map(id => P[`ID${id}`]).filter(p => p && p.battingOrder);
+  // Starters hold their line from the first pitch; a substitute only gets his
+  // row once he has a plate appearance in the book — during a replay that is
+  // the moment he actually enters, not the final card leaking backwards.
+  const order = (bx.batters || []).map(id => P[`ID${id}`])
+    .filter(p => p && p.battingOrder &&
+      (p.battingOrder % 100 === 0 || (cells[p.person?.id] || []).length));
   if (!order.length) return null;
   return { cells, order, maxInning };
 }
@@ -619,6 +624,7 @@ function replayInfo(pk) {
 function replayState(feed, upto) {
   const plays = feed.liveData?.plays?.allPlays || [];
   const bat = {}, arms = {}, armOrder = { away: [], home: [] };
+  const appeared = new Set();   // men the game has actually used, as of the cursor
   const innings = [], tot = { away: { runs: 0, hits: 0, errors: 0 }, home: { runs: 0, hits: 0, errors: 0 } };
   let curHalf = '', outsPrev = 0, last = null;
 
@@ -647,6 +653,7 @@ function replayState(feed, upto) {
     }
     const isPA = pl.about.isComplete && bid && !NON_PA.test(ev) && notation(pl);
     if (isPA) {
+      appeared.add(bid);
       const b = bat[bid] = bat[bid] || { ab: 0, r: 0, h: 0, rbi: 0, bb: 0, k: 0 };
       const free = ev === 'walk' || ev === 'intent_walk' || ev === 'hit_by_pitch' || ev === 'catcher_interf';
       if (!free && !/^sac_/.test(ev)) b.ab++;
@@ -659,6 +666,7 @@ function replayState(feed, upto) {
     (pl.runners || []).forEach(r => {
       const rid = r.details?.runner?.id, mv = r.movement || {};
       if (!rid || scored.has(rid)) return;
+      appeared.add(rid);
       if (mv.end && BASE_N[mv.end] === 4 && !mv.isOut) {
         scored.add(rid);
         cell.runs++; tot[side].runs++;
@@ -679,7 +687,7 @@ function replayState(feed, upto) {
     isTopInning: last?.about?.halfInning === 'top',
     outs: last?.count?.outs ?? null,
   };
-  return { ls, bat, arms, armOrder, last };
+  return { ls, bat, arms, armOrder, last, appeared };
 }
 
 const ipOf = outs => `${Math.floor(outs / 3)}${outs % 3 ? '.' + outs % 3 : '.0'}`;
@@ -693,6 +701,8 @@ function replayBoxHTML(g, feed, side, st8) {
     if (!p || !p.battingOrder) return '';
     const b = st8.bat[id];
     const sub = p.battingOrder % 100 !== 0;
+    // A substitute steps into the book the moment the game uses him, not before
+    if (sub && !st8.appeared.has(id)) return '';
     const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
     return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
