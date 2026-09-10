@@ -724,7 +724,6 @@ function replayHTML(g, feed) {
   const aAb = esc(g.teams.away.team.abbreviation || ''), hAb = esc(g.teams.home.team.abbreviation || '');
   const fakeFeed = { liveData: { boxscore: feed.liveData.boxscore,
     plays: { allPlays: plays.slice(0, i + 1) }, linescore: st8.ls } };
-  const scorecard = scorecardHTML(g, fakeFeed, 'away') + scorecardHTML(g, fakeFeed, 'home');
   return `
     <div class="rpbar">
       <button data-gpr="exit" title="Back to the final">✕</button>
@@ -739,14 +738,8 @@ function replayHTML(g, feed) {
       : `<div class="rp-now rp-dim">First pitch coming up…</div>`}
     ${linesHTML(st8.ls, g)}
     <div class="dcols">
-      <div class="dcol">
-        <div class="dh">Boxscore</div>
-        ${replayBoxHTML(g, feed, 'away', st8)}${replayBoxHTML(g, feed, 'home', st8)}
-      </div>
-      <div class="dcol">
-        <div class="dh">Scorecard</div>
-        <div class="sc">${scorecard || '<span class="dload">Waiting on the first pitch</span>'}</div>
-      </div>
+      ${teamPair(g, 'away', true, replayBoxHTML(g, feed, 'away', st8), scorecardHTML(g, fakeFeed, 'away'))}
+      ${teamPair(g, 'home', false, replayBoxHTML(g, feed, 'home', st8), scorecardHTML(g, fakeFeed, 'home'))}
     </div>`;
 }
 
@@ -781,7 +774,6 @@ function detailHTML(g, feed, tier, opts = {}) {
     : '';
   const scoring = scoringHTML(g, feed);
   const lastplay = live && desc ? `<div class="lastplay"><b>Last play:</b> ${esc(desc)}</div>` : '';
-  const scorecard = scorecardHTML(g, feed, 'away') + scorecardHTML(g, feed, 'home');
   // Live: situation, box and scorecard ride three columns where the screen has
   // room. Finished: scoring plays up top, then box beside scorecard.
   const situCol = situation
@@ -792,16 +784,18 @@ function detailHTML(g, feed, tier, opts = {}) {
     ${situation ? '' : scoring}
     <div class="dcols${situation ? ' three' : ''}">
       ${situCol}
-      <div class="dcol">
-        <div class="dh">Boxscore</div>
-        ${boxTeamHTML(g, feed, 'away')}${boxTeamHTML(g, feed, 'home')}
-      </div>
-      <div class="dcol">
-        <div class="dh">Scorecard</div>
-        <div class="sc">${scorecard || '<span class="dload">No plate appearances yet</span>'}</div>
-      </div>
+      ${teamPair(g, 'away', true, boxTeamHTML(g, feed, 'away'), scorecardHTML(g, feed, 'away'))}
+      ${teamPair(g, 'home', false, boxTeamHTML(g, feed, 'home'), scorecardHTML(g, feed, 'home'))}
     </div>
     ${opts.mlink === false ? '' : mlinkHTML(g)}`;
+}
+
+// One grid row per club: his box beside his own scorecard, top edges level —
+// not two independent stacks drifting out of step.
+function teamPair(g, side, first, box, sc) {
+  return `<div class="dcol dcol-box">${first ? '<div class="dh">Boxscore</div>' : ''}${box}</div>
+    <div class="dcol dcol-sc">${first ? '<div class="dh">Scorecard</div>' : ''}
+      <div class="sc">${sc || '<span class="dload">No plate appearances yet</span>'}</div></div>`;
 }
 
 window.GP = { detailHTML, fetchDelayed, fetchFinal, miniBases, replayInfo,
