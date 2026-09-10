@@ -14,7 +14,9 @@
 .gp .dcols{display:grid;grid-template-columns:1fr}
 .gp .dcol{min-width:0}
 @media (min-width:900px){
-  .gp .dcols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+  /* The box takes exactly what its tables need (capped); the scorecard gets
+     every remaining pixel — on a desktop that's nine innings with no scroll. */
+  .gp .dcols{grid-template-columns:fit-content(500px) minmax(0,1fr)}
   .gp .dcols > .dcol + .dcol{border-left:1px solid var(--line)}
   /* Below three-column width, the live situation spans the row above box + scorecard */
   .gp .dcol-situ{grid-column:1/-1;border-left:0 !important}
@@ -106,8 +108,8 @@
 .gp{--gp-bg:#101d14}
 .gp .sc{padding:2px 16px 10px;overflow-x:auto}
 .gp .sc table{border-collapse:separate;border-spacing:0}
-.gp .sc th,.gp .sc td{font-weight:800;text-align:center;padding:1px 2px;vertical-align:top;
-  border-bottom:1px solid rgba(243,239,224,.09);border-right:1px solid rgba(243,239,224,.09);min-width:50px}
+.gp .sc th,.gp .sc td{font-weight:800;text-align:center;padding:1px;vertical-align:top;
+  border-bottom:1px solid rgba(243,239,224,.09);border-right:1px solid rgba(243,239,224,.09);min-width:46px}
 .gp .sc th{font-size:9.5px;letter-spacing:1px;color:var(--ink-soft);padding:3px 2px}
 .gp .sc th:first-child,.gp .sc td:first-child{text-align:left;min-width:82px;max-width:112px;overflow:hidden;
   text-overflow:ellipsis;padding-left:0;padding-right:6px;white-space:nowrap;

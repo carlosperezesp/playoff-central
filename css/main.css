@@ -1705,7 +1705,9 @@
   .wb-sb{ --board:#3f6049; --board2:#365340; --ink:#f3efe0; --line:rgba(243,239,224,.55);
     --line-soft:rgba(243,239,224,.22); --plate:#e9e4d0; --plate-ink:#1d2b21; --gold:#e8c23a;
     font-family:'Barlow Condensed',system-ui,sans-serif; color:var(--ink);
-    max-width:760px; margin:0 auto; }
+    /* Wide enough that an unfolded game's box and nine-inning scorecard sit
+       side by side with no horizontal scroll on a desktop. */
+    max-width:1080px; margin:0 auto; }
   .wb-top{display:flex;justify-content:center;margin-bottom:12px}
   .wb-clock{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 50% 42%,#48684f,#2f4a38);
     border:3px solid #f3efe0;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.35);flex:none}
