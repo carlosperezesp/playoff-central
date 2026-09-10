@@ -15,15 +15,17 @@
 .gp .dcol{min-width:0}
 @media (min-width:900px){
   /* The box takes exactly what its tables need (capped); the scorecard gets
-     every remaining pixel — on a desktop that's nine innings with no scroll. */
-  .gp .dcols{grid-template-columns:fit-content(500px) minmax(0,1fr)}
-  .gp .dcols > .dcol + .dcol{border-left:1px solid var(--line)}
+     every remaining pixel — on a desktop that's nine innings with no scroll —
+     and a real gutter keeps the two from leaning on each other. */
+  .gp .dcols{grid-template-columns:fit-content(500px) minmax(0,1fr);column-gap:24px}
+  .gp .dcols > .dcol:last-child{border-left:1px solid var(--line);padding-left:24px}
   /* Below three-column width, the live situation spans the row above box + scorecard */
-  .gp .dcol-situ{grid-column:1/-1;border-left:0 !important}
+  .gp .dcol-situ{grid-column:1/-1;border-left:0 !important;padding-left:0 !important}
 }
 @media (min-width:1250px){
   .gp .dcols.three{grid-template-columns:minmax(0,3fr) minmax(0,4fr) minmax(0,5fr)}
   .gp .dcols.three .dcol-situ{grid-column:auto}
+  .gp .dcols.three > .dcol:nth-child(2){border-left:1px solid var(--line);padding-left:24px}
 }
 
 /* ── Linescore (full, with R H E) ────────────────────────── */

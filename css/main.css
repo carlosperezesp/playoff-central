@@ -1726,7 +1726,9 @@
   .wb-board{background:linear-gradient(180deg,var(--board) 0%,var(--board2) 100%);border:3px solid rgba(0,0,0,.25);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);padding:6px}
   .wb-scroll{overflow-x:auto}
   .wb-grid{min-width:0}
-  .wb-row{display:grid;grid-template-columns:minmax(160px,1fr) repeat(9,minmax(32px,54px)) 38px;align-items:center}
+  /* Extra width flows into the nine inning columns, the way a stadium board
+     spreads — not into one dead gap after the team name. */
+  .wb-row{display:grid;grid-template-columns:minmax(160px,230px) repeat(9,minmax(32px,1fr)) 48px;align-items:center}
   .wb-ghead{padding:9px 6px 3px}
   .wb-gstatus{text-align:left;padding-left:4px;font-weight:700;font-size:12px;letter-spacing:1px;color:rgba(243,239,224,.62);text-transform:uppercase;white-space:nowrap}
   .wb-gstatus.wb-live{color:#7fe07f}
