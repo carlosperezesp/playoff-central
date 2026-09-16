@@ -885,7 +885,7 @@ async function renderStandings() {
       // Shorten long names for table compactness
       const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;      const isDivLeader = tid === divLeaderId;
       const isWC = wcIds.has(tid) && !isDivLeader;
-      const isElim = tr.eliminationNumber === 'E' || tr.wildCardEliminationNumber === 'E';
+      const isElim = tr.eliminationNumber === 'E' && tr.wildCardEliminationNumber === 'E';
       const rowCls = isElim ? 'elim-row' : isDivLeader ? 'div-leader' : isWC ? 'wc-spot' : '';
 
       const pct = parseFloat(tr.winningPercentage || 0).toFixed(3).replace(/^0/, '');
@@ -1222,7 +1222,7 @@ function renderWildCardTables() {
       const isDivW = divLeaderIds.has(t.team.id);
       const isWC = wcIds.has(t.team.id);
       const isWC3 = isWC && wcBubble && t.team.id === wcBubble.team.id;
-      const isElim = t.eliminationNumber === 'E' || t.wildCardEliminationNumber === 'E';
+      const isElim = t.eliminationNumber === 'E' && t.wildCardEliminationNumber === 'E';
       const rowCls = isElim ? 'wc-elim' : isDivW ? 'wc-div' : isWC ? 'wc-wc' : '';
       const pct = parseFloat(t.winningPercentage||0).toFixed(3).replace(/^0/,'');
       // GB logic:
@@ -2304,7 +2304,7 @@ function renderProjectedBracket() {
       const displayName = meta.name === 'Diamondbacks' ? 'D-Backs' : meta.name;
       const isDivW = divLeaderIds.has(t.team.id);
       const isWC = wcIds.has(t.team.id);
-      const isElim = t.eliminationNumber === 'E' || t.wildCardEliminationNumber === 'E';
+      const isElim = t.eliminationNumber === 'E' && t.wildCardEliminationNumber === 'E';
       const rc = isElim ? 'xr' : isDivW ? 'dr' : isWC ? 'wr' : '';
       const pct = parseFloat(t.winningPercentage||0).toFixed(3).replace(/^0/,'');
       const wcgb = parseFloat(t.wildCardGamesBack);
@@ -5188,8 +5188,8 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   const homeRec = teamRecord(homeId, homeAbbr);
 
   // Elimination modifier
-  const awayElim = awayRec ? (awayRec.eliminationNumber === 'E' || awayRec.wildCardEliminationNumber === 'E') : false;
-  const homeElim = homeRec ? (homeRec.eliminationNumber === 'E' || homeRec.wildCardEliminationNumber === 'E') : false;
+  const awayElim = awayRec ? (awayRec.eliminationNumber === 'E' && awayRec.wildCardEliminationNumber === 'E') : false;
+  const homeElim = homeRec ? (homeRec.eliminationNumber === 'E' && homeRec.wildCardEliminationNumber === 'E') : false;
   let elimMod = 1.0;
   if (awayElim && homeElim) elimMod = 0;
   else if (awayElim || homeElim) elimMod = 0.5;
