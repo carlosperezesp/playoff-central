@@ -51,6 +51,53 @@ const fmt3 = v => v == null ? '—' : v.toFixed(3).replace(/^0/, '');
 const circle = (label, cls, bg, txt) =>
   `<span class="cw"><i class="cl">${label}</i><span class="fcirc ${cls}" style="background:${bg};color:${onTier(bg)}">${txt}</span></span>`;
 
+// ── Season or October: which numbers the circles wear ────────────────────────
+// In a postseason game the feed's "seasonStats" are the playoff numbers alone,
+// a handful of at-bats. The regular season comes from the people endpoint, and
+// the reader flips between the two with the toggle on the panel.
+const isPost = g => /^[FDLW]$/.test(g?.gameType || '');
+let STATMODE = 'season';
+try { if (localStorage.getItem('bl-statmode') === 'post') STATMODE = 'post'; } catch (e) {}
+const REG = {};               // personId → { batting, pitching }, regular season
+const REG_ASKED = new Set();
+const POSTPANELS = new Set(); // postseason panels painted, to repaint when the mode flips
+function wantReg(g, feed) {
+  const ids = [];
+  ['away', 'home'].forEach(s => Object.values(feed.liveData?.boxscore?.teams?.[s]?.players || {}).forEach(p => {
+    const id = p.person?.id;
+    if (id && !REG_ASKED.has(id)) { REG_ASKED.add(id); ids.push(id); }
+  }));
+  if (!ids.length) return;
+  const season = g.season || String(g.gameDate || '').slice(0, 4);
+  cj(`https://statsapi.mlb.com/api/v1/people?personIds=${ids.join(',')}`
+    + `&hydrate=stats(group=[hitting,pitching],type=season,season=${season},gameType=R)`
+    + '&fields=people,id,stats,group,displayName,splits,stat,avg,ops,era,whip,saves,saveOpportunities,holds,gamesFinished')
+    .then(d => {
+      ids.forEach(id => { REG[id] = REG[id] || {}; });
+      (d.people || []).forEach(p => (p.stats || []).forEach(b => {
+        REG[p.id][b.group?.displayName === 'hitting' ? 'batting' : 'pitching'] = b.splits?.[0]?.stat || {};
+      }));
+      if (typeof GP.onRender === 'function') GP.onRender(g.gamePk);
+    })
+    .catch(() => ids.forEach(id => REG_ASKED.delete(id)));
+}
+// The line a circle reads: the regular season, unless the reader asked for October
+const sst = (g, p, grp) => (isPost(g) && STATMODE === 'season'
+  ? REG[p?.person?.id]?.[grp] : p?.seasonStats?.[grp]) || {};
+const statLab = g => isPost(g) && STATMODE === 'post' ? 'PLAYOFF' : 'SEASON';
+const statToggle = g => isPost(g) ? `<div class="gp-stat">
+    <button data-gps="season" class="${STATMODE === 'season' ? 'on' : ''}">Season stats</button>
+    <button data-gps="post" class="${STATMODE === 'post' ? 'on' : ''}">Playoff stats</button></div>` : '';
+// Capture phase, like the replay buttons: a tap on the toggle never folds the game
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-gps]');
+  if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  STATMODE = b.dataset.gps;
+  try { localStorage.setItem('bl-statmode', STATMODE); } catch (err) {}
+  if (typeof GP.onRender === 'function') POSTPANELS.forEach(pk => GP.onRender(pk));
+}, true);
+
 // ── Field lists: one flat list of names; the API keeps any field whose name
 // appears here, at any depth. A folded row only needs the scoreboard... ──────
 const F_LITE = 'gamePk,gameData,status,abstractGameState,detailedState,liveData,linescore,'
@@ -170,8 +217,8 @@ function pitchCount(feed, pid) {
 }
 
 // Same thresholds the Bullpen board uses to call a man's job
-function penRole(p) {
-  const ss = p?.seasonStats?.pitching || {};
+function penRole(p, g) {
+  const ss = (isPost(g) ? REG[p?.person?.id]?.pitching : p?.seasonStats?.pitching) || {};
   if ((ss.saves ?? 0) >= 5 || ((ss.saveOpportunities ?? 0) >= 5 && (ss.gamesFinished ?? 0) >= 10))
     return '<i class="role">CLOSER</i>';
   if ((ss.holds ?? 0) >= 8) return '<i class="role set">SETUP</i>';
@@ -193,8 +240,8 @@ function situHTML(g, feed, ls) {
   const bP = batter ? boxPlayer(feed, batter.id) : null;
   const pP = pitcher ? boxPlayer(feed, pitcher.id) : null;
   const gp = pid => feed.gameData?.players?.[`ID${pid}`];
-  const bOps = num(bP?.seasonStats?.batting?.ops);
-  const pForm = forma(num(pP?.seasonStats?.pitching?.era), num(pP?.seasonStats?.pitching?.whip));
+  const bOps = num(sst(g, bP, 'batting').ops);
+  const pForm = forma(num(sst(g, pP, 'pitching').era), num(sst(g, pP, 'pitching').whip));
   const bC = tierOps(bOps), pC = tierForm(pForm);
   const bSide = batter && gp(batter.id)?.batSide?.code, pSide = pitcher && gp(pitcher.id)?.pitchHand?.code;
   const faceHTML = pid => pid ? `<span class="face"><img src="${face(pid)}" alt="" loading="lazy"
@@ -212,7 +259,7 @@ function situHTML(g, feed, ls) {
         ${circle('FORM', '', pC, pForm ?? '—')}
         ${faceHTML(pitcher?.id)}
         <span class="nm">${esc(pitcher?.fullName || '—')}</span>
-        ${pSide ? `<span class="hand ${pSide}">${pSide}HP</span>` : ''}${penRole(pP)}
+        ${pSide ? `<span class="hand ${pSide}">${pSide}HP</span>` : ''}${penRole(pP, g)}
         ${pc ? `<span class="pc">${pc.p} P${pc.s != null ? ` · ${pc.s} S` : ''}</span>` : ''}</div>
     </div>
   </div>`;
@@ -514,7 +561,7 @@ function boxTeamHTML(g, feed, side) {
     sums.rbi += st.rbi ?? 0; sums.bb += st.baseOnBalls ?? 0; sums.k += st.strikeOuts ?? 0;
     const sub = p.battingOrder && p.battingOrder % 100 !== 0;
     // The season next to the night: the same OPS circle his own board scores him by
-    const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
+    const ops = num(sst(g, p, 'batting').ops), oc = tierOps(ops);
     // ...and AVG is tonight's alone
     const avg = st.atBats ? (st.hits ?? 0) / st.atBats : null;
     return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${
@@ -528,13 +575,13 @@ function boxTeamHTML(g, feed, side) {
     const p = P[`ID${id}`]; if (!p) return '';
     const st = p.stats?.pitching;
     if (!st || st.inningsPitched == null) return '';
-    const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
+    const f = forma(num(sst(g, p, 'pitching').era), num(sst(g, p, 'pitching').whip)), fc = tierForm(f);
     // Tonight's ERA: "5.2" innings means 5⅔ → 17 outs
     const [ip, part] = String(st.inningsPitched).split('.').map(Number);
     const outs = ip * 3 + (part || 0), er = st.earnedRuns ?? 0;
     const era = outs ? er * 27 / outs : (er ? Infinity : null);
     return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${
-      esc(p.person?.fullName)} ${penRole(p)}</td>
+      esc(p.person?.fullName)} ${penRole(p, g)}</td>
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
       <td>${st.numberOfPitches ?? ''}</td>
@@ -547,11 +594,11 @@ function boxTeamHTML(g, feed, side) {
   return `<div class="box">
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
     ${bats ? `<table>
-      <thead><tr><th class="lab-th">SEASON OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
+      <thead><tr><th class="lab-th">${statLab(g)} OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
       <tbody>${bats}<tr class="totrow"><td>Totals</td><td>${sums.ab}</td><td>${sums.r}</td><td>${sums.h}</td>
         <td>${sums.rbi}</td><td>${sums.bb}</td><td>${sums.k}</td><td></td></tr></tbody></table>` : ''}
     ${arms ? `<table>
-      <thead><tr><th class="lab-th">SEASON FORM</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
+      <thead><tr><th class="lab-th">${statLab(g)} FORM</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
   </div>`;
 }
@@ -710,7 +757,7 @@ function replayBoxHTML(g, feed, side, st8) {
     const sub = p.battingOrder % 100 !== 0;
     // A substitute steps into the book the moment the game uses him, not before
     if (sub && !st8.appeared.has(id)) return '';
-    const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
+    const ops = num(sst(g, p, 'batting').ops), oc = tierOps(ops);
     return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${b?.ab ?? 0}</td><td>${b?.r ?? 0}</td><td>${b?.h ?? 0}</td><td>${b?.rbi ?? 0}</td>
@@ -719,15 +766,15 @@ function replayBoxHTML(g, feed, side, st8) {
   const arms = st8.armOrder[side].map(pid => {
     const p = P[`ID${pid}`], a = st8.arms[pid];
     if (!p || !a) return '';
-    const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
+    const f = forma(num(sst(g, p, 'pitching').era), num(sst(g, p, 'pitching').whip)), fc = tierForm(f);
     return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${esc(p.person?.fullName)}</td>
       <td>${ipOf(a.outs)}</td><td>${a.h}</td><td>${a.r}</td><td>${a.bb}</td><td>${a.k}</td></tr>`;
   }).join('');
   return `<div class="box">
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
-    ${bats ? `<table><thead><tr><th class="lab-th">SEASON OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
+    ${bats ? `<table><thead><tr><th class="lab-th">${statLab(g)} OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
       <tbody>${bats}</tbody></table>` : ''}
-    ${arms ? `<table><thead><tr><th class="lab-th">SEASON FORM</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
+    ${arms ? `<table><thead><tr><th class="lab-th">${statLab(g)} FORM</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
   </div>`;
 }
@@ -741,7 +788,7 @@ function replayHTML(g, feed) {
   const aAb = esc(g.teams.away.team.abbreviation || ''), hAb = esc(g.teams.home.team.abbreviation || '');
   const fakeFeed = { liveData: { boxscore: feed.liveData.boxscore,
     plays: { allPlays: plays.slice(0, i + 1) }, linescore: st8.ls } };
-  return `
+  return `${statToggle(g)}
     <div class="rpbar">
       <button data-gpr="exit" title="Back to the final">✕</button>
       <button data-gpr="restart" title="From the top">⟲</button>
@@ -780,6 +827,7 @@ function detailHTML(g, feed, tier, opts = {}) {
 
   // A finished game can be relived: remember its feed and offer the button —
   // or, when the replay is running, hand the whole panel over to it.
+  if (isPost(g)) { POSTPANELS.add(g.gamePk); wantReg(g, feed); }
   const fin = st.abstractGameState === 'Final';
   if (fin) PANELFEEDS[g.gamePk] = { g, feed };
   if (fin && REPLAY.pk === g.gamePk) return replayHTML(g, feed);
@@ -797,6 +845,7 @@ function detailHTML(g, feed, tier, opts = {}) {
     ? `<div class="dcol dcol-situ"><div class="dh">Situation</div>${situation}${lastplay}${scoring}</div>`
     : '';
   return `${lines}
+    ${statToggle(g)}
     ${rpBtn}
     ${situation ? '' : scoring}
     <div class="dcols${situation ? ' three' : ''}">

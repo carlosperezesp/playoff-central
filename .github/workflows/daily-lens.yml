@@ -20,22 +20,44 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      # The Lens rests between seasons: the last edition is the morning after
+      # the final regular-season day, the first is Opening Day. Manual runs
+      # from the Actions tab skip this check and always publish.
+      - name: Is the regular season on?
+        id: season
+        if: github.event_name == 'schedule'
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import datetime as dt, json, urllib.request
+          today = dt.datetime.now(dt.timezone.utc).date()
+          url = f"https://statsapi.mlb.com/api/v1/seasons/{today.year}?sportId=1"
+          s = json.load(urllib.request.urlopen(url, timeout=30))["seasons"][0]
+          start = dt.date.fromisoformat(s["regularSeasonStartDate"])
+          end = dt.date.fromisoformat(s["regularSeasonEndDate"]) + dt.timedelta(days=1)
+          print(f"on={'true' if start <= today <= end else 'false'}")
+          PY
+
       - uses: actions/checkout@v4
+        if: steps.season.outputs.on != 'false'
 
       - uses: actions/setup-python@v5
+        if: steps.season.outputs.on != 'false'
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: steps.season.outputs.on != 'false'
         run: pip install -r tools/requirements.txt
 
       - name: Generate today's edition
         id: generate
+        if: steps.season.outputs.on != 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python tools/generate_weekly.py
 
       - name: Commit & push if changed
+        if: steps.season.outputs.on != 'false'
         run: |
           git config user.name "Baseball Lens Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"

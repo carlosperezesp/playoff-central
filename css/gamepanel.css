@@ -148,6 +148,13 @@
 .gp .sc tr.totr td:first-child{color:var(--gold)}
 .gp .sc tr.toth td,.gp .sc tr.toth td:first-child{color:var(--ink-dim)}
 
+/* ── Season / playoff stats toggle (postseason games only) ── */
+.gp .gp-stat{display:flex;width:fit-content;margin:10px 16px 2px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.gp .gp-stat button{font:700 11.5px/1 'Barlow Condensed',sans-serif;letter-spacing:1.2px;text-transform:uppercase;
+  padding:7px 12px;border:0;background:transparent;color:var(--ink-soft);cursor:pointer}
+.gp .gp-stat button.on{background:var(--gold);color:#1a1a1a}
+.gp.gp-flush .gp-stat{margin-left:0}
+
 /* ── Player boxscore ─────────────────────────────────────── */
 .gp .box{padding:2px 16px 10px;overflow-x:auto}
 .gp .box-team{font-family:'Bebas Neue';font-size:16px;letter-spacing:1.8px;color:var(--gold);margin:8px 0 2px}

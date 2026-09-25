@@ -11,7 +11,7 @@
 <link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css?v=20260903-scroll">
-<link rel="stylesheet" href="css/gamepanel.css?v=20260924-gp17">
+<link rel="stylesheet" href="css/gamepanel.css?v=20260925-gp18">
 <style>
   :root{
     --ink:#f3efe0; --ink-dim:rgba(243,239,224,.55); --ink-soft:rgba(243,239,224,.32);
@@ -217,7 +217,7 @@
 </div>
 
 <script src="js/apicache.js?v=20260903-scroll"></script>
-<script src="js/gamepanel.js?v=20260924-gp17"></script>
+<script src="js/gamepanel.js?v=20260925-gp18"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
 const TICK_MS = 15000;      // how often live rows ask the feed for their (delayed) present
@@ -233,7 +233,7 @@ const fj = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); retur
 // through the whole Spanish evening and small hours.
 const etDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 
-const F_SCHED = 'dates,games,gamePk,gameDate,status,abstractGameState,detailedState,'
+const F_SCHED = 'dates,games,gamePk,gameDate,gameType,season,status,abstractGameState,detailedState,'
   + 'teams,away,home,team,id,teamName,abbreviation,probablePitcher,fullName';
 
 // ── State ────────────────────────────────────────────────────────────────────

@@ -387,12 +387,26 @@ async function init() {
   }
 }
 
+// October starts when the last regular-season game is final — not when MLB
+// publishes the bracket, which it does weeks early with placeholder clubs.
+async function regularSeasonOver() {
+  const s = await (await fetchWithTimeout(`${MLB_API}/seasons/${CURRENT_YEAR}?sportId=1`)).json();
+  const end = s.seasons?.[0]?.regularSeasonEndDate;
+  if (!end || dateKeyInTimeZone() < end) return false;
+  // Rainouts can push a makeup game past the scheduled last day
+  const d = await (await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&gameType=R&startDate=${end}&endDate=${CURRENT_YEAR}-10-15`)).json();
+  return (d.dates || []).every(x => x.games.every(g =>
+    g.status?.abstractGameState === 'Final' || /Postponed|Cancel/.test(g.status?.detailedState || '')));
+}
+
 async function detectPlayoffs() {
   try {
+    if (!(await regularSeasonOver())) return;
     const res = await fetchWithTimeout(`${MLB_API}/schedule/postseason/series?season=${CURRENT_YEAR}&sportId=1`);
     const data = await res.json();
     if (data.series && data.series.length > 0) {
       isPlayoffSeason = true;
+      standingsView = 'playoffs';   // October opens on the bracket
       allData.playoffs = data;
       data.series.forEach(s => {
         if (s.series && s.series.teams) {
@@ -834,8 +848,10 @@ async function renderStandings() {
       <div class="standings-toggle">
         <button class="standings-toggle-btn active division-btn" id="btn-division" onclick="setStandingsView('division')">DIVISION STANDINGS</button>
         <button class="standings-toggle-btn wildcard-btn" id="btn-wildcard" onclick="setStandingsView('wildcard')">WILD CARD RACE</button>
+        ${isPlayoffSeason ? `<button class="standings-toggle-btn playoffs-btn" id="btn-playoffs" onclick="setStandingsView('playoffs')">PLAYOFFS</button>` : ''}
       </div>
     </div>
+    <div id="view-playoffs" style="display:none"><div id="playoffsContent"></div></div>
     <div id="view-division">
       <div class="standings-meta">
         <span id="standingsDateInfo" class="standings-date-info"></span>
@@ -1006,6 +1022,8 @@ async function renderStandings() {
 
   // Render wild card tables
   renderWildCardTables();
+  // A re-render must not throw the reader off the view they were on
+  if (standingsView !== 'division') setStandingsView(standingsView);
 }
 
 // ── DIVISION TOGGLE ───────────────────────────────────────────────────────
@@ -1180,21 +1198,188 @@ let standingsView = 'division';
 function setStandingsView(view) {
   standingsView = view;
   document.querySelectorAll('.standings-toggle-btn').forEach(b => b.classList.remove('active'));
-  const activeBtn = document.getElementById(view === 'division' ? 'btn-division' : 'btn-wildcard');
+  const activeBtn = document.getElementById('btn-' + view);
   if (activeBtn) activeBtn.classList.add('active');
   document.getElementById('view-division').style.display = view === 'division' ? '' : 'none';
   document.getElementById('view-wildcard').style.display = view === 'wildcard' ? '' : 'none';
+  const poView = document.getElementById('view-playoffs');
+  if (poView) poView.style.display = view === 'playoffs' ? '' : 'none';
   const divGrid = document.getElementById('divisionsGrid');
-  if (divGrid) divGrid.style.display = view === 'wildcard' ? 'none' : '';
+  if (divGrid) divGrid.style.display = view === 'division' ? '' : 'none';
+  if (view === 'playoffs') loadPlayoffsView();
 
-  // When switching to wild card, collapse any open division
-  if (view === 'wildcard' && activeDivisionId !== null) {
+  // When switching away from divisions, collapse any open division
+  if (view !== 'division' && activeDivisionId !== null) {
     toggleDivision(activeDivisionId); // toggle off
   }
   // When switching back to division, show all cards
   if (view === 'division') {
     document.querySelectorAll('.division-card').forEach(c => c.style.display = '');
   }
+}
+
+// ── PLAYOFFS VIEW ─────────────────────────────────────────────────────────
+// The bracket as it stands, read straight off the postseason schedule: a
+// series is just its games, so wins, status and the next first pitch all come
+// from one fetch. Game 1's home side is always the higher seed.
+let poSeries = null, poOpen = null, poTimer = null;
+const PO_ROUND = { F: 'WC', D: 'DS', L: 'CS', W: 'WS' };
+
+async function loadPlayoffsView(season = CURRENT_YEAR) {
+  const el = document.getElementById('playoffsContent');
+  if (!el) return;
+  if (!poSeries) el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">LOADING BRACKET...</div></div>`;
+  clearTimeout(poTimer);
+  try {
+    const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&season=${season}&gameType=F,D,L,W&hydrate=team,linescore,seriesStatus`);
+    if (!res.ok) throw new Error(`MLB API returned ${res.status}`);
+    poSeries = buildPlayoffSeries((await res.json()).dates || []);
+    renderPlayoffsView();
+    // Keep up while games are on: every minute live, every five on a game day
+    const games = poSeries.flatMap(s => s.games), today = dateKeyInTimeZone();
+    const live = games.some(g => g.status.abstractGameState === 'Live');
+    const pending = games.some(g => g.officialDate === today && g.status.abstractGameState !== 'Final');
+    if (live || pending) {
+      const wait = live ? 60000 : 300000;
+      const tick = () => standingsView === 'playoffs' && isStandingsTabActive()
+        ? loadPlayoffsView(season) : (poTimer = setTimeout(tick, wait));
+      poTimer = setTimeout(tick, wait);
+    }
+  } catch (e) {
+    if (!poSeries) el.innerHTML = errorStateHTML('loadPlayoffsView()');
+  }
+}
+
+function buildPlayoffSeries(dates) {
+  const by = {};
+  dates.forEach(d => (d.games || []).forEach(g => {
+    if (/Postponed|Cancel/.test(g.status?.detailedState || '')) return;
+    const name = String(g.description || '').replace(/\s*Game\s*\d+\s*$/i, '').trim();
+    const key = g.gameType + name;
+    (by[key] = by[key] || { id: key.replace(/\W/g, ''), type: g.gameType, name, games: [] }).games.push(g);
+  }));
+  return Object.values(by).map(s => {
+    s.games.sort((a, b) => String(a.gameDate).localeCompare(String(b.gameDate)));
+    const g1 = s.games[0];
+    s.league = /^AL/.test(s.name) ? 'AL' : /^NL/.test(s.name) ? 'NL' : '';
+    s.slot = (s.name.match(/'([AB])'/) || [])[1] || '';
+    s.hi = g1.teams.home.team; s.lo = g1.teams.away.team;
+    s.need = Math.ceil((g1.gamesInSeries || 1) / 2);
+    s.wins = { [s.hi.id]: 0, [s.lo.id]: 0 };
+    s.games.forEach(g => {
+      if (g.status.abstractGameState !== 'Final') return;
+      ['away', 'home'].forEach(k => { if (g.teams[k].isWinner) s.wins[g.teams[k].team.id] = (s.wins[g.teams[k].team.id] || 0) + 1; });
+    });
+    s.winner = [s.hi, s.lo].find(t => s.wins[t.id] >= s.need) || null;
+    // The "if necessary" games a clinched series never needed
+    if (s.winner) s.games = s.games.filter(g => g.status.abstractGameState === 'Final');
+    return s;
+  });
+}
+
+// Seeds by bracket slot: WC 'A' is 3 v 6, WC 'B' 4 v 5; DS 'A' hosts the 1, DS 'B' the 2
+function playoffSeeds() {
+  const seed = {};
+  poSeries.forEach(s => {
+    if (s.type === 'F') { seed[s.hi.id] = s.slot === 'A' ? 3 : 4; seed[s.lo.id] = s.slot === 'A' ? 6 : 5; }
+    if (s.type === 'D') seed[s.hi.id] = s.slot === 'A' ? 1 : 2;
+  });
+  return seed;
+}
+
+function poTeam(t) {
+  if (!t || t.placeholder) return { abbr: String(t?.name || 'TBD').replace(/^(AL|NL)\s+/, '').replace(/ League Champion$/, '').replace('Wild Card', 'WC'), tbd: true };
+  return { abbr: TEAM_META[t.id]?.abbr || t.abbreviation || '', logo: `https://www.mlbstatic.com/team-logos/${t.id}.svg` };
+}
+
+function poWhen(g) {
+  const d = new Date(g.gameDate), today = g.officialDate === dateKeyInTimeZone();
+  if (g.status.startTimeTBD) return today ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return today ? t : `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${t}`;
+}
+
+function poLive(g) {
+  const ls = g.linescore || {};
+  return `LIVE${ls.currentInning ? ` · ${ls.isTopInning ? '▲' : '▼'}${ls.currentInning}` : ''}`;
+}
+
+function poStatus(s) {
+  const ab = t => poTeam(t).abbr;
+  const wh = s.wins[s.hi.id], wl = s.wins[s.lo.id];
+  if (s.winner) return `${ab(s.winner)} wins ${Math.max(wh, wl)}-${Math.min(wh, wl)}`;
+  const lead = wh + wl === 0 ? '' : wh === wl ? `Tied ${wh}-${wl}` : `${ab(wh > wl ? s.hi : s.lo)} leads ${Math.max(wh, wl)}-${Math.min(wh, wl)}`;
+  const next = s.games.find(g => g.status.abstractGameState !== 'Final');
+  const nextTxt = next ? `G${next.seriesGameNumber} · ${next.status.abstractGameState === 'Live' ? poLive(next) : poWhen(next)}` : '';
+  return [lead, nextTxt].filter(Boolean).join(' · ');
+}
+
+function poCard(s, seed) {
+  if (!s) return `<div class="po-card po-empty">TBD</div>`;
+  const row = t => {
+    const T = poTeam(t);
+    const cls = s.winner ? (s.winner.id === t.id ? ' win' : ' out') : '';
+    return `<div class="po-team${cls}"><span class="po-seed">${seed[t.id] ?? ''}</span>
+      ${T.logo ? `<img src="${T.logo}" alt="" onerror="this.style.visibility='hidden'">` : '<i class="po-nologo"></i>'}
+      <span class="po-abbr${T.tbd ? ' tbd' : ''}">${T.abbr}</span><span class="po-w">${T.tbd ? '' : s.wins[t.id]}</span></div>`;
+  };
+  const live = s.games.some(g => g.status.abstractGameState === 'Live');
+  return `<button type="button" class="po-card${poOpen === s.id ? ' open' : ''}${live ? ' live' : ''}" onclick="togglePlayoffSeries('${s.id}')">
+    ${row(s.hi)}${row(s.lo)}<div class="po-status">${poStatus(s)}</div></button>`;
+}
+
+function poGameLine(g) {
+  const a = g.teams.away, h = g.teams.home, st = g.status.abstractGameState;
+  const score = side => st === 'Preview' ? '' : ` <b>${g.teams[side].score ?? 0}</b>`;
+  const state = st === 'Final' ? (g.status.detailedState || 'Final') : st === 'Live' ? poLive(g) : poWhen(g);
+  return `<span class="po-gm">${poTeam(a.team).abbr}${score('away')} @ ${poTeam(h.team).abbr}${score('home')}</span>
+    <span class="po-gs${st === 'Live' ? ' live' : ''}">${state}</span>`;
+}
+
+function poGames(s) {
+  return `<div class="po-games"><div class="po-ch">${s.name.replace(/'/g, '')}</div>
+    ${s.games.map(g => `<div class="po-g"><span class="po-gn">G${g.seriesGameNumber}</span>${poGameLine(g)}</div>`).join('')}</div>`;
+}
+
+function togglePlayoffSeries(id) {
+  poOpen = poOpen === id ? null : id;
+  renderPlayoffsView();
+}
+
+function renderPlayoffsView() {
+  const el = document.getElementById('playoffsContent');
+  if (!el || !poSeries) return;
+  const seed = playoffSeeds();
+  const find = (lg, type, slot = '') => poSeries.find(s => s.league === lg && s.type === type && s.slot === slot);
+  const openIn = list => { const s = list.find(x => x && x.id === poOpen); return s ? poGames(s) : ''; };
+
+  const league = lg => {
+    const wcB = find(lg, 'F', 'B'), wcA = find(lg, 'F', 'A'), dsA = find(lg, 'D', 'A'), dsB = find(lg, 'D', 'B'), cs = find(lg, 'L');
+    return `<div class="po-league"><div class="po-lname">${lg === 'AL' ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</div>
+      <div class="po-grid">
+        <div class="po-col"><div class="po-ch">WILD CARD</div>${poCard(wcB, seed)}${poCard(wcA, seed)}</div>
+        <div class="po-col"><div class="po-ch">DIVISION SERIES</div>${poCard(dsA, seed)}${poCard(dsB, seed)}</div>
+        <div class="po-col"><div class="po-ch">${lg}CS</div>${poCard(cs, seed)}</div>
+      </div>${openIn([wcB, wcA, dsA, dsB, cs])}</div>`;
+  };
+  const ws = poSeries.find(s => s.type === 'W');
+
+  // The day's slate up top — or the next day that has one
+  const games = poSeries.flatMap(s => s.games.map(g => ({ g, s }))), today = dateKeyInTimeZone();
+  let day = games.some(x => x.g.officialDate === today) ? today
+    : games.map(x => x.g.officialDate).filter(d => d > today).sort()[0];
+  const slate = games.filter(x => x.g.officialDate === day)
+    .sort((a, b) => String(a.g.gameDate).localeCompare(String(b.g.gameDate)));
+  const dayLabel = day === today ? 'TODAY'
+    : day ? 'NEXT UP · ' + new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase() : '';
+  const slateHTML = slate.length ? `<div class="po-slate"><div class="po-ch">${dayLabel}</div><div class="po-slate-row">
+    ${slate.map(({ g, s }) => `<button type="button" class="po-sg" onclick="switchTab('topgames')">
+      <span class="po-sg-tag">${s.league}${PO_ROUND[s.type]} · G${g.seriesGameNumber}</span>${poGameLine(g)}</button>`).join('')}
+    </div></div>` : '';
+
+  el.innerHTML = `${slateHTML}
+    <div class="po-leagues">${league('AL')}${league('NL')}</div>
+    <div class="po-ws"><div class="po-ch">WORLD SERIES</div>${poCard(ws, seed)}${openIn([ws])}</div>`;
 }
 
 function renderWildCardTables() {
@@ -5004,7 +5189,7 @@ function switchTab(tab) {
       const fromMvp = !!window._fromMvpTopGames;
       tgBC.style.display = (tab === 'topgames' && (fromStandings || fromMvp)) ? 'flex' : 'none';
       if (tab === 'topgames' && (fromStandings || fromMvp)) {
-        if (tgBCLabel) tgBCLabel.textContent = fromMvp ? 'MVP RACE' : 'PLAYOFF RACE';
+        if (tgBCLabel) tgBCLabel.textContent = fromMvp ? 'MVP RACE' : 'PLAYOFFS';
         tgBC.onclick = () => switchTab(fromMvp ? 'mvp' : 'standings');
       }
     }
@@ -5385,7 +5570,7 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
     el.innerHTML=games.map(g=>{
       const live=g.status.abstractGameState==='Live', open=expanded.has(g.gamePk);
       const ih=Array.from({length:9},(_,i)=>`<div class="wb-gi">${i+1}</div>`).join('')+`<div class="wb-gi wb-r">R</div>`;
-      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div><div class="gp gp-flush" id="wbgp-${g.gamePk}"></div>`:g.status.abstractGameState==='Live'?`<div class="gp gp-flush" id="wbgp-${g.gamePk}"><div class="wb-ptw-loading">Loading live board…</div></div>`:`<div class="wb-dh">Probable starters</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
+      return `<div class="wb-game ${open?'wb-open':''}" data-pk="${g.gamePk}" onclick="WB.toggle(${g.gamePk})"><div class="wb-row wb-ghead"><div class="wb-gstatus ${live?'wb-live':''}">${statusText(g)}${topPks.has(g.gamePk)&&!/^[FDLW]$/.test(g.gameType)?'<span class="wb-topbadge">TOP GAME</span>':''}</div>${ih}</div>${teamRow(g,'away',people)}${teamRow(g,'home',people)}</div><div class="wb-detail ${open?'wb-open':''}" id="wbd-${g.gamePk}">${g.status.abstractGameState==='Final'?`<div class="wb-dh">Key performances</div><div id="wbstars-${g.gamePk}"><div class="wb-ptw-loading">Loading…</div></div><div class="gp gp-flush" id="wbgp-${g.gamePk}"></div>`:g.status.abstractGameState==='Live'?`<div class="gp gp-flush" id="wbgp-${g.gamePk}"><div class="wb-ptw-loading">Loading live board…</div></div>`:`<div class="wb-dh">Probable starters</div><div class="wb-sp-grid">${spCard(g,'away',people)}${spCard(g,'home',people)}</div><div class="wb-ptw" id="wbptw-${g.gamePk}"></div>`}${matchupLink(g)}</div>`;
     }).join('');
     expanded.forEach(pk=>{const g=games.find(x=>x.gamePk===pk);if(g)fillDetail(g);});
   }
