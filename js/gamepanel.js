@@ -515,24 +515,31 @@ function boxTeamHTML(g, feed, side) {
     const sub = p.battingOrder && p.battingOrder % 100 !== 0;
     // The season next to the night: the same OPS circle his own board scores him by
     const ops = num(p.seasonStats?.batting?.ops), oc = tierOps(ops);
+    // ...and AVG is tonight's alone
+    const avg = st.atBats ? (st.hits ?? 0) / st.atBats : null;
     return `<tr><td><span class="fcirc mini ops" style="background:${oc};color:${onTier(oc)}">${fmt3(ops)}</span>${
       sub ? '<i class="subarrow">↳</i> ' : ''}${esc(p.person?.fullName)}
         <i class="pos-tag">${esc(p.position?.abbreviation || '')}</i></td>
       <td>${st.atBats}</td><td>${st.runs ?? 0}</td><td>${st.hits ?? 0}</td><td>${st.rbi ?? 0}</td>
       <td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
-      <td style="color:${tscale(num(p.seasonStats?.batting?.avg), AVG_T)};font-weight:800">${esc(p.seasonStats?.batting?.avg ?? '')}</td></tr>`;
+      <td style="color:${avg === 0 ? TIERS[4] : tscale(avg, AVG_T)};font-weight:800">${fmt3(avg)}</td></tr>`;
   };
   const armRow = id => {
     const p = P[`ID${id}`]; if (!p) return '';
     const st = p.stats?.pitching;
     if (!st || st.inningsPitched == null) return '';
     const f = forma(num(p.seasonStats?.pitching?.era), num(p.seasonStats?.pitching?.whip)), fc = tierForm(f);
+    // Tonight's ERA: "5.2" innings means 5⅔ → 17 outs
+    const [ip, part] = String(st.inningsPitched).split('.').map(Number);
+    const outs = ip * 3 + (part || 0), er = st.earnedRuns ?? 0;
+    const era = outs ? er * 27 / outs : (er ? Infinity : null);
     return `<tr><td><span class="fcirc mini" style="background:${fc};color:${onTier(fc)}">${f ?? '—'}</span>${
       esc(p.person?.fullName)} ${penRole(p)}</td>
       <td>${esc(st.inningsPitched)}</td><td>${st.hits ?? 0}</td><td>${st.runs ?? 0}</td>
       <td>${st.earnedRuns ?? 0}</td><td>${st.baseOnBalls ?? 0}</td><td>${st.strikeOuts ?? 0}</td>
       <td>${st.numberOfPitches ?? ''}</td>
-      <td style="color:${tierForm(forma(num(p.seasonStats?.pitching?.era), null))};font-weight:800">${esc(p.seasonStats?.pitching?.era ?? '')}</td></tr>`;
+      <td style="color:${era === Infinity ? TIERS[4] : tierForm(forma(era, null))};font-weight:800">${
+        era == null ? '—' : era === Infinity ? '∞' : era.toFixed(2)}</td></tr>`;
   };
   const bats = (bx.batters || []).map(batRow).join('');
   const arms = (bx.pitchers || []).map(armRow).join('');
@@ -540,11 +547,11 @@ function boxTeamHTML(g, feed, side) {
   return `<div class="box">
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
     ${bats ? `<table>
-      <thead><tr><th class="lab-th">OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
+      <thead><tr><th class="lab-th">SEASON OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th><th>AVG</th></tr></thead>
       <tbody>${bats}<tr class="totrow"><td>Totals</td><td>${sums.ab}</td><td>${sums.r}</td><td>${sums.h}</td>
         <td>${sums.rbi}</td><td>${sums.bb}</td><td>${sums.k}</td><td></td></tr></tbody></table>` : ''}
     ${arms ? `<table>
-      <thead><tr><th class="lab-th">FORM</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
+      <thead><tr><th class="lab-th">SEASON FORM</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>K</th><th>P</th><th>ERA</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
   </div>`;
 }
@@ -718,9 +725,9 @@ function replayBoxHTML(g, feed, side, st8) {
   }).join('');
   return `<div class="box">
     <div class="box-team">${esc(g.teams[side].team.teamName)}</div>
-    ${bats ? `<table><thead><tr><th class="lab-th">OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
+    ${bats ? `<table><thead><tr><th class="lab-th">SEASON OPS</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead>
       <tbody>${bats}</tbody></table>` : ''}
-    ${arms ? `<table><thead><tr><th class="lab-th">FORM</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
+    ${arms ? `<table><thead><tr><th class="lab-th">SEASON FORM</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead>
       <tbody>${arms}</tbody></table>` : ''}
   </div>`;
 }

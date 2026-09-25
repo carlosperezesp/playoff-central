@@ -157,6 +157,9 @@
   color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .gp .box th{font-size:9.5px;letter-spacing:1.2px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
 .gp .box th:first-child,.gp .box td:first-child{text-align:left;padding-left:0;white-space:normal}
+/* Stat columns share one even width; the name column takes whatever is left */
+.gp .box th:not(:first-child),.gp .box td:not(:first-child){width:36px;text-align:center}
+.gp .box th:last-child:not(:first-child),.gp .box td:last-child:not(:first-child){width:48px;text-align:right}
 .gp .box td:first-child{color:#fff;font-weight:600;font-size:14px}
 .gp .pos-tag{font-style:normal;font-weight:800;font-size:10px;letter-spacing:1px;color:#fff;margin-left:3px}
 .gp .subarrow{font-style:normal;color:#fff;font-size:15px}
