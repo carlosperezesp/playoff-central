@@ -2,10 +2,11 @@
 """Render a social card (template.html + JSON data) to a square PNG via headless Chrome.
 
 Usage:
-    python3 render.py data.json out.png [--template template.html] [--size 1080] [--scale 2]
+    python3 render.py data.json out.png [--template template.html] [--size 1080] [--height H] [--scale 2]
 
 The JSON is injected into the template (replacing __DATA__) and Chrome screenshots
-it at size*scale px square (default 2160x2160 -> crisp, downscales nicely for social).
+it at size*scale px, square unless --height is given (default 2160x2160 -> crisp,
+downscales nicely for social).
 """
 import json
 import subprocess
@@ -18,12 +19,14 @@ HERE = Path(__file__).parent
 
 
 def parse_args(argv):
-    pos, opts = [], {"size": 1080, "scale": 2, "template": "template.html"}
+    pos, opts = [], {"size": 1080, "height": None, "scale": 2, "template": "template.html"}
     i = 0
     while i < len(argv):
         a = argv[i]
         if a == "--size":
             opts["size"] = int(argv[i + 1]); i += 2
+        elif a == "--height":
+            opts["height"] = int(argv[i + 1]); i += 2
         elif a == "--scale":
             opts["scale"] = float(argv[i + 1]); i += 2
         elif a == "--template":
@@ -58,7 +61,7 @@ def main():
             "--hide-scrollbars",
             "--no-sandbox",
             f"--force-device-scale-factor={opts['scale']}",
-            f"--window-size={opts['size']},{opts['size']}",
+            f"--window-size={opts['size']},{opts['height'] or opts['size']}",
             "--virtual-time-budget=5000",
             "--run-all-compositor-stages-before-draw",
             f"--screenshot={out_path}",
@@ -70,8 +73,8 @@ def main():
     finally:
         tmp.unlink(missing_ok=True)
 
-    px = int(opts["size"] * opts["scale"])
-    print(f"OK -> {out_path} ({px}x{px})")
+    w, h = int(opts["size"] * opts["scale"]), int((opts["height"] or opts["size"]) * opts["scale"])
+    print(f"OK -> {out_path} ({w}x{h})")
 
 
 if __name__ == "__main__":

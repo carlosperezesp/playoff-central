@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg1:#0d2016; --bg2:#1a2e1f; --text:#ffffff; --muted:#9fb4a6; --line:rgba(255,255,255,.12); }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1350px;overflow:hidden}
+  body{
+    font-family:'Barlow Condensed',system-ui,sans-serif;
+    background:radial-gradient(120% 80% at 50% -10%, #214a30 0%, var(--bg2) 38%, var(--bg1) 78%);
+    color:var(--text);
+  }
+  .card{position:absolute; inset:0; display:flex; flex-direction:column; padding:40px 36px 30px}
+
+  /* header — same as every Baseball Lens card */
+  .hd{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px}
+  .brandwrap{display:flex; align-items:center; gap:12px}
+  .brand-logo{width:42px; height:42px; display:block; flex:none}
+  .brand{font-family:'Bebas Neue'; font-size:31px; letter-spacing:4px; line-height:1}
+  .brand b{font-weight:400; color:#16a34a}
+  .kicker{font-weight:700; font-size:17px; letter-spacing:2.5px; text-transform:uppercase;
+    background:rgba(255,255,255,.08); border:1px solid var(--line); padding:7px 16px; border-radius:999px}
+  .title{font-family:'Bebas Neue'; font-size:66px; letter-spacing:2px; line-height:.9}
+  .sub{font-weight:600; font-size:19px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); margin:6px 0 18px}
+
+  /* one banner per club, in its own colours */
+  .clubs{flex:1; display:flex; flex-direction:column; gap:7px; min-height:0}
+  .club{flex:1 1 0; min-height:0; position:relative; display:grid; align-items:center;
+    grid-template-columns:28px 66px repeat(4, minmax(0,1fr)) 78px;
+    border-radius:14px; overflow:hidden; padding-left:8px;
+    background:linear-gradient(110deg, var(--c1) 0%, var(--c1) 50%, var(--c2) 100%);
+    box-shadow:0 8px 22px rgba(0,0,0,.32)}
+  .club::after{content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 52%, rgba(255,255,255,.06) 72%, transparent 90%)}
+  .rank{font-family:'Bebas Neue'; font-size:34px; line-height:1; color:rgba(255,255,255,.62); text-align:center; z-index:1}
+  .tl{display:flex; flex-direction:column; align-items:center; gap:3px; z-index:1}
+  .tl img{height:44px; max-width:60px; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+  .tl .tag{font-weight:800; font-size:12.5px; letter-spacing:1.2px; color:rgba(255,255,255,.8); white-space:nowrap}
+
+  /* a starter: his FORM, his face, his name — the order of every rotation card */
+  .sp{position:relative; height:100%; display:flex; align-items:center; min-width:0; z-index:1}
+  .face{position:relative; height:100%; width:72px; flex:none}
+  .face img{position:absolute; left:0; right:0; bottom:0; margin:auto; height:94%; max-width:100%;
+    object-fit:contain; object-position:bottom center; filter:drop-shadow(0 3px 6px rgba(0,0,0,.45))}
+  .chip{flex:none; width:40px; height:40px; border-radius:50%; margin-right:3px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:21px; line-height:1;
+    box-shadow:inset 0 -4px 9px rgba(0,0,0,.22), 0 3px 8px rgba(0,0,0,.4);
+    border:2px solid rgba(255,255,255,.35)}
+  .nm{min-width:0; padding:0 6px 0 4px}
+  .nm b{display:block; font-family:'Bebas Neue'; font-weight:400; font-size:25px; letter-spacing:.6px; line-height:1;
+    white-space:nowrap; text-shadow:0 2px 8px rgba(0,0,0,.35)}
+  .nm i{display:inline-block; margin-top:4px; font-style:normal; font-weight:800; font-size:11.5px; letter-spacing:1px;
+    color:rgba(255,255,255,.85); background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.14);
+    padding:1px 6px; border-radius:5px}
+
+  .avg{height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1;
+    border-left:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.14)}
+  .avg .v{font-weight:800; font-size:42px; line-height:.9}
+  .avg .l{font-weight:700; font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:rgba(255,255,255,.8); margin-top:3px}
+
+  .ft{padding-top:16px; display:flex; align-items:center; justify-content:space-between; color:var(--muted)}
+  .ft .url{font-weight:700; font-size:20px; letter-spacing:2px; text-transform:uppercase}
+  .ft .edition{font-weight:500; font-size:19px; letter-spacing:1px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="hd">
+      <div class="brandwrap">
+        <img class="brand-logo" src="brand.png" alt="">
+        <div class="brand">BASEBALL<b> LENS</b></div>
+      </div>
+      <div class="kicker" id="kicker"></div>
+    </div>
+    <div class="title" id="title"></div>
+    <div class="sub" id="sub"></div>
+    <div class="clubs" id="clubs"></div>
+    <div class="ft">
+      <span class="url" id="url"></span>
+      <span class="edition" id="edition"></span>
+    </div>
+  </div>
+
+<script>
+const DATA = __DATA__;
+(function(){
+  const d = DATA || {};
+  const txt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v == null ? '' : v; };
+  txt('kicker', d.kicker); txt('title', d.title); txt('sub', d.subtitle);
+  txt('url', d.footer); txt('edition', d.edition);
+
+  const silo = pid => `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:silo:current.png/w_300,q_auto:best/v1/people/${pid}/headshot/silo/current`;
+  const hand = t => t === 'L' ? 'LHP' : t === 'R' ? 'RHP' : '';
+
+  document.getElementById('clubs').innerHTML = (d.clubs || []).map(c => `
+    <div class="club" style="--c1:${c.c1};--c2:${c.c2}">
+      <div class="rank">${c.rank}</div>
+      <div class="tl"><img src="${c.logo}" alt=""><span class="tag">${c.tag}</span></div>
+      ${c.starters.map(p => `<div class="sp">
+        <span class="chip" style="background:${p.color};color:${p.tcolor}">${p.forma}</span>
+        <div class="face"><img src="${silo(p.pid)}" alt="" onerror="this.style.display='none'"></div>
+        <div class="nm"><b>${p.name}</b>${hand(p.throws) ? `<i>${hand(p.throws)}</i>` : ''}</div>
+      </div>`).join('')}
+      <div class="avg"><div class="v" style="color:${c.avgColor}">${c.avg}</div><div class="l">Avg Form</div></div>
+    </div>`).join('');
+
+  // A long surname shrinks to its slot instead of running under the next man's face
+  const fit = () => document.querySelectorAll('.nm b').forEach(b => {
+    let s = 25;
+    while (b.scrollWidth > b.parentNode.clientWidth - 10 && s > 15) b.style.fontSize = (--s) + 'px';
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit();
+})();
+</script>
+</body>
+</html>

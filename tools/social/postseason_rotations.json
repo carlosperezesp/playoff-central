@@ -1,0 +1,537 @@
+{
+  "kicker": "Rotation Report",
+  "title": "Postseason Rotations",
+  "subtitle": "All 12 playoff teams · four starters each · ranked by average FORM",
+  "footer": "baseballlens.com",
+  "edition": "Regular-season FORM · Sep 30, 2026",
+  "clubs": [
+    {
+      "rank": 1,
+      "name": "Dodgers",
+      "tag": "NL · 2",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/119.svg",
+      "c1": "#005A9C",
+      "c2": "#002d4e",
+      "avg": 80,
+      "avgColor": "#16a34a",
+      "starters": [
+        {
+          "pid": 808967,
+          "name": "Yamamoto",
+          "throws": "R",
+          "forma": 86,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 605483,
+          "name": "Snell",
+          "throws": "L",
+          "forma": 83,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 669373,
+          "name": "Skubal",
+          "throws": "L",
+          "forma": 80,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 607192,
+          "name": "Glasnow",
+          "throws": "R",
+          "forma": 71,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "name": "Yankees",
+      "tag": "AL · 4",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg",
+      "c1": "#003087",
+      "c2": "#001844",
+      "avg": 77,
+      "avgColor": "#16a34a",
+      "starters": [
+        {
+          "pid": 693645,
+          "name": "Schlittler",
+          "throws": "R",
+          "forma": 90,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 608331,
+          "name": "Fried",
+          "throws": "L",
+          "forma": 78,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 607074,
+          "name": "Rodón",
+          "throws": "L",
+          "forma": 76,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 543037,
+          "name": "Cole",
+          "throws": "R",
+          "forma": 64,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        }
+      ]
+    },
+    {
+      "rank": 3,
+      "name": "Brewers",
+      "tag": "NL · 1",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/158.svg",
+      "c1": "#12284B",
+      "c2": "#091426",
+      "avg": 73,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 694819,
+          "name": "Misiorowski",
+          "throws": "R",
+          "forma": 97,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 701656,
+          "name": "Henderson",
+          "throws": "R",
+          "forma": 88,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 688107,
+          "name": "Gasser",
+          "throws": "L",
+          "forma": 57,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        },
+        {
+          "pid": 675660,
+          "name": "Drohan",
+          "throws": "L",
+          "forma": 48,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 4,
+      "name": "Astros",
+      "tag": "AL · 3",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/117.svg",
+      "c1": "#002D62",
+      "c2": "#001631",
+      "avg": 69,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 699044,
+          "name": "Ullola",
+          "throws": "R",
+          "forma": 93,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 669713,
+          "name": "Wesneski",
+          "throws": "R",
+          "forma": 67,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 686613,
+          "name": "Brown",
+          "throws": "R",
+          "forma": 62,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 663567,
+          "name": "Lambert",
+          "throws": "R",
+          "forma": 55,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "name": "Red Sox",
+      "tag": "AL · 5",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/111.svg",
+      "c1": "#BD3039",
+      "c2": "#5e181c",
+      "avg": 68,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 543243,
+          "name": "Gray",
+          "throws": "R",
+          "forma": 72,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 801139,
+          "name": "Tolle",
+          "throws": "L",
+          "forma": 70,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 624133,
+          "name": "Suarez",
+          "throws": "L",
+          "forma": 65,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 687562,
+          "name": "Bennett",
+          "throws": "L",
+          "forma": 64,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        }
+      ]
+    },
+    {
+      "rank": 6,
+      "name": "Rays",
+      "tag": "AL · 1",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/139.svg",
+      "c1": "#092C5C",
+      "c2": "#04162e",
+      "avg": 65,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 656876,
+          "name": "Rasmussen",
+          "throws": "R",
+          "forma": 82,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 607259,
+          "name": "Martinez",
+          "throws": "R",
+          "forma": 70,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 643377,
+          "name": "Jax",
+          "throws": "R",
+          "forma": 62,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 642547,
+          "name": "Peralta",
+          "throws": "R",
+          "forma": 45,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 7,
+      "name": "Braves",
+      "tag": "NL · 3",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/144.svg",
+      "c1": "#CE1141",
+      "c2": "#670820",
+      "avg": 65,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 519242,
+          "name": "Sale",
+          "throws": "L",
+          "forma": 85,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 608718,
+          "name": "Suter",
+          "throws": "L",
+          "forma": 62,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 656550,
+          "name": "Holmes",
+          "throws": "R",
+          "forma": 57,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        },
+        {
+          "pid": 641816,
+          "name": "Mahle",
+          "throws": "R",
+          "forma": 54,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 8,
+      "name": "Phillies",
+      "tag": "NL · 6",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/143.svg",
+      "c1": "#E81828",
+      "c2": "#740c14",
+      "avg": 64,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 666200,
+          "name": "Luzardo",
+          "throws": "L",
+          "forma": 74,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 554430,
+          "name": "Wheeler",
+          "throws": "R",
+          "forma": 73,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 650911,
+          "name": "Sánchez",
+          "throws": "L",
+          "forma": 68,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 605400,
+          "name": "Nola",
+          "throws": "R",
+          "forma": 42,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 9,
+      "name": "White Sox",
+      "tag": "AL · 6",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/145.svg",
+      "c1": "#27251F",
+      "c2": "#141210",
+      "avg": 63,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 696146,
+          "name": "Smith",
+          "throws": "L",
+          "forma": 93,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 680732,
+          "name": "Burke",
+          "throws": "R",
+          "forma": 63,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 663436,
+          "name": "Martin",
+          "throws": "R",
+          "forma": 51,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        },
+        {
+          "pid": 641743,
+          "name": "Kay",
+          "throws": "L",
+          "forma": 44,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 10,
+      "name": "Guardians",
+      "tag": "AL · 2",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/114.svg",
+      "c1": "#00385D",
+      "c2": "#001c2e",
+      "avg": 62,
+      "avgColor": "#b1c882",
+      "starters": [
+        {
+          "pid": 800048,
+          "name": "Messick",
+          "throws": "L",
+          "forma": 77,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 668909,
+          "name": "Williams",
+          "throws": "R",
+          "forma": 62,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 656492,
+          "name": "Griffin",
+          "throws": "L",
+          "forma": 60,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        },
+        {
+          "pid": 676440,
+          "name": "Bibee",
+          "throws": "R",
+          "forma": 51,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 11,
+      "name": "Padres",
+      "tag": "NL · 4",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/135.svg",
+      "c1": "#2F241D",
+      "c2": "#18120e",
+      "avg": 59,
+      "avgColor": "#ffc000",
+      "starters": [
+        {
+          "pid": 601713,
+          "name": "Pivetta",
+          "throws": "R",
+          "forma": 76,
+          "color": "#16a34a",
+          "tcolor": "#ffffff"
+        },
+        {
+          "pid": 650633,
+          "name": "King",
+          "throws": "R",
+          "forma": 65,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 592662,
+          "name": "Ray",
+          "throws": "L",
+          "forma": 54,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        },
+        {
+          "pid": 621111,
+          "name": "Buehler",
+          "throws": "R",
+          "forma": 42,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    },
+    {
+      "rank": 12,
+      "name": "Cubs",
+      "tag": "NL · 5",
+      "logo": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/112.svg",
+      "c1": "#0E3386",
+      "c2": "#071a43",
+      "avg": 57,
+      "avgColor": "#ffc000",
+      "starters": [
+        {
+          "pid": 605280,
+          "name": "Holmes",
+          "throws": "R",
+          "forma": 64,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 684007,
+          "name": "Imanaga",
+          "throws": "L",
+          "forma": 62,
+          "color": "#b1c882",
+          "tcolor": "#15351c"
+        },
+        {
+          "pid": 571510,
+          "name": "Boyd",
+          "throws": "L",
+          "forma": 56,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        },
+        {
+          "pid": 592332,
+          "name": "Gausman",
+          "throws": "R",
+          "forma": 47,
+          "color": "#ffc000",
+          "tcolor": "#3a2c00"
+        }
+      ]
+    }
+  ]
+}
