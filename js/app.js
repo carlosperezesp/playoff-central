@@ -3275,8 +3275,8 @@ async function fetchTeamImpact(teamId) {
   if (armPids.length) {
     try {
       const url = `${MLB_API}/people?personIds=${armPids.join(',')}`
-        + `&hydrate=stats(type=gameLog,group=pitching,season=${season})`
-        + `&fields=people,id,stats,group,displayName,splits,date,team,stat,gamesStarted,`
+        + `&hydrate=stats(type=gameLog,group=pitching,season=${season},gameType=[R,P])`
+        + `&fields=people,id,stats,group,displayName,splits,date,team,gameType,stat,gamesStarted,`
         + `inningsPitched,earnedRuns,saves,holds,blownSaves`;
       const d = typeof cachedJSON === 'function'
         ? await cachedJSON(url, { timeout: 12000 })
@@ -3289,6 +3289,9 @@ async function fetchTeamImpact(teamId) {
           const st = sp.stat || {};
           const ip = parseFloat(st.inningsPitched) || 0;
           if (ip <= 0) return;
+          if (sp.date && (!a.lastPitchDate || sp.date > a.lastPitchDate)) a.lastPitchDate = sp.date;
+          // October tires an arm like any other month, but the tallies below are the season's
+          if (sp.gameType === 'P') return;
           if ((parseInt(st.gamesStarted) || 0) >= 1) {
             a.starts++;
             // Quality start: six innings or more, three earned runs or fewer
@@ -3299,7 +3302,6 @@ async function fetchTeamImpact(teamId) {
               a.closerApps++;
             }
           }
-          if (sp.date && (!a.lastPitchDate || sp.date > a.lastPitchDate)) a.lastPitchDate = sp.date;
         });
       });
     } catch(e) { /* the panel reads a missing arm as zero, as it always has */ }
