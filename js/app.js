@@ -561,11 +561,13 @@ async function checkStandingsAutoRefresh() {
 async function loadGamesRemaining(teamIds) {
   const today = new Date().toISOString().split('T')[0];
   const seasonEnd = `${CURRENT_YEAR}-10-01`;
+  const counts = {};
+  teamIds.forEach(id => counts[id] = 0);
+  // Past the end date the range runs backwards and MLB answers 400
+  if (today > seasonEnd) return counts;
   try {
     const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&startDate=${today}&endDate=${seasonEnd}&gameType=R`);
     const data = await res.json();
-    const counts = {};
-    teamIds.forEach(id => counts[id] = 0);
     (data.dates || []).forEach(d => {
       (d.games || []).forEach(g => {
         const a = g.teams.away.team.id, h = g.teams.home.team.id;
