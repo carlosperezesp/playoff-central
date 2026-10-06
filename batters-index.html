@@ -321,13 +321,8 @@
 
   <div id="list" class="state">Loading lineups…</div>
 
-  <div class="legend">
+  <div class="legend" id="scaleLegend">
     <span>OPS scale</span>
-    <span><i style="background:#16a34a"></i>Elite .900+</span>
-    <span><i style="background:#b1c882"></i>Above avg .750+</span>
-    <span><i style="background:#ffc000"></i>Average .600+</span>
-    <span><i style="background:#ff8100"></i>Below avg .450+</span>
-    <span><i style="background:#ff2200"></i>Poor</span>
   </div>
   <p class="note">Positions come from each hitter's primary position, so a utility man appears at the spot he
     is listed for. Where a club has no regular at a spot, the outfield slots fall back to the next most-used
@@ -365,6 +360,7 @@
   </a>
 </nav>
 
+<script src="js/scales.js?v=20261007-gp20"></script>
 <script src="js/apicache.js?v=20260903-scroll"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
@@ -402,21 +398,22 @@ let ROSTER_MODE = false;  // October and the winter: the roster is the lineup, u
 let paFloor = MIN_PA;
 const rosterPos = {};     // pid → the position the club lists him at
 
-// ── OPS scale — the app's hitter tiers (js/app.js getDiamondPlayerColor) ──
-const TIERS = ['#16a34a','#b1c882','#ffc000','#ff8100','#ff2200'];
-const scale = (v, c) => (v == null || v <= 0) ? '#9ca3af'
-  : v >= c[0] ? TIERS[0] : v >= c[1] ? TIERS[1] : v >= c[2] ? TIERS[2] : v >= c[3] ? TIERS[3] : TIERS[4];
-const tier = o => scale(o, [.900, .750, .600, .450]);
-// AVG/OBP/SLG cut where the OPS tiers actually fall among qualified hitters, so a
-// green batting average and a green OPS mean the same thing
-const AVG_T = [.300, .255, .205, .160], OBP_T = [.380, .330, .275, .250], SLG_T = [.545, .425, .315, .270];
+// ── Colour scales: js/scales.js, the one copy every board and the How-to-read page share ──
+const TIERS = SCALES.TIERS;
+const scale = (v, c) => (v == null || v <= 0) ? '#9ca3af' : SCALES.tier(v, c);
+const tier = o => scale(o, SCALES.OPS);
+const AVG_T = SCALES.AVG, OBP_T = SCALES.OBP, SLG_T = SCALES.SLG;
+// The legend reads the same cut-offs the chips are painted with
+document.getElementById('scaleLegend').insertAdjacentHTML('beforeend', SCALES.NAMES.map((n, i) =>
+  `<span><i style="background:${TIERS[i]}"></i>${n}${i < 4 ? ` ${SCALES.OPS[i].toFixed(3).replace(/^0/, '')}+` : ''}</span>`).join(''));
+
 // Dark ink on the light tiers, cream on the two dark ones — same as the social card
 const onTier = c => (c === '#ff8100' || c === '#ff2200' || c === '#9ca3af') ? '#fff' : shade(c,.62);
 const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));
   return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1); };
 const rgba = (h,a) => { const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; };
 // 1 = best → the five tiers in quintiles, so a rank always carries a colour
-const rankColor = (rank, total) => TIERS[Math.min(4, Math.floor((rank - 1) / (total / 5)))];
+const rankColor = (rank, total) => SCALES.rank(rank, total);
 
 const PRIMARY = {108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0E3386',113:'#C6011F',114:'#00385D',
   115:'#33006F',116:'#0C2340',117:'#002D62',118:'#004687',119:'#005A9C',120:'#AB0003',121:'#002D72',133:'#003831',
@@ -888,7 +885,7 @@ function axesHTML(pid, season) {
   return `<div class="pdl" style="margin-top:13px">Profile · percentile among qualified bats this season</div>
     <div class="axes">${ax.map(([n,v]) => {
       if (v == null) return '';
-      const c = scale(v / 100, [.75, .60, .40, .25]);
+      const c = scale(v, SCALES.PERCENTILE);
       return `<div class="ax"><span class="axn">${n}</span>
         <span class="axbar"><i style="width:${v}%;background:${c}"></i></span>
         <span class="axv" style="color:${c}">${v}</span></div>`;

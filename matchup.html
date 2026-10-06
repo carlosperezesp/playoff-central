@@ -276,6 +276,7 @@
   </a>
 </nav>
 
+<script src="js/scales.js?v=20261007-gp20"></script>
 <script src="js/apicache.js?v=20260903-scroll"></script>
 <script>
 const API = 'https://statsapi.mlb.com/api/v1';
@@ -312,18 +313,17 @@ const MIN_PA = 25, PA_AT = 40;
 const SLOTS = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
 const OF = new Set(['LF','CF','RF','OF']);
 
-const ERA_BEST = 1.50, ERA_WORST = 6.00, WHIP_BEST = 0.80, WHIP_WORST = 2.00;
+const ERA_BEST = SCALES.ERA.best, ERA_WORST = SCALES.ERA.worst, WHIP_BEST = SCALES.WHIP.best, WHIP_WORST = SCALES.WHIP.worst;
 function forma(era, whip) {
   const p = [];
   if (era  != null && isFinite(era))  p.push(Math.max(0, Math.min(100, (ERA_WORST  - era)  / (ERA_WORST  - ERA_BEST)  * 100)));
   if (whip != null && isFinite(whip)) p.push(Math.max(0, Math.min(100, (WHIP_WORST - whip) / (WHIP_WORST - WHIP_BEST) * 100)));
   return p.length ? Math.round(p.reduce((a,b)=>a+b,0) / p.length) : null;
 }
-const TIERS = ['#16a34a','#b1c882','#ffc000','#ff8100','#ff2200'];
-const tierForm = f => f == null ? '#9ca3af' : f >= 75 ? TIERS[0] : f >= 60 ? TIERS[1] : f >= 40 ? TIERS[2] : f >= 25 ? TIERS[3] : TIERS[4];
-const scale = (v, c) => (v == null || v <= 0) ? '#9ca3af'
-  : v >= c[0] ? TIERS[0] : v >= c[1] ? TIERS[1] : v >= c[2] ? TIERS[2] : v >= c[3] ? TIERS[3] : TIERS[4];
-const tierOps = o => scale(o, [.900, .750, .600, .450]);
+const TIERS = SCALES.TIERS;
+const tierForm = f => f == null ? '#9ca3af' : SCALES.tier(f, SCALES.FORM);
+const scale = (v, c) => (v == null || v <= 0) ? '#9ca3af' : SCALES.tier(v, c);
+const tierOps = o => scale(o, SCALES.OPS);
 const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));
   return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1); };
 const onTier = c => (c === '#ff8100' || c === '#ff2200' || c === '#9ca3af') ? '#fff' : shade(c,.62);
@@ -333,11 +333,10 @@ const PRIMARY = {108:'#BA0021',109:'#A71930',110:'#DF4601',111:'#BD3039',112:'#0
   134:'#FDB827',135:'#2F241D',136:'#0C2C56',137:'#FD5A1E',138:'#C41E3A',139:'#092C5C',140:'#003278',141:'#134A8E',
   142:'#002B5C',143:'#E81828',144:'#CE1141',145:'#27251F',146:'#00A3E0',147:'#003087',158:'#12284B'};
 
-const svPctColor = p => p == null ? '#9ca3af' : p >= .90 ? TIERS[0] : p >= .80 ? TIERS[1] : p >= .70 ? TIERS[2] : p >= .60 ? TIERS[3] : TIERS[4];
-const irsColor = p => p == null ? '#9ca3af' : p >= .85 ? TIERS[0] : p >= .75 ? TIERS[1] : p >= .65 ? TIERS[2] : p >= .55 ? TIERS[3] : TIERS[4];
-const pctColor = (w,l) => (w + l) === 0 ? '#9ca3af'
-  : (p => p >= .650 ? TIERS[0] : p >= .550 ? TIERS[1] : p >= .450 ? TIERS[2] : p >= .350 ? TIERS[3] : TIERS[4])(w / (w + l));
-const AVG_T = [.300, .255, .205, .160], OBP_T = [.380, .330, .275, .250], SLG_T = [.545, .425, .315, .270];
+const svPctColor = p => p == null ? '#9ca3af' : SCALES.tier(p, SCALES.SAVE_PCT);
+const irsColor = p => p == null ? '#9ca3af' : SCALES.tier(p, SCALES.STRAND_PCT);
+const pctColor = (w,l) => (w + l) === 0 ? '#9ca3af' : SCALES.tier(w / (w + l), SCALES.WIN_PCT);
+const AVG_T = SCALES.AVG, OBP_T = SCALES.OBP, SLG_T = SCALES.SLG;
 const rgba = (h,a) => { const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; };
 
 const logo = id => `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg`;
@@ -744,7 +743,7 @@ function penRowHTML(s, c) {
   // is his job, not the two chances a middle reliever happened to inherit
   const job = (s.isClose || s.svo > s.hld)
     ? stat(`${s.sv}/${s.svo}`, 'SV', svPctColor(s.svPct))
-    : stat(s.hld, 'HLD', s.hld >= 15 ? TIERS[0] : s.hld >= 8 ? TIERS[1] : '#9ca3af');
+    : stat(s.hld, 'HLD', s.hld >= SCALES.HOLDS[0] ? TIERS[0] : s.hld >= SCALES.HOLDS[1] ? TIERS[1] : '#9ca3af');
   return `<div class="sp">
     <div class="sp-form" style="background:${col};color:${onTier(col)}">${s.form ?? '—'}</div>
     ${faceHTML(s.pid, c)}

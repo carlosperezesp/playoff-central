@@ -58,8 +58,8 @@
 <link rel="dns-prefetch" href="https://www.mlbstatic.com">
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css?v=20260903-ts3">
-<link rel="stylesheet" href="css/main.css?v=20261001-gp19">
-<link rel="stylesheet" href="css/gamepanel.css?v=20261001-gp19">
+<link rel="stylesheet" href="css/main.css?v=20261007-gp20">
+<link rel="stylesheet" href="css/gamepanel.css?v=20261007-gp20">
 <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -228,7 +228,8 @@
       <section class="info-section">
         <h2 class="info-h2">The color code</h2>
         <p class="info-text">Color is the heart of the app: it turns a player's season into a
-          single glance. Same scale everywhere — the diamond, top games, MVP race and team stats.</p>
+          single glance. The same five colors run through every screen; where each one starts, stat by
+          stat, is in the next section.</p>
         <div class="info-scale">
           <div class="info-scale-bar">
             <div style="flex:1;background:#ff2200"></div>
@@ -255,13 +256,21 @@
         </ul>
       </section>
 
+      <!-- 2b · The thresholds — rendered by renderColorThresholds() from js/scales.js -->
+      <section class="info-section">
+        <h2 class="info-h2">The thresholds</h2>
+        <p class="info-text">Where every color starts. This table is read from the same numbers the app
+          paints with, so it always matches what you see.</p>
+        <div id="infoThresholds"></div>
+      </section>
+
       <!-- 3 · Stats glossary -->
       <section class="info-section">
         <h2 class="info-h2">Stats glossary</h2>
         <h3 class="info-h3">Hitters</h3>
         <dl class="info-glossary">
-          <dt>OPS</dt><dd>The headline hitting number (on-base % + slugging). ~.750 is average,
-            .900+ is elite. Drives a hitter's color.</dd>
+          <dt>OPS</dt><dd>The headline hitting number (on-base % + slugging). Drives a hitter's
+            color.</dd>
           <dt>AVG</dt><dd>Batting average — hits per at-bat.</dd>
           <dt>OBP</dt><dd>On-base % — how often they reach base.</dd>
           <dt>SLG</dt><dd>Slugging — total bases per at-bat (a power measure).</dd>
@@ -270,11 +279,10 @@
         </dl>
         <h3 class="info-h3">Pitchers</h3>
         <dl class="info-glossary">
-          <dt>FORM</dt><dd>Baseball Lens's 0–100 pitcher score, built from ERA &amp; WHIP. ~50 is
-            average, 75+ is elite. Drives a pitcher's color.</dd>
-          <dt>ERA</dt><dd>Earned runs allowed per 9 innings. Lower is better — ~4.00 average,
-            under 3.00 excellent.</dd>
-          <dt>WHIP</dt><dd>Walks + hits per inning — baserunners allowed. Under 1.00 is elite.</dd>
+          <dt>FORM</dt><dd>Baseball Lens's 0–100 pitcher score, built from ERA &amp; WHIP. Drives a
+            pitcher's color.</dd>
+          <dt>ERA</dt><dd>Earned runs allowed per 9 innings. Lower is better.</dd>
+          <dt>WHIP</dt><dd>Walks + hits per inning — baserunners allowed. Lower is better.</dd>
           <dt>IP</dt><dd>Innings pitched.</dd>
           <dt>GS · QS</dt><dd>Games started · quality starts (6+ IP, 3 earned runs or fewer).</dd>
           <dt>HLD</dt><dd>Holds — a reliever protecting a lead without finishing the game.</dd>
@@ -374,7 +382,8 @@
 </nav>
 
 <script src="js/apicache.js?v=20260903-ts3"></script>
-<script src="js/gamepanel.js?v=20261001-gp19"></script>
-<script src="js/app.js?v=20261001-gp19"></script>
+<script src="js/scales.js?v=20261007-gp20"></script>
+<script src="js/gamepanel.js?v=20261007-gp20"></script>
+<script src="js/app.js?v=20261007-gp20"></script>
 </body>
 </html>

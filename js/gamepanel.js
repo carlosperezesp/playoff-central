@@ -28,19 +28,18 @@ const timecode = d => `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.get
 
 // ── The index pages' scoring language, copied verbatim so a number here can
 // never disagree with the same man's number on his own board ─────────────────
-const ERA_BEST = 1.50, ERA_WORST = 6.00, WHIP_BEST = 0.80, WHIP_WORST = 2.00;
+const ERA_BEST = SCALES.ERA.best, ERA_WORST = SCALES.ERA.worst, WHIP_BEST = SCALES.WHIP.best, WHIP_WORST = SCALES.WHIP.worst;
 function forma(era, whip) {
   const p = [];
   if (era  != null && isFinite(era))  p.push(Math.max(0, Math.min(100, (ERA_WORST  - era)  / (ERA_WORST  - ERA_BEST)  * 100)));
   if (whip != null && isFinite(whip)) p.push(Math.max(0, Math.min(100, (WHIP_WORST - whip) / (WHIP_WORST - WHIP_BEST) * 100)));
   return p.length ? Math.round(p.reduce((a,b)=>a+b,0) / p.length) : null;
 }
-const TIERS = ['#16a34a','#b1c882','#ffc000','#ff8100','#ff2200'];
-const tierForm = f => f == null ? '#9ca3af' : f >= 75 ? TIERS[0] : f >= 60 ? TIERS[1] : f >= 40 ? TIERS[2] : f >= 25 ? TIERS[3] : TIERS[4];
-const tscale = (v, c) => (v == null || v <= 0) ? '#9ca3af'
-  : v >= c[0] ? TIERS[0] : v >= c[1] ? TIERS[1] : v >= c[2] ? TIERS[2] : v >= c[3] ? TIERS[3] : TIERS[4];
-const tierOps = o => tscale(o, [.900, .750, .600, .450]);
-const AVG_T = [.300, .255, .205, .160];
+const TIERS = SCALES.TIERS;
+const tierForm = f => f == null ? '#9ca3af' : SCALES.tier(f, SCALES.FORM);
+const tscale = (v, c) => (v == null || v <= 0) ? '#9ca3af' : SCALES.tier(v, c);
+const tierOps = o => tscale(o, SCALES.OPS);
+const AVG_T = SCALES.AVG;
 const shade = (h,r) => { const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));
   return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1); };
 const onTier = c => (c === '#ff8100' || c === '#ff2200' || c === '#9ca3af') ? '#fff' : shade(c,.62);

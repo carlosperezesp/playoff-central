@@ -2678,19 +2678,11 @@ let selectedDiamondKey = null;
 function getDiamondPlayerColor(value, type) {
   if (type === 'hitter') {
     if (!value || value <= 0) return '#9ca3af';
-    if (value >= 0.900) return '#16a34a';   // verde: elite
-    if (value >= 0.750) return '#b1c882';   // verde claro
-    if (value >= 0.600) return '#ffc000';   // amarillo
-    if (value >= 0.450) return '#ff8100';   // naranja
-    return '#ff2200';                        // rojo
+    return SCALES.tier(value, SCALES.OPS);
   } else {
-    // FORMA 0-100. Media MLB ≈ 51. ≥75 élite, ≥60 bueno, ≥40 medio, <40 malo
+    // FORMA 0-100. Media MLB ≈ 51
     if (value == null || value < 0) return '#9ca3af';
-    if (value >= 75) return '#16a34a';   // verde: elite
-    if (value >= 60) return '#b1c882';   // verde claro
-    if (value >= 40) return '#ffc000';   // amarillo
-    if (value >= 25) return '#ff8100';   // naranja
-    return '#ff2200';                     // rojo
+    return SCALES.tier(value, SCALES.FORM);
   }
 }
 
@@ -2762,11 +2754,98 @@ function diamondColorLegendHTML() {
   </div>`;
 }
 
+// ── How to read: the thresholds ───────────────────────────────────────────
+// Printed from js/scales.js — the numbers every board paints with — so the page
+// cannot describe a scale the site no longer uses. The league-relative scales
+// also say where their cut-offs sit today, from the same team stats the Teams
+// tab ranks.
+async function renderColorThresholds() {
+  const el = document.getElementById('infoThresholds');
+  if (!el) return;
+  const S = SCALES;
+  const f2 = v => v.toFixed(2), f3 = v => v.toFixed(3).replace(/^0/, '');
+  // "floor+", "a–b"…, "under floor" for a scale where higher is better
+  const bands = (cuts, fmt, step, unit = '') => [
+    `${fmt(cuts[0])}${unit}+`,
+    ...cuts.slice(1).map((c, i) => `${fmt(c)}–${fmt(cuts[i] - step)}${unit}`),
+    `under ${fmt(cuts[cuts.length - 1])}${unit}`,
+  ];
+  // ERA and WHIP are coloured through their half of FORM: invert it, rounding
+  // included, to say in plain ERA/WHIP where each colour starts
+  const half = ({ best, worst }) => {
+    const x = S.FORM.map(c => Math.floor((worst - (c - 0.5) / 100 * (worst - best)) * 100 + 1e-9) / 100);
+    return [`≤ ${f2(x[0])}`, ...x.slice(1).map((v, i) => `${f2(x[i] + .01)}–${f2(v)}`), `${f2(x[3] + .01)}+`];
+  };
+  const pct = v => Math.round(v * 100);
+  // Ranks 1–30 grouped by the tier SCALES.rank gives them
+  const rankBands = S.TIERS.map(c => {
+    const r = Array.from({ length: 30 }, (_, i) => i + 1).filter(n => S.rank(n, 30) === c);
+    return `${r[0]}–${r[r.length - 1]}`;
+  });
+  const M = S.MLB_RANK;
+
+  const table = rows => `<div class="th-wrap"><table class="th-table">
+    <thead><tr><th></th>${S.NAMES.map((n, i) =>
+      `<th><span class="th-chip" style="background:${S.TIERS[i]};color:${diamondTextColor(S.TIERS[i])}">${n}</span></th>`).join('')}</tr></thead>
+    <tbody>${rows.map(([stat, note, cells]) => `<tr><td class="th-stat">${stat}${note ? `<i>${note}</i>` : ''}</td>${
+      cells.map((c, i) => `<td style="color:${c === '—' ? 'var(--muted)' : statTextColor(S.TIERS[i])}">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+
+  const season = table([
+    ['OPS', 'Hitters’ circles', bands(S.OPS, f3, .001)],
+    ['AVG', 'Season, or tonight’s in a box score', bands(S.AVG, f3, .001)],
+    ['OBP', '', bands(S.OBP, f3, .001)],
+    ['SLG', '', bands(S.SLG, f3, .001)],
+    ['FORM', 'Pitchers’ circles', bands(S.FORM, String, 1)],
+    ['ERA', 'Season, or tonight’s in a box score', half(S.ERA)],
+    ['WHIP', '', half(S.WHIP)],
+    ['Save %', 'Closers', bands(S.SAVE_PCT, pct, .01, '%')],
+    ['Strand %', 'Inherited runners left on base', bands(S.STRAND_PCT, pct, .01, '%')],
+    ['Win %', 'Starters’ W–L', bands(S.WIN_PCT, f3, .001)],
+    ['Holds', 'Set-up men', [`${S.HOLDS[0]}+`, `${S.HOLDS[1]}–${S.HOLDS[0] - 1}`, '—', '—', '—']],
+  ]);
+
+  // Season-form dots: each game against every game of its season (same role)
+  const tiers = await fetchWithTimeout('data/game-tiers.json').then(r => r.json()).catch(() => null);
+  const g = tiers?.meta?.thresholds;
+  const relative = table([
+    ['League rank', 'Team stats, and players’ totals on the boards', rankBands],
+    ['Percentile', 'Profile bars, among players in the same role', bands(S.PERCENTILE, String, 1, 'th')],
+    ...(g ? [['Single games', 'Season-form dots, against every game of that season',
+      bands([g.green, g.lightGreen, g.yellow, g.orange], String, 1, 'th')]] : []),
+    ['Rank in MLB', 'Award-race lines', [`Top ${M[0]}`, `${M[0] + 1}–${M[1]}`, `${M[1] + 1}–${M[2]}`, `${M[2] + 1}+`, '—']],
+  ]);
+
+  el.innerHTML = `${season}
+    <p class="th-note"><b>FORM</b> = the average of an ERA score (${f2(S.ERA.best)} → 100, ${f2(S.ERA.worst)} → 0) and a
+      WHIP score (${f2(S.WHIP.best)} → 100, ${f2(S.WHIP.worst)} → 0). <b>Gray</b> = no data yet.</p>
+    <h3 class="info-h3">Ranked against the rest</h3>${relative}
+    <h3 class="info-h3">Team cut-offs today</h3><div id="infoThresholdsLive"><p class="th-note">Loading…</p></div>`;
+
+  // Where the team-rank colours start right now, in the stats themselves
+  const map = await fetchLeagueTeamStats();
+  const live = document.getElementById('infoThresholdsLive');
+  if (!live) return;
+  const teams = Object.entries(map || {}).filter(([k]) => !k.startsWith('_')).map(([, v]) => v);
+  const last = rankBands.slice(0, 4).map(b => +b.split('–')[1]);   // last rank in each of the top four tiers
+  const cut = (key, lower, fmt) => {
+    const vals = teams.map(t => t[key]).filter(v => v > 0).sort((a, b) => lower ? a - b : b - a);
+    if (vals.length < 30) return null;
+    const v = last.map(r => fmt(vals[r - 1])), ge = lower ? '≤' : '≥';
+    return [...v.map(x => `${ge} ${x}`), `${lower ? '>' : '<'} ${v[3]}`];
+  };
+  const rows = [['AVG', 'Team batting', cut('avg', false, f3)], ['OPS', 'Team batting', cut('ops', false, f3)],
+    ['ERA', 'Team pitching', cut('era', true, f2)], ['WHIP', 'Team pitching', cut('whip', true, f2)]].filter(r => r[2]);
+  live.innerHTML = rows.length
+    ? table(rows) + `<p class="th-note">Re-measured from all 30 clubs every time you open this page.</p>`
+    : '<p class="th-note">League stats are unavailable right now.</p>';
+}
+
 // ── FORMA score system (0–100, never exceeds 100) ─────────────────────────
 // Media MLB 2024: ERA 4.15, WHIP 1.27 → FORMA 51
 // Kershaw carrera: ERA 2.53, WHIP 1.018 → FORMA 76
-const ERA_BEST = 1.50,  ERA_WORST = 6.00;
-const WHIP_BEST = 0.80, WHIP_WORST = 2.00;
+const ERA_BEST = SCALES.ERA.best,  ERA_WORST = SCALES.ERA.worst;
+const WHIP_BEST = SCALES.WHIP.best, WHIP_WORST = SCALES.WHIP.worst;
 const MIN_IP_RELIABLE = 3;
 
 function calcBaseScore(era, whip) {
@@ -4169,12 +4248,8 @@ function renderTeamStatsPanel(teamId, impact) {
   // (fills/badges); `text` is a darkened variant readable on white.
   function rankTier(r) {
     if (r.rank === '—') return { bar: '#9ca3af', text: '#6b7280' };
-    const rk = r.rank;
-    if (rk <= 6)  return { bar: '#16a34a', text: '#16a34a' };
-    if (rk <= 12) return { bar: '#b1c882', text: '#7d9440' };
-    if (rk <= 18) return { bar: '#ffc000', text: '#c29200' };
-    if (rk <= 24) return { bar: '#ff8100', text: '#e06f00' };
-    return { bar: '#ff2200', text: '#e51f00' };
+    const bar = SCALES.rank(r.rank, 30);
+    return { bar, text: statTextColor(bar) };
   }
 
   const avgR  = rank('avg');  const opsR  = rank('ops');
@@ -5172,6 +5247,7 @@ function switchTab(tab) {
     if (panel) panel.classList.add('active');
     if (tab === 'standings') startStandingsAutoRefresh();
     else stopStandingsAutoRefresh();
+    if (tab === 'info') renderColorThresholds();
     const rosterAbbr = (tab === 'rosters' && selectedTeamId && TEAM_META[selectedTeamId]?.abbr)
       ? TEAM_META[selectedTeamId].abbr.toLowerCase() : '';
     history.replaceState(null, '', rosterAbbr ? `#rosters/${rosterAbbr}` : `#${tab}`);
@@ -5450,8 +5526,9 @@ function calcTopMatchScore(game, pitcherFormaMap, candidatesByTeam) {
   const $=id=>document.getElementById(id);
   const fj=u=>fetch(u).then(r=>r.json());
   function dateFor(day){const d=new Date();if(day==='ayer')d.setDate(d.getDate()-1);if(day==='manana')d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);}
-  function forma(era,whip){const p=[];if(era!=null)p.push(Math.max(0,Math.min(100,(6-era)/4.5*100)));if(whip!=null)p.push(Math.max(0,Math.min(100,(2-whip)/1.2*100)));return p.length?Math.round(p.reduce((a,b)=>a+b,0)/p.length):null;}
-  function tier(f){return f==null?'#9ca3af':f>=75?'#16a34a':f>=60?'#b1c882':f>=40?'#ffc000':f>=25?'#ff8100':'#ff2200';}
+  const {ERA:E,WHIP:W}=SCALES;
+  function forma(era,whip){const p=[];if(era!=null)p.push(Math.max(0,Math.min(100,(E.worst-era)/(E.worst-E.best)*100)));if(whip!=null)p.push(Math.max(0,Math.min(100,(W.worst-whip)/(W.worst-W.best)*100)));return p.length?Math.round(p.reduce((a,b)=>a+b,0)/p.length):null;}
+  function tier(f){return f==null?'#9ca3af':SCALES.tier(f,SCALES.FORM);}
   function lighten(h,r){const n=parseInt(h.slice(1),16),R=(n>>16)&255,G=(n>>8)&255,B=n&255;return '#'+((1<<24)+(Math.round(R+(255-R)*r)<<16)+(Math.round(G+(255-G)*r)<<8)+Math.round(B+(255-B)*r)).toString(16).slice(1);}
   function shade(h,r){const n=parseInt(h.slice(1),16),R=Math.round(((n>>16)&255)*(1-r)),G=Math.round(((n>>8)&255)*(1-r)),B=Math.round((n&255)*(1-r));return '#'+((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1);}
   function fmt3(x){if(x==null||x==='')return '—';const s=(+x).toFixed(3);return s.startsWith('0.')?s.slice(1):s;}
@@ -8309,10 +8386,8 @@ async function _loadMVPTracker() {
     // League-wide stat rank → player color scale (readable text variants).
     // Thresholds tuned for "how notable", not 1-30: top 10 elite, etc.
     function rankSummaryColor(rank) {
-      if (rank <= 10) return '#16a34a';   // verde: elite
-      if (rank <= 30) return '#7d9440';   // verde claro
-      if (rank <= 75) return '#c29200';   // amarillo
-      return '#e06f00';                    // naranja
+      const i = SCALES.MLB_RANK.findIndex(c => rank <= c);
+      return statTextColor(SCALES.TIERS[i < 0 ? SCALES.MLB_RANK.length : i]);
     }
 
     function buildRankMap(players, valueFn, { desc = true, filter = () => true } = {}) {
