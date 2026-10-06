@@ -19,13 +19,19 @@
      and a real gutter keeps the two from leaning on each other. */
   .gp .dcols{grid-template-columns:fit-content(500px) minmax(0,1fr);column-gap:24px;row-gap:14px}
   .gp .dcols > .dcol-sc{border-left:1px solid var(--line);padding-left:24px}
-  /* Below three-column width, the live situation spans the row above the pairs */
-  .gp .dcol-situ{grid-column:1/-1;border-left:0 !important;padding-left:0 !important}
+  /* Below three-column width, the live situation spans the row above the pairs,
+     the duel on the left and the zone, pitches and fielders right beside it */
+  .gp .dcol-situ{grid-column:1/-1;border-left:0 !important;padding-left:0 !important;
+    display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:24px;align-items:start}
+  .gp .dcol-situ > :not(.situ):not(.zonewrap){grid-column:1/-1}
 }
-@media (min-width:1250px){
+/* Three columns only when the panel itself has the room — both boards cap it
+   near 1080px, where three columns crushed the duel into the box */
+.gp{container:gp / inline-size}
+@container gp (min-width:1300px){
   .gp .dcols.three{grid-template-columns:minmax(0,3fr) minmax(0,4fr) minmax(0,5fr)}
   /* The situation rides its own column beside both team rows */
-  .gp .dcols.three .dcol-situ{grid-column:1;grid-row:1/span 2}
+  .gp .dcols.three .dcol-situ{grid-column:1;grid-row:1/span 2;display:block}
   .gp .dcols.three > .dcol-box{border-left:1px solid var(--line);padding-left:24px}
 }
 
@@ -76,7 +82,7 @@
   flex-shrink:0;background:rgba(232,194,58,.18);color:#e8c23a}
 .gp .role.set{background:rgba(159,180,166,.18);color:#c3d4c9}
 .gp .duel-row .nm{font-family:'Bebas Neue';font-size:17px;letter-spacing:.9px;color:#fff;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:40px}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:40px}
 .gp .duel-row .pc{font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--ink-dim);white-space:nowrap;flex-shrink:0}
 .gp .lastplay{font-family:'Inter',sans-serif;font-size:11.5px;line-height:1.5;color:var(--ink-dim);
   padding:4px 16px 8px}
